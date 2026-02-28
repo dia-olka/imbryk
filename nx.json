@@ -54,6 +54,9 @@
         "ciTargetName": "test-ci",
         "testMode": "watch"
       }
+    },
+    {
+      "plugin": "@nxlv/python"
     }
   ],
   "neverConnectToCloud": true,

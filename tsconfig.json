@@ -5,6 +5,12 @@
   "references": [
     {
       "path": "./apps/imbryk"
+    },
+    {
+      "path": "./packages/world-state"
+    },
+    {
+      "path": "./packages/ai-personas"
     }
   ]
 }

@@ -1,0 +1,81 @@
+[tool.coverage.run]
+branch = true
+source = [ "ingestion_api" ]
+
+[tool.coverage.report]
+exclude_lines = ['if TYPE_CHECKING:']
+show_missing = true
+
+[tool.pytest.ini_options]
+addopts = """
+ --cov
+ --cov-report html:'../../coverage/apps/ingestion-api/html'
+ --cov-report xml:'../../coverage/apps/ingestion-api/coverage.xml'
+ --html='../../reports/apps/ingestion-api/unittests/html/index.html'
+ --junitxml='../../reports/apps/ingestion-api/unittests/junit.xml'
+"""
+
+[project]
+name = "ingestion-api"
+version = "1.0.0"
+description = "Imbryk ingestion API - user prompts and payments"
+requires-python = ">=3.9,<4"
+readme = 'README.md'
+dependencies = [
+    "fastapi>=0.128.8",
+    "pydantic>=2.12.5",
+    "uvicorn[standard]>=0.39.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ingestion_api"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[dependency-groups]
+dev = [
+  "autopep8>=2.3.1",
+  "ruff>=0.8.2",
+  "pytest>=8.3.4",
+  "pytest-sugar>=1.0.0",
+  "pytest-cov>=6.0.0",
+  "pytest-html>=4.1.1",
+  "httpx>=0.28.1",
+]
+
+[build-system]
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+exclude = [
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  "dist",
+]
+
+line-length = 88
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+  # pycodestyle
+  "E",
+  # Pyflakes
+  "F",
+  # pyupgrade
+  "UP",
+  # flake8-bugbear
+  "B",
+  # flake8-simplify
+  "SIM",
+  # isort
+  "I",
+]
+ignore = []
+
+fixable = ["ALL"]
+unfixable = []

@@ -1,0 +1,78 @@
+[tool.coverage.run]
+branch = true
+source = [ "newsroom_director" ]
+
+[tool.coverage.report]
+exclude_lines = ['if TYPE_CHECKING:']
+show_missing = true
+
+[tool.pytest.ini_options]
+addopts = """
+ --cov
+ --cov-report html:'../../coverage/apps/newsroom-director/html'
+ --cov-report xml:'../../coverage/apps/newsroom-director/coverage.xml'
+ --html='../../reports/apps/newsroom-director/unittests/html/index.html'
+ --junitxml='../../reports/apps/newsroom-director/unittests/junit.xml'
+"""
+
+[project]
+name = "newsroom-director"
+version = "1.0.0"
+description = "Imbryk Morning Press - AI newspaper generation orchestrator"
+requires-python = ">=3.9,<4"
+readme = 'README.md'
+dependencies = [
+    "google-cloud-aiplatform>=1.139.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["newsroom_director"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[dependency-groups]
+dev = [
+  "autopep8>=2.3.1",
+  "ruff>=0.8.2",
+  "pytest>=8.3.4",
+  "pytest-sugar>=1.0.0",
+  "pytest-cov>=6.0.0",
+  "pytest-html>=4.1.1",
+]
+
+[build-system]
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+exclude = [
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  "dist",
+]
+
+line-length = 88
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+  # pycodestyle
+  "E",
+  # Pyflakes
+  "F",
+  # pyupgrade
+  "UP",
+  # flake8-bugbear
+  "B",
+  # flake8-simplify
+  "SIM",
+  # isort
+  "I",
+]
+ignore = []
+
+fixable = ["ALL"]
+unfixable = []

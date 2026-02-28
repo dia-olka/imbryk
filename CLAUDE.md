@@ -1,3 +1,13 @@
+# Project Documentation
+
+- **ARCHITECTURE.md** — full system design, data flow, project descriptions, infrastructure, and key design decisions. Read this first to understand how Imbryk works.
+- **PLAN.md** — phased production release plan with task checklists and open questions. Check this for current progress and next steps.
+
+# UI Guidelines
+
+- **Mobile-first design** — all components and layouts must be designed for small screens first, then enhanced for larger viewports via progressive media queries.
+- **Accessibility (WCAG 2.2 AA minimum)** — semantic HTML, ARIA landmarks, skip links, visible focus indicators, sufficient colour contrast (4.5:1 text, 3:1 UI), keyboard navigability, and screen reader compatibility are non-negotiable requirements for every UI component.
+
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 
