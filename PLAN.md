@@ -21,92 +21,119 @@
 
 ## Phase 2: World Lore & Prompt Engineering
 
-- [ ] Author the initial WorldLedger — populate `WORLD_LEDGER_TEMPLATE` with the founding lore (nations, alliances, economic blocs, tech landscape, environmental state, and seed history)
-- [ ] Write a `WorldLedger → synopsis` serialiser that compresses the ledger into a concise text block for the `{{WORLD_LEDGER_SYNOPSIS}}` placeholder
-- [ ] Write a `WorldLedger + event → updated WorldLedger` mutation function that applies an event's consequences to the ledger
+- [ ] Author the initial WorldLedger — populate the template with founding lore (nations, alliances, economic blocs, tech landscape, environmental state, seed history)
+- [ ] Write a `WorldLedger → synopsis` serialiser that compresses the ledger into a text block for `{{WORLD_LEDGER_SYNOPSIS}}`
+- [ ] Write a `WorldLedger + event → updated WorldLedger` mutation function
+- [ ] Add `packages/prompt-engine` library with template interpolation utilities
 - [ ] Refine persona system prompt templates — test each against sample events, tune voice/bias fidelity
-- [ ] Add a `packages/prompt-engine` library with template interpolation utilities (fill `{{WORLD_LEDGER_SYNOPSIS}}`, `{{EVENT_DESCRIPTION}}`, `{{SIX_ARTICLES}}`)
 - [ ] Write integration tests: template interpolation → valid prompt string for each persona
 
 ---
 
-## Phase 3: Newsroom Director Implementation
+## Phase 3: Prompt Categorisation & Ingestion API
 
+- [ ] Design PostgreSQL schema: `prompts`, `categorised_prompts`, `payment_refs`, `world_ledger`, `editions`
+- [ ] Set up PostgreSQL (Cloud SQL or Supabase) and database migrations
+- [ ] Implement `POST /prompts/quote` — accept draft prompt, run local LLM categoriser, return cost estimate
+- [ ] Implement `CategoriserStrategy` interface and Gemini Flash implementation — classify prompt into 1–6 newspaper categories
+- [ ] Implement `POST /payments/braintree-webhook` — on payment success: save prompt, categorise, publish to Pub/Sub
+- [ ] Implement `GET /editions` — list editions from R2 index
+- [ ] Set up Braintree sandbox integration
+- [ ] Add input validation and content moderation for prompts
+- [ ] Add rate limiting
+- [ ] Write API tests for all endpoints
+
+---
+
+## Phase 4: Newsroom Director Implementation
+
+- [ ] Implement batch job entry point (Cloud Run Job trigger)
+- [ ] Implement: pull unprocessed categorised prompts from PostgreSQL
+- [ ] Implement: load WorldLedger from PostgreSQL
 - [ ] Implement Vertex AI context cache creation from WorldLedger synopsis
-- [ ] Implement parallel 6-persona Gemini calls with structured output (article title, body, pull quotes, bias disclosure)
-- [ ] Implement Curator synthesis call — input: 6 articles, output: consensus/disagreement map + meta-analysis
-- [ ] Implement WorldLedger mutation — apply event consequences after article generation
-- [ ] Implement R2 write — store edition (articles + curator + updated ledger snapshot)
-- [ ] Implement context cache cleanup
+- [ ] Implement world coherence validation (Pro model) — accept/reject prompts against current world state
+- [ ] Implement per-newspaper model tier config map (Pro vs Flash per persona)
+- [ ] Implement per-newspaper Gemini calls — only for newspapers with accepted, matched prompts; merge multiple prompts per newspaper into single event briefing
+- [ ] Implement Curator synthesis (Pro model) — input: generated articles, output: meta-analysis
+- [ ] Implement WorldLedger mutation (Pro model) — apply consequences, write back to PostgreSQL transactionally
+- [ ] Implement R2 write — store edition articles as JSON
+- [ ] Implement context cache force-deletion
 - [ ] Add retry logic and error handling for Gemini API failures
-- [ ] Add structured logging (edition ID, persona ID, latency, token usage)
+- [ ] Add structured logging (edition ID, persona ID, model tier, latency, token usage)
 - [ ] Write end-to-end test: sample event → full edition output
 
 ---
 
-## Phase 4: Ingestion API Implementation
+## Phase 5: Gazette — Static Site Generator
 
-- [ ] Design and implement user authentication (likely OAuth2 / JWT)
-- [ ] Implement credit/payment system (Stripe or similar)
-- [ ] Implement `POST /prompts` — validate input, deduct credits, enqueue event
-- [ ] Implement `GET /prompts/:id` — poll processing status
-- [ ] Implement `GET /editions` — list editions with pagination
-- [ ] Implement `GET /editions/:id` — fetch full edition (articles + curator + ledger snapshot)
-- [ ] Implement `POST /payments/webhook` — handle payment processor callbacks
-- [ ] Add rate limiting and abuse prevention
-- [ ] Add input validation and content moderation for user prompts
-- [ ] Write API tests for all endpoints (auth, payment, CRUD)
+- [ ] Scaffold `apps/gazette` with 11ty
+- [ ] Design newspaper page templates (edition index, per-newspaper article, Curator synthesis)
+- [ ] Build persona identity cards (ideology, biases, blindspots) into article templates
+- [ ] Build world timeline page from WorldLedger history
+- [ ] Build edition archive with pagination
+- [ ] Mobile-first responsive design, WCAG 2.2 AA
+- [ ] Set up Cloudflare Pages deployment for gazette output
+- [ ] Automate: morning run completes → gazette rebuild → deploy
 
 ---
 
-## Phase 5: Frontend — Newspaper Reader UI
+## Phase 6: Frontend — Prompt Submission UI
 
-- [ ] Remove NxWelcome boilerplate, establish app shell with routing
-- [ ] Design mobile-first layout system (responsive grid, touch-friendly)
-- [ ] Implement accessibility foundations (skip links, ARIA landmarks, focus management, colour contrast)
-- [ ] Build newspaper edition reader — display all 6 articles + Curator synthesis
-- [ ] Build individual article view with persona identity card (ideology, biases, blindspots)
-- [ ] Build world timeline / history view — visualise the WorldLedger history
-- [ ] Build prompt submission form — event description input with credit balance display
-- [ ] Build edition archive / browse view with pagination
-- [ ] Implement keyboard navigation and screen reader testing
-- [ ] Add loading states, error boundaries, and empty states
-- [ ] Add dark mode / theme support
+- [ ] Remove NxWelcome boilerplate, establish app shell
+- [ ] Build prompt submission form — event description textarea + weight slider
+- [ ] Build cost calculator — show estimated cost based on category count (calls `/prompts/quote`)
+- [ ] Integrate Braintree Drop-in UI for payment
+- [ ] Build confirmation view — payment success, prompt queued for next morning edition
+- [ ] Mobile-first layout, WCAG 2.2 AA compliance
+- [ ] Keyboard navigation and screen reader testing
+- [ ] Loading states, error boundaries, empty states
+- [ ] Deploy to Cloudflare Pages
 
 ---
 
-## Phase 6: Integration & DevOps
+## Phase 7: Integration & DevOps
 
 - [ ] Set up CI/CD pipeline (GitHub Actions) — lint, typecheck, test on PR
 - [ ] Configure Cloudflare R2 bucket and access credentials
 - [ ] Set up Vertex AI project, service account, and API keys
+- [ ] Set up GCP Pub/Sub topic and subscription
+- [ ] Configure Cloud Scheduler for daily morning trigger
 - [ ] Containerise Python apps (Dockerfile per app)
-- [ ] Deploy frontend to Cloudflare Pages (or similar)
-- [ ] Deploy ingestion-api and newsroom-director to Cloud Run (or similar)
-- [ ] Set up environment variable management (secrets for API keys, payment keys)
-- [ ] Configure CORS between frontend and API
+- [ ] Deploy ingestion-api to Cloud Run
+- [ ] Deploy newsroom-director as Cloud Run Job
+- [ ] Set up environment variable management (secrets for API keys, Braintree keys)
+- [ ] Configure CORS between prompt UI and API
 - [ ] Set up monitoring and alerting (error rates, API latency, Gemini token spend)
 
 ---
 
-## Phase 7: Hardening & Launch Prep
+## Phase 8: Hardening & Launch Prep
 
 - [ ] Security audit — OWASP top 10 review, dependency scanning
-- [ ] Performance testing — Gemini call latency, concurrent edition generation
-- [ ] Cost modelling — Gemini token usage per edition, R2 storage growth
+- [ ] Verify zero PII — audit all database tables, logs, and error reports for personal data leakage
+- [ ] Performance testing — Gemini call latency, categorisation throughput
+- [ ] Cost modelling — Gemini token usage per edition, R2 storage growth, Pub/Sub costs
 - [ ] User acceptance testing with sample world events
-- [ ] Write user-facing documentation (how it works, what the personas are)
 - [ ] Set up error tracking (Sentry or similar)
-- [ ] Define and implement backup strategy for WorldLedger state
+- [ ] Define and implement backup strategy for WorldLedger in PostgreSQL
 - [ ] Launch checklist: DNS, SSL, rate limits, monitoring dashboards
 
 ---
 
+## Resolved Decisions
+
+1. **Trigger model** — daily batch ("morning press"). Strictly once daily.
+2. **World state** — single canonical ledger in PostgreSQL, no branching.
+3. **Language** — English only.
+4. **Monetisation** — per-prompt payment via Braintree. Cost scales with number of newspaper categories activated.
+5. **User data** — zero PII stored. Braintree owns identity.
+6. **Reading experience** — static HTML via 11ty + Cloudflare Pages. Free, no registration.
+7. **Prompt UI** — separate React SPA (`apps/imbryk`).
+8. **Categorisation model** — Gemini Flash via `CategoriserStrategy` interface (swappable to local model later).
+9. **Per-newspaper model tiers** — Pro for Herald, Market Wire, Curator, validation, ledger mutation. Flash for People's Dispatch, Sovereign Standard, Green Pulse, Oracle Network. Configurable via map.
+10. **Content moderation** — the Newsroom Director (Pro model with full world context) validates prompt coherence before article generation. The categoriser does not gate content. Payment itself filters casual abuse.
+11. **Prompt merging** — multiple prompts landing in the same newspaper category for one morning run are merged into a single event briefing for that persona.
+
 ## Open Questions
 
-1. **Trigger model** — Should editions be generated on-demand per user prompt, or batched on a schedule (e.g., "morning press" daily)?
-2. **World state branching** — If multiple prompts arrive concurrently, do they share the same world state or create divergent timelines?
-3. **Gemini model selection** — Which Gemini model variant balances quality vs. cost for 6 parallel persona calls?
-4. **Content moderation** — How aggressively should user prompts be filtered? What about generated content?
-5. **Monetisation** — Credit-based? Subscription? Free tier with limits?
-6. **Multi-language** — Should articles be generated in multiple languages from the start, or English-only for MVP?
+None currently blocking. Model tier assignments (decision 9) can be tuned after initial testing.
