@@ -1,6 +1,8 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
+import sentry_sdk
 from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -8,7 +10,14 @@ from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
 from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
-from ingestion_api.config import RATE_LIMIT_QUOTE
+from ingestion_api.config import CORS_ALLOWED_ORIGINS, RATE_LIMIT_QUOTE, SENTRY_DSN
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+    )
 from ingestion_api.database import get_db
 from ingestion_api.models import (
     CategorisedPrompt,
@@ -33,6 +42,13 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="Imbryk Ingestion API", version="0.2.0")
 app.state.limiter = limiter
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 @app.exception_handler(RateLimitExceeded)

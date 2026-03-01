@@ -123,38 +123,41 @@
 
 ---
 
-## Phase 8: Frontend — Prompt Submission UI
+## Phase 8: Frontend — Prompt Submission UI ("The Orb") [x]
 
-- [ ] Remove NxWelcome boilerplate, establish app shell
-- [ ] Build prompt submission form — event description textarea
-- [ ] Build cost calculator — show estimated cost based on newspapers_reached (calls `/prompts/quote`)
-- [ ] Show which newspapers will cover the prompt (category routing preview)
-- [ ] Integrate Braintree Drop-in UI for payment
-- [ ] Build confirmation view — payment success, prompt queued for next morning edition, list of newspapers that will receive it
-- [ ] Mobile-first layout, WCAG 2.2 AA compliance
-- [ ] Keyboard navigation and screen reader testing
-- [ ] Loading states, error boundaries, empty states
-- [ ] Deploy to Cloudflare Pages
+- [x] Set up Tailwind CSS v4 + shadcn/ui + braintree-web-drop-in dependencies
+- [x] Remove NxWelcome boilerplate, establish app shell with ARIA landmarks (SkipLink, Header, Footer)
+- [x] Build the Orb — glowing sphere centerpiece with breathing animation, focus glow, and release animation (custom CSS keyframes + `prefers-reduced-motion` support)
+- [x] Build OrbInput — shadcn Textarea inside the orb visual, character count with `aria-live`
+- [x] Build cost calculator with live QuotePreview — debounced `POST /prompts/quote`, newspaper routing cards (shadcn Card + Badge)
+- [x] Build PromptFlow state machine — `useReducer` with `input → payment → confirmed → error` states
+- [x] Integrate Braintree Drop-in UI for payment (PaymentForm + useBraintree hook)
+- [x] Build Confirmation view — success alert, newspaper list, "Submit another" button
+- [x] Build ErrorBoundary with retry
+- [x] Mobile-first layout, WCAG 2.2 AA compliance (skip link, focus rings, labels, contrast, touch targets)
+- [x] Keyboard navigation and screen reader testing — ARIA landmarks, skip link, focus rings, labels verified in tests
+- [x] Write tests — app shell, OrbInput, QuotePreview, useQuote hook (25 tests passing)
+- [ ] Deploy to Cloudflare Pages — requires Cloudflare account setup (see DEPLOYMENT.md)
 
 ---
 
-## Phase 9: Integration & DevOps
+## Phase 9: Integration & DevOps [~]
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed infrastructure setup, containerisation, and deployment procedures.
 
-- [ ] Set up CI/CD pipeline (GitHub Actions) — lint, typecheck, test on PR
-- [ ] Configure Cloudflare R2 bucket and access credentials
-- [ ] Set up Vertex AI project, service account, and API keys
-- [ ] Set up GCP Pub/Sub topic and subscription
-- [ ] Configure Cloud Scheduler for daily morning trigger
-- [ ] Containerise Python apps (Dockerfile per app, include sentence-transformers model in newsroom-director image)
-- [ ] Deploy ingestion-api to Cloud Run
-- [ ] Deploy newsroom-director as Cloud Run Job
-- [ ] Set up environment variable management (secrets for API keys, Braintree keys)
-- [ ] Configure CORS between prompt UI and API
-- [ ] Set up monitoring and alerting (error rates, API latency, Gemini token spend, cluster quality metrics)
-- [ ] Set up Cloudflare Pages deployment for gazette output
-- [ ] Automate: morning run completes -> gazette rebuild -> deploy
+- [x] Set up CI/CD pipeline (GitHub Actions) — JS job (lint, test, build, typecheck) + Python job (lint, test) + Docker build check
+- [ ] Configure Cloudflare R2 bucket and access credentials — requires Cloudflare account
+- [ ] Set up Vertex AI project, service account, and API keys — requires GCP project
+- [ ] Set up GCP Pub/Sub topic and subscription — requires GCP project
+- [ ] Configure Cloud Scheduler for daily morning trigger — requires GCP project
+- [x] Containerise Python apps (Dockerfile per app, include sentence-transformers model in newsroom-director image)
+- [ ] Deploy ingestion-api to Cloud Run — requires GCP project + container registry
+- [ ] Deploy newsroom-director as Cloud Run Job — requires GCP project + container registry
+- [ ] Set up environment variable management (secrets for API keys, Braintree keys) — requires GCP Secret Manager
+- [x] Configure CORS between prompt UI and API — CORSMiddleware added, configurable via `CORS_ALLOWED_ORIGINS` env var
+- [ ] Set up monitoring and alerting (error rates, API latency, Gemini token spend, cluster quality metrics) — requires GCP project
+- [ ] Set up Cloudflare Pages deployment for gazette output — requires Cloudflare account
+- [ ] Automate: morning run completes -> gazette rebuild -> deploy — requires deploy hook URL
 
 ---
 
@@ -169,7 +172,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed infrastructure setup, containeri
 - [ ] Calibrate weight formula against editorial judgment — A/B test which prompts get coverage
 - [ ] Calibrate "In Brief" threshold — what weight floor separates a full article from a brief mention
 - [ ] User acceptance testing with sample world events
-- [ ] Set up error tracking (Sentry or similar)
+- [x] Set up error tracking (Sentry) — `@sentry/react` in frontend (ErrorBoundary + browser tracing), `sentry-sdk[fastapi]` in ingestion API. DSN via `VITE_SENTRY_DSN` / `SENTRY_DSN` env vars. Disabled when DSN is empty.
 - [ ] Define and implement backup strategy for WorldLedger in PostgreSQL
 - [ ] Define failure behaviour: if pipeline fails, publish nothing vs last successful edition vs stub
 - [ ] Refine persona system prompt templates — test each against sample events, tune voice/bias fidelity

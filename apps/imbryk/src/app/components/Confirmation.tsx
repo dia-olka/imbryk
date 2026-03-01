@@ -1,0 +1,61 @@
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import type { QuoteResponse } from '../api/types';
+import { NEWSPAPER_DISPLAY } from './newspaper-display';
+
+interface ConfirmationProps {
+  quote: QuoteResponse;
+  onReset: () => void;
+}
+
+export function Confirmation({ quote, onReset }: ConfirmationProps) {
+  return (
+    <div
+      className="w-full max-w-md mx-auto space-y-4"
+      role="status"
+      aria-live="polite"
+    >
+      <Alert variant="success">
+        <AlertTitle>Your event has been sent into the world</AlertTitle>
+        <AlertDescription>
+          It will appear in tomorrow morning&apos;s edition. Each newspaper will
+          cover it from their own angle.
+        </AlertDescription>
+      </Alert>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-sans">
+            Newspapers covering your event
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2">
+            {quote.newspapers.map((n) => {
+              const display = NEWSPAPER_DISPLAY[n.newspaper_id];
+              return (
+                <li key={n.newspaper_id} className="font-sans">
+                  <span className="font-semibold">
+                    {display?.paperName ?? n.newspaper_id}
+                  </span>
+                  {display?.tagline && (
+                    <span className="text-text-muted text-sm ml-2 italic">
+                      — {display.tagline}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </CardContent>
+      </Card>
+
+      <div className="text-center">
+        <Button onClick={onReset} variant="outline" size="lg">
+          Submit another event
+        </Button>
+      </div>
+    </div>
+  );
+}

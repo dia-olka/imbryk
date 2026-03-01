@@ -316,6 +316,7 @@ curl -X POST "$DEPLOY_HOOK_URL"
 3. Set environment variables:
    - `NODE_VERSION=20`
    - `VITE_API_URL=https://ingestion-api-HASH-uc.a.run.app`
+   - `VITE_SENTRY_DSN=https://...@sentry.io/...` (optional)
 
 ---
 
@@ -330,6 +331,8 @@ curl -X POST "$DEPLOY_HOOK_URL"
 | `BRAINTREE_MERCHANT_ID` | Secret Manager | Braintree credentials |
 | `BRAINTREE_PUBLIC_KEY` | Secret Manager | Braintree credentials |
 | `BRAINTREE_PRIVATE_KEY` | Secret Manager | Braintree credentials |
+| `CORS_ALLOWED_ORIGINS` | Env var | Comma-separated allowed origins (default: `http://localhost:4200`) |
+| `SENTRY_DSN` | Env var | Sentry error tracking DSN (optional, disabled if empty) |
 
 ### Newsroom Director
 

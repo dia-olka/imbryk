@@ -219,16 +219,20 @@ One expensive, high-quality LLM call per newspaper edition. Multiple calls would
 
 ## Projects
 
-### `apps/imbryk` — Prompt Submission UI
+### `apps/imbryk` — Prompt Submission UI ("The Orb")
 
 | Aspect | Detail |
 |---|---|
 | Framework | React 19, Vite 7 |
-| Styling | CSS Modules (mobile-first, WCAG 2.2 AA) |
+| Styling | Tailwind CSS v4 + shadcn/ui (mobile-first, WCAG 2.2 AA) |
 | Test | Vitest + @testing-library/react |
 | Port | 4200 (dev) |
 
-The prompt submission and payment interface. Users write an event prompt, see a cost estimate (based on how many newspapers it would trigger), pay via Braintree, and receive confirmation. No account creation — Braintree handles identity.
+The prompt submission and payment interface, built around a central metaphor: **the Orb**. Inspired by the Interstate 60 magic ball — users hold a glowing sphere, type a world-altering event into it, and release it into the world. The orb pulses with a warm rust glow while idle, intensifies on focus, and plays a release animation on submission.
+
+The UX flow: users type an event prompt inside the orb, see a live cost estimate (based on how many newspapers the event would trigger), review which newspapers will cover it, pay via Braintree Drop-in, and receive confirmation. No account creation — Braintree handles identity.
+
+Tailwind CSS v4 handles layout, spacing, and typography. shadcn/ui provides polished accessible components (Card, Button, Badge, Label, Textarea, Alert). The orb glow and animation effects use custom CSS keyframes layered on top.
 
 This app does **not** display generated newspapers. Those are static HTML on a separate domain.
 

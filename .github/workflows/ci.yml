@@ -11,7 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  main:
+  js:
+    name: JavaScript (lint, test, build, typecheck)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,12 +20,6 @@ jobs:
           filter: tree:0
           fetch-depth: 0
 
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e-ci"
-
-      # Cache node_modules
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -32,9 +27,58 @@ jobs:
 
       - run: npm ci
 
-      # Prepend any command with "nx record --" to record its logs to Nx Cloud
-      - run: npx nx record -- npx nx format:check  --base="remotes/origin/main"
-      - run: npx nx run-many -t lint test build typecheck e2e-ci
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: npx nx fix-ci
-        if: always()
+      - uses: nrwl/nx-set-shas@v4
+
+      - run: npx nx format:check
+
+      - run: npx nx affected -t lint test build typecheck
+
+  python:
+    name: Python (lint, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install ingestion-api dependencies
+        working-directory: apps/ingestion-api
+        run: uv pip install --system ".[dev]" 2>/dev/null || uv pip install --system .
+
+      - name: Install newsroom-director dependencies
+        working-directory: apps/newsroom-director
+        run: uv pip install --system ".[dev]" 2>/dev/null || uv pip install --system .
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      - uses: nrwl/nx-set-shas@v4
+
+      - run: npx nx affected -t lint test --projects='ingestion-api,newsroom-director'
+
+  docker:
+    name: Docker build check
+    runs-on: ubuntu-latest
+    needs: [js, python]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ingestion-api image
+        run: docker build -t imbryk/ingestion-api:ci -f apps/ingestion-api/Dockerfile apps/ingestion-api
+
+      # newsroom-director build is skipped in CI — the sentence-transformers
+      # model download makes it too slow for a CI check. It's validated
+      # during manual deployment.
