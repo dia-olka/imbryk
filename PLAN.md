@@ -140,6 +140,8 @@
 
 ## Phase 9: Integration & DevOps
 
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed infrastructure setup, containerisation, and deployment procedures.
+
 - [ ] Set up CI/CD pipeline (GitHub Actions) — lint, typecheck, test on PR
 - [ ] Configure Cloudflare R2 bucket and access credentials
 - [ ] Set up Vertex AI project, service account, and API keys
