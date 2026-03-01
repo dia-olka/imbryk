@@ -10,7 +10,13 @@
       "path": "./packages/world-state"
     },
     {
+      "path": "./packages/taxonomy"
+    },
+    {
       "path": "./packages/ai-personas"
+    },
+    {
+      "path": "./packages/prompt-engine"
     }
   ]
 }

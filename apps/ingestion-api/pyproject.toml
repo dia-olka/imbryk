@@ -25,6 +25,11 @@ dependencies = [
     "fastapi>=0.128.8",
     "pydantic>=2.12.5",
     "uvicorn[standard]>=0.39.0",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "slowapi>=0.1",
+    "braintree>=4.0",
+    "google-cloud-aiplatform>=1.139.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -55,6 +60,7 @@ exclude = [
   ".tox",
   ".venv",
   "dist",
+  "alembic",
 ]
 
 line-length = 88
@@ -79,3 +85,6 @@ ignore = []
 
 fixable = ["ALL"]
 unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"ingestion_api/main.py" = ["B008"]  # Depends() in FastAPI signatures is idiomatic

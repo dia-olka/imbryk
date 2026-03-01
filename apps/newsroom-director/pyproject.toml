@@ -23,6 +23,13 @@ requires-python = ">=3.9,<4"
 readme = 'README.md'
 dependencies = [
     "google-cloud-aiplatform>=1.139.0",
+    "hdbscan>=0.8.41",
+    "numpy<2",
+    "scikit-learn>=1.6.1",
+    "sentence-transformers>=5.1.2",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "torch>=2.1,<2.3",
 ]
 
 [tool.hatch.build.targets.wheel]
