@@ -1,0 +1,81 @@
+---
+layout: layouts/base.njk
+title: "Newspapers — Imbryk Gazette"
+---
+
+<div class="page-header">
+  <h1>Our Newspapers</h1>
+  <p class="subtitle">Six ideologically distinct perspectives on the same world</p>
+</div>
+
+{% for persona in personas.newspapers %}
+  <article class="identity-card" aria-labelledby="paper-{{ persona.id }}">
+    <h2 id="paper-{{ persona.id }}">{{ persona.paperName }}</h2>
+    <p class="tagline">{{ persona.tagline }}</p>
+    <span class="model-tier">{{ persona.modelTier }} tier</span>
+
+    <p class="detail-label">Ideology</p>
+    <p>{{ persona.ideology }}</p>
+
+    <p class="detail-label">Political Leaning</p>
+    <p>{{ persona.politicalLeaning }}</p>
+
+    <p class="detail-label">Writing Style</p>
+    <p>{{ persona.writingStyle }}</p>
+
+    <p class="detail-label">Regional Bias</p>
+    <p>{{ persona.regionalBias }}</p>
+
+    <p class="detail-label">Editorial Biases</p>
+    <ul>
+      {% for bias in persona.biases %}
+        <li>{{ bias }}</li>
+      {% endfor %}
+    </ul>
+
+    <p class="detail-label">Blindspots</p>
+    <ul>
+      {% for blindspot in persona.blindspots %}
+        <li>{{ blindspot }}</li>
+      {% endfor %}
+    </ul>
+
+    <p class="detail-label">Subscribed Categories</p>
+    <ul class="category-tags" role="list">
+      {% for catId in persona.subscribedCategories %}
+        {% set cat = taxonomy.categories | findCategory(catId) %}
+        <li class="category-tag">{{ cat.label if cat else catId }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+{% endfor %}
+
+<hr class="section-divider">
+
+<article class="identity-card" aria-labelledby="paper-curator">
+  <h2 id="paper-curator">{{ personas.curator.paperName }}</h2>
+  <p class="tagline">{{ personas.curator.tagline }}</p>
+
+  <p class="detail-label">Ideology</p>
+  <p>{{ personas.curator.ideology }}</p>
+
+  <p class="detail-label">Political Leaning</p>
+  <p>{{ personas.curator.politicalLeaning }}</p>
+
+  <p class="detail-label">Writing Style</p>
+  <p>{{ personas.curator.writingStyle }}</p>
+
+  <p class="detail-label">Editorial Biases</p>
+  <ul>
+    {% for bias in personas.curator.biases %}
+      <li>{{ bias }}</li>
+    {% endfor %}
+  </ul>
+
+  <p class="detail-label">Blindspots</p>
+  <ul>
+    {% for blindspot in personas.curator.blindspots %}
+      <li>{{ blindspot }}</li>
+    {% endfor %}
+  </ul>
+</article>

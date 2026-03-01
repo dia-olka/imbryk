@@ -1,0 +1,38 @@
+---
+pagination:
+  data: editions
+  size: 1
+  alias: edition
+permalink: "edition/{{ edition.edition_id }}/index.html"
+layout: layouts/base.njk
+eleventyComputed:
+  title: "Edition {{ edition.date | dateDisplay }} — Imbryk Gazette"
+---
+
+<div class="page-header">
+  <h1>Edition</h1>
+  <p class="date"><time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time></p>
+</div>
+
+<ul class="newspaper-list" role="list">
+  {% for newspaper in edition.newspapers %}
+    {% set persona = personas.newspapers | findPersona(newspaper.newspaper_id) %}
+    <li class="newspaper-list-item">
+      <h2><a href="/edition/{{ edition.edition_id }}/{{ newspaper.newspaper_id }}/">{{ newspaper.newspaper_name }}</a></h2>
+      {% if persona %}
+        <p class="tagline">{{ persona.tagline }}</p>
+      {% endif %}
+      <p class="summary">
+        {{ newspaper.articles.length }} article{{ "s" if newspaper.articles.length != 1 }}{% if newspaper.in_brief.length %}, {{ newspaper.in_brief.length }} in brief{% endif %}
+      </p>
+    </li>
+  {% endfor %}
+</ul>
+
+{% if edition.curator_synthesis %}
+  <hr class="section-divider">
+  <section aria-labelledby="curator-heading">
+    <h2 id="curator-heading"><a href="/edition/{{ edition.edition_id }}/curator/">The Curator's Synthesis</a></h2>
+    <p>{{ edition.curator_synthesis.analysis | truncate(300) }}</p>
+  </section>
+{% endif %}

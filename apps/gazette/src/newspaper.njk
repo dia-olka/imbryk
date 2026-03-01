@@ -1,0 +1,76 @@
+---
+pagination:
+  data: newspaperPages
+  size: 1
+  alias: np
+permalink: "edition/{{ np.editionId }}/{{ np.newspaperId }}/index.html"
+layout: layouts/base.njk
+eleventyComputed:
+  title: "{{ np.newspaperName }} — {{ np.editionDate | dateDisplay }} — Imbryk Gazette"
+---
+
+{% set persona = personas.newspapers | findPersona(np.newspaperId) %}
+
+<div class="page-header">
+  <h1>{{ np.newspaperName }}</h1>
+  {% if persona %}
+    <p class="subtitle">{{ persona.tagline }}</p>
+  {% endif %}
+  <p class="date"><time datetime="{{ np.editionDate | dateISO }}">{{ np.editionDate | dateDisplay }}</time></p>
+</div>
+
+{% if persona %}
+  <details class="identity-card">
+    <summary><strong>About this newspaper</strong></summary>
+    <p class="detail-label">Ideology</p>
+    <p>{{ persona.ideology }}</p>
+    <p class="detail-label">Political Leaning</p>
+    <p>{{ persona.politicalLeaning }}</p>
+    <p class="detail-label">Editorial Biases</p>
+    <ul>
+      {% for bias in persona.biases %}
+        <li>{{ bias }}</li>
+      {% endfor %}
+    </ul>
+    <p class="detail-label">Blindspots</p>
+    <ul>
+      {% for blindspot in persona.blindspots %}
+        <li>{{ blindspot }}</li>
+      {% endfor %}
+    </ul>
+  </details>
+{% endif %}
+
+{% if np.editorsNote %}
+  <aside class="editors-note" aria-label="Editor's note">
+    <h2>Editor's Note</h2>
+    <p>{{ np.editorsNote }}</p>
+  </aside>
+{% endif %}
+
+<section aria-labelledby="articles-heading">
+  <h2 id="articles-heading">Articles</h2>
+
+  {% for article in np.articles %}
+    <article class="article">
+      <h3>{{ article.headline }}</h3>
+      <div class="article-body">
+        {{ article.body | markdown | safe }}
+      </div>
+      <p class="article-meta">{{ article.word_count }} words</p>
+    </article>
+  {% endfor %}
+</section>
+
+{% if np.inBrief.length %}
+  <section class="in-brief" aria-labelledby="in-brief-heading">
+    <h2 id="in-brief-heading">In Brief</h2>
+
+    {% for item in np.inBrief %}
+      <div class="in-brief-item">
+        <h3>{{ item.headline }}</h3>
+        <p>{{ item.summary }}</p>
+      </div>
+    {% endfor %}
+  </section>
+{% endif %}

@@ -1,5 +1,7 @@
 """Integration tests for the orchestrator (run_morning_press)."""
 
+import json
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -142,9 +144,9 @@ class TestOrchestrator:
         assert len(editions) == 1
 
         articles = editions[0]["articles"]
-        # geopolitics → sovereign, aspirant, radical
-        # entertainment → hedonist, moralist
-        # finance-and-markets → owner
+        # geopolitics -> sovereign, aspirant, radical
+        # entertainment -> hedonist, moralist
+        # finance-and-markets -> owner
         # + curator
         assert "curator" in articles
 
@@ -182,7 +184,7 @@ class TestOrchestrator:
 
         # The stub returns non-JSON, so mutation parsing fails gracefully.
         # WorldLedger should NOT be saved (mutation parse failure).
-        # This is expected — real LLM would return valid JSON.
+        # This is expected -- real LLM would return valid JSON.
         engine = create_engine(test_db_url)
         Session = sessionmaker(bind=engine)
         session = Session()
@@ -219,7 +221,100 @@ class TestOrchestrator:
             distillation_pipeline=pipeline,
         )
 
-        # Generation should be called for each newspaper + curator + mutation
+        # Generation should be called for validation + curator + mutation
+        # (newspapers use generate_with_cache when caching is enabled)
         assert len(gen.calls) > 0
-        model_tiers = {c["model_tier"] for c in gen.calls}
-        assert "pro" in model_tiers
+
+    def test_validation_filters_prompts(self, test_db_url):
+        """Validation that rejects all prompts produces empty edition."""
+        accepted_json = json.dumps({"accepted": []})
+        gen = StubGenerationStrategy(responses={"pro": accepted_json})
+        storage = StubEditionStorage()
+        pipeline = StubDistillationPipeline()
+
+        result = run_morning_press(
+            database_url=test_db_url,
+            generation_strategy=gen,
+            storage=storage,
+            distillation_pipeline=pipeline,
+            enable_validation=True,
+        )
+
+        assert result["edition_id"] is None
+        assert result["newspaper_count"] == 0
+
+    def test_validation_disabled(self, test_db_url):
+        gen = StubGenerationStrategy()
+        storage = StubEditionStorage()
+        pipeline = StubDistillationPipeline()
+
+        result = run_morning_press(
+            database_url=test_db_url,
+            generation_strategy=gen,
+            storage=storage,
+            distillation_pipeline=pipeline,
+            enable_validation=False,
+        )
+
+        # Should still produce an edition without validation step
+        assert result["edition_id"] is not None
+        # With caching enabled, newspaper calls go through generate_with_cache
+        assert result["article_count"] > 0
+
+    def test_cache_lifecycle(self, test_db_url):
+        """Cache is created before generation and deleted in finally."""
+        gen = StubGenerationStrategy()
+        storage = StubEditionStorage()
+        pipeline = StubDistillationPipeline()
+
+        run_morning_press(
+            database_url=test_db_url,
+            generation_strategy=gen,
+            storage=storage,
+            distillation_pipeline=pipeline,
+            enable_caching=True,
+        )
+
+        # Cache should have been created once
+        assert len(gen._cache_calls) == 1
+        # Cache should have been deleted once
+        assert len(gen._cache_delete_calls) == 1
+        assert gen._cache_delete_calls[0] == "stub-cache-handle"
+
+    def test_caching_disabled(self, test_db_url):
+        gen = StubGenerationStrategy()
+        storage = StubEditionStorage()
+        pipeline = StubDistillationPipeline()
+
+        run_morning_press(
+            database_url=test_db_url,
+            generation_strategy=gen,
+            storage=storage,
+            distillation_pipeline=pipeline,
+            enable_caching=False,
+        )
+
+        # No cache operations should have occurred
+        assert len(gen._cache_calls) == 0
+        assert len(gen._cache_delete_calls) == 0
+        # All newspaper generation goes through regular generate()
+        assert len(gen.calls) > 0
+
+    def test_cached_generation_used_for_newspapers(self, test_db_url):
+        gen = StubGenerationStrategy()
+        storage = StubEditionStorage()
+        pipeline = StubDistillationPipeline()
+
+        run_morning_press(
+            database_url=test_db_url,
+            generation_strategy=gen,
+            storage=storage,
+            distillation_pipeline=pipeline,
+            enable_caching=True,
+        )
+
+        # Newspapers should use generate_with_cache
+        assert len(gen._cache_generate_calls) > 0
+        # Curator and mutation should use regular generate (not cached)
+        # At minimum: validation call(s) + curator + mutation
+        assert len(gen.calls) >= 2

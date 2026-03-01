@@ -30,6 +30,7 @@ dependencies = [
     "sqlalchemy>=2.0",
     "alembic>=1.13",
     "torch>=2.1,<2.3",
+    "boto3>=1.35.0",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -4,22 +4,26 @@ Orchestrates the daily newspaper generation pipeline:
 1. Fetch unprocessed prompts from DB
 2. Load/initialise WorldLedger
 3. Route prompts to newspapers via taxonomy
-4. Run distillation pipeline per newspaper
-5. Generate articles via Gemini (per persona)
-6. Run Curator synthesis
-7. Apply WorldLedger mutation
-8. Save edition and mark prompts processed
+4. Serialize WorldLedger synopsis & create context cache
+5. Run coherence validation on prompts
+6. Run distillation pipeline per newspaper
+7. Generate articles via Gemini (per persona)
+8. Run Curator synthesis
+9. Apply WorldLedger mutation
+10. Save edition and mark prompts processed
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
+import sys
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from .config import DATABASE_URL
+from .config import DATABASE_URL, R2_ACCOUNT_ID, VERTEX_AI_LOCATION, VERTEX_AI_PROJECT
 from .db import (
     fetch_unprocessed_prompts,
     get_engine,
@@ -31,7 +35,7 @@ from .db import (
 )
 from .distillation.pipeline import DistillationPipeline
 from .distillation.types import Prompt as DistillationPrompt
-from .generation import GenerationStrategy, StubGenerationStrategy
+from .generation import GenerationStrategy, StubGenerationStrategy, VertexAIStrategy
 from .logging_config import configure_logging
 from .personas import (
     CURATOR_PERSONA,
@@ -39,6 +43,7 @@ from .personas import (
 )
 from .storage import EditionStorage, StubEditionStorage
 from .taxonomy import route_prompt
+from .validation import validate_prompts
 from .world_ledger import (
     INITIAL_WORLD_LEDGER,
     LedgerMutation,
@@ -58,6 +63,8 @@ def run_morning_press(
     generation_strategy: GenerationStrategy | None = None,
     storage: EditionStorage | None = None,
     distillation_pipeline: DistillationPipeline | None = None,
+    enable_validation: bool = True,
+    enable_caching: bool = True,
 ) -> dict:
     """Execute the full Morning Press generation pipeline.
 
@@ -66,6 +73,8 @@ def run_morning_press(
         generation_strategy: LLM generation backend (defaults to stub).
         storage: Edition output storage (defaults to stub).
         distillation_pipeline: Override for the distillation pipeline.
+        enable_validation: Run coherence validation on prompts.
+        enable_caching: Use Vertex AI context caching when available.
 
     Returns:
         Summary dict with edition_id, newspaper_count, article_count.
@@ -82,6 +91,8 @@ def run_morning_press(
     engine = get_engine(db_url)
     session_factory = get_session_factory(engine)
     session = session_factory()
+
+    cached_content = None
 
     try:
         # Step 2: Fetch unprocessed prompts
@@ -109,14 +120,34 @@ def run_morning_press(
         # Step 4: Serialize WorldLedger to synopsis
         synopsis = serialize_ledger_to_synopsis(ledger)
 
-        # Step 5: Route prompts to newspapers
+        # Step 4b: Create context cache for synopsis (shared across newspapers)
+        if enable_caching:
+            cached_content = gen.create_cache(synopsis)
+
+        # Step 5: Coherence validation — filter prompts against world state
+        if enable_validation:
+            prompt_records = validate_prompts(
+                prompt_records, synopsis, gen
+            )
+            if not prompt_records:
+                logger.info(
+                    "All prompts rejected by coherence validation, "
+                    "skipping edition"
+                )
+                return {
+                    "edition_id": None,
+                    "newspaper_count": 0,
+                    "article_count": 0,
+                }
+
+        # Step 6: Route prompts to newspapers
         newspaper_prompts: dict[str, list] = defaultdict(list)
         for pr in prompt_records:
             routes = route_prompt(pr.category_ids)
             for route in routes:
                 newspaper_prompts[route.newspaper_id].append(pr)
 
-        # Step 6: For each newspaper, distill and generate
+        # Step 7: For each newspaper, distill and generate
         articles: dict[str, str] = {}
         for persona in NEWSPAPER_PERSONAS:
             prompts_for_paper = newspaper_prompts.get(persona.id, [])
@@ -146,14 +177,19 @@ def run_morning_press(
             budgeted = pipeline.run(dist_prompts)
             digests_text = pipeline.serialize_all(budgeted)
 
-            # Interpolate persona system prompt
-            system_prompt = persona.system_prompt_template.replace(
+            # Build the user prompt with cluster digests for this newspaper
+            user_prompt = persona.system_prompt_template.replace(
                 "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
             ).replace("{{CLUSTER_DIGESTS}}", digests_text)
 
-            # Call LLM
+            # Call LLM — use cached generation when cache is available
             gen_start = time.monotonic()
-            article = gen.generate(system_prompt, persona.model_tier)
+            if cached_content is not None:
+                article = gen.generate_with_cache(
+                    cached_content, user_prompt, persona.model_tier
+                )
+            else:
+                article = gen.generate(user_prompt, persona.model_tier)
             gen_ms = int((time.monotonic() - gen_start) * 1000)
 
             logger.info(
@@ -168,7 +204,7 @@ def run_morning_press(
 
             articles[persona.id] = article
 
-        # Step 7: Run Curator synthesis
+        # Step 8: Run Curator synthesis
         if articles:
             all_articles_text = _format_all_articles(articles)
             curator_prompt = CURATOR_PERSONA.system_prompt_template.replace(
@@ -179,7 +215,7 @@ def run_morning_press(
             )
             articles["curator"] = curator_article
 
-        # Step 8: WorldLedger mutation via LLM
+        # Step 9: WorldLedger mutation via LLM
         if articles:
             mutation_prompt = _build_mutation_prompt(synopsis, articles)
             mutation_response = gen.generate(mutation_prompt, "pro")
@@ -188,14 +224,14 @@ def run_morning_press(
                 ledger = apply_mutation(ledger, mutation)
                 save_world_ledger(session, ledger_to_dict(ledger))
 
-        # Step 9: Save edition to DB
+        # Step 10: Save edition to DB
         edition_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         edition_id = save_edition(session, edition_date, articles)
 
-        # Step 10: Write edition to storage
+        # Step 11: Write edition to storage
         store.write_edition(edition_id, edition_date, articles)
 
-        # Step 11: Mark prompts as processed
+        # Step 12: Mark prompts as processed
         prompt_ids = [pr.prompt_id for pr in prompt_records]
         mark_prompts_processed(session, prompt_ids)
 
@@ -226,6 +262,9 @@ def run_morning_press(
         session.rollback()
         raise
     finally:
+        # Force-delete context cache to avoid stale billing
+        if cached_content is not None:
+            gen.delete_cache(cached_content)
         session.close()
 
 
@@ -475,5 +514,49 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
     return mutation
 
 
+def cli_main() -> None:
+    """CLI entry point for Cloud Run Job execution."""
+    configure_logging()
+
+    db_url = os.getenv("DATABASE_URL", DATABASE_URL)
+
+    # Choose generation strategy based on environment
+    if VERTEX_AI_PROJECT:
+        gen: GenerationStrategy = VertexAIStrategy(
+            project=VERTEX_AI_PROJECT,
+            location=VERTEX_AI_LOCATION,
+        )
+    else:
+        logger.warning(
+            "VERTEX_AI_PROJECT not set, using StubGenerationStrategy"
+        )
+        gen = StubGenerationStrategy()
+
+    # Choose storage backend
+    store: EditionStorage
+    if R2_ACCOUNT_ID:
+        from .r2_storage import R2EditionStorage
+
+        store = R2EditionStorage()
+    else:
+        logger.warning("R2_ACCOUNT_ID not set, using StubEditionStorage")
+        store = StubEditionStorage()
+
+    enable_validation = os.getenv("ENABLE_VALIDATION", "true").lower() == "true"
+    enable_caching = os.getenv("ENABLE_CACHING", "true").lower() == "true"
+
+    summary = run_morning_press(
+        database_url=db_url,
+        generation_strategy=gen,
+        storage=store,
+        enable_validation=enable_validation,
+        enable_caching=enable_caching,
+    )
+
+    logger.info("Pipeline finished", extra={"summary": summary})
+    if summary["edition_id"] is None:
+        sys.exit(0)
+
+
 if __name__ == "__main__":
-    run_morning_press()
+    cli_main()

@@ -1,0 +1,24 @@
+---
+layout: layouts/base.njk
+title: "Archive — Imbryk Gazette"
+---
+
+<div class="page-header">
+  <h1>Edition Archive</h1>
+  <p class="subtitle">Past editions of the Imbryk Gazette</p>
+</div>
+
+{% if editions.length %}
+  <ul class="edition-list" role="list">
+    {% for edition in editions %}
+      <li class="edition-list-item">
+        <a href="/edition/{{ edition.edition_id }}/">
+          <time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time>
+        </a>
+        — {{ edition.newspapers.length }} newspaper{{ "s" if edition.newspapers.length != 1 }}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No editions published yet.</p>
+{% endif %}

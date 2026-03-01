@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title | default("Imbryk Gazette") }}</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header role="banner" class="site-header">
+    <div class="site-header__inner">
+      <a href="/" class="site-title">Imbryk Gazette</a>
+      <nav aria-label="Primary navigation">
+        <ul class="nav-list" role="list">
+          <li><a href="/"{% if page.url == "/" %} aria-current="page"{% endif %}>Today</a></li>
+          <li><a href="/newspapers/"{% if page.url == "/newspapers/" %} aria-current="page"{% endif %}>Newspapers</a></li>
+          <li><a href="/timeline/"{% if page.url == "/timeline/" %} aria-current="page"{% endif %}>World</a></li>
+          <li><a href="/archive/"{% if page.url == "/archive/" %} aria-current="page"{% endif %}>Archive</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" role="main">
+    {{ content | safe }}
+  </main>
+
+  <footer role="contentinfo" class="site-footer">
+    <p>Imbryk Gazette — AI-generated newspapers reflecting diverse ideological perspectives on a fictional world. No real events. No real people.</p>
+  </footer>
+</body>
+</html>

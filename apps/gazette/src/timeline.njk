@@ -1,0 +1,33 @@
+---
+layout: layouts/base.njk
+title: "World Timeline — Imbryk Gazette"
+---
+
+<div class="page-header">
+  <h1>World Timeline</h1>
+  <p class="subtitle">{{ worldState.epoch }}</p>
+</div>
+
+<section aria-label="World synopsis">
+  <p>{{ worldState.synopsis }}</p>
+</section>
+
+<hr class="section-divider">
+
+<section aria-labelledby="history-heading">
+  <h2 id="history-heading">Historical Events</h2>
+
+  {% for event in worldState.history %}
+    <article class="timeline-event">
+      <p class="event-date">{{ event.date }}</p>
+      <h3>{{ event.headline }}</h3>
+      <p class="event-description">{{ event.description }}</p>
+      <p class="event-impact">{{ event.impact }}</p>
+      <ul class="event-sectors" aria-label="Affected sectors" role="list">
+        {% for sector in event.sectors %}
+          <li class="category-tag">{{ sector }}</li>
+        {% endfor %}
+      </ul>
+    </article>
+  {% endfor %}
+</section>

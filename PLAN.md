@@ -40,7 +40,6 @@
 - [x] Write a `WorldLedger + event -> updated WorldLedger` mutation function (`LedgerMutation` + `applyMutation`)
 - [x] Add `packages/prompt-engine` library with template interpolation utilities (`interpolateTemplate`, `buildNewspaperPrompt`, `buildCuratorPrompt`)
 - [x] Update persona system prompt templates to use `{{CLUSTER_DIGESTS}}` placeholder (replacing `{{EVENT_DESCRIPTION}}`) — completed in Phase 2
-- [ ] Refine persona system prompt templates — test each against sample events, tune voice/bias fidelity
 - [x] Add weighting instructions to system prompts — how to interpret aggregate_weight and verbatim markers `[w:XXXX]` — completed in Phase 2
 - [x] Add output schema to system prompts — newspaper structure with sections, article slots, "In Brief" for minor clusters — completed in Phase 2
 - [x] Write integration tests: template interpolation -> valid prompt string for each persona
@@ -65,9 +64,6 @@
   - [x] Minimum floor (500 tokens) and maximum cap (150K tokens) per cluster
   - [x] Low-volume handling: equal allocation when no weight info
   - [x] High-volume handling: `merge_low_weight_clusters()` into "Other Topics"
-- [ ] Validate pipeline on sample data — embed 10K-100K sample prompts, inspect clusters manually
-- [ ] Validate weight scoring — confirm high-weight prompts surface meaningfully different content than count-weighted selection
-- [ ] Validate digest quality — does the digest faithfully represent the cluster and preserve verbatim voice?
 - [x] Write unit tests for each pipeline stage (50 tests: scorer 10, clusterer 5, digest 10, budget 12, embedder 6, pipeline 6, hello 1)
 
 ---
@@ -88,42 +84,42 @@
 
 ---
 
-## Phase 6: Newsroom Director Implementation
+## Phase 6: Newsroom Director Implementation [x]
 
-- [ ] Implement batch job entry point (Cloud Run Job trigger)
-- [ ] Implement: pull unprocessed categorised prompts from PostgreSQL
-- [ ] Implement: route prompts to newspapers via taxonomy (set intersection)
-- [ ] Implement: load WorldLedger from PostgreSQL
-- [ ] Implement Vertex AI context cache creation from WorldLedger synopsis
-- [ ] Implement world coherence validation (Pro model) — accept/reject prompts against current world state
-- [ ] Implement per-newspaper distillation pipeline integration:
-  - [ ] Embed newspaper's prompt pool (local sentence-transformers)
-  - [ ] Cluster via HDBSCAN
-  - [ ] Build weighted cluster digests
-  - [ ] Allocate token budget
-  - [ ] Single Gemini call with persona system prompt, ledger context, and allocated digests
-- [ ] Implement per-newspaper model tier config map (Pro vs Flash per persona)
-- [ ] Implement Curator synthesis (Pro model) — input: all generated articles, output: meta-analysis
-- [ ] Implement WorldLedger mutation (Pro model) — apply consequences, write back to PostgreSQL transactionally
-- [ ] Implement R2 write — store edition articles as JSON (full articles, in brief, editor's note, metadata block)
-- [ ] Implement context cache force-deletion
-- [ ] Add retry logic and error handling for Gemini API failures (cache cluster digests so failed calls can retry without recomputing)
-- [ ] Add structured logging (edition ID, newspaper ID, model tier, latency, token usage, cluster count)
-- [ ] Write end-to-end test: sample prompts -> full edition output across multiple newspapers
+- [x] Implement batch job entry point (Cloud Run Job trigger)
+- [x] Implement: pull unprocessed categorised prompts from PostgreSQL
+- [x] Implement: route prompts to newspapers via taxonomy (set intersection)
+- [x] Implement: load WorldLedger from PostgreSQL
+- [x] Implement Vertex AI context cache creation from WorldLedger synopsis
+- [x] Implement world coherence validation (Pro model) — accept/reject prompts against current world state
+- [x] Implement per-newspaper distillation pipeline integration:
+  - [x] Embed newspaper's prompt pool (local sentence-transformers)
+  - [x] Cluster via HDBSCAN
+  - [x] Build weighted cluster digests
+  - [x] Allocate token budget
+  - [x] Single Gemini call with persona system prompt, ledger context, and allocated digests
+- [x] Implement per-newspaper model tier config map (Pro vs Flash per persona)
+- [x] Implement Curator synthesis (Pro model) — input: all generated articles, output: meta-analysis
+- [x] Implement WorldLedger mutation (Pro model) — apply consequences, write back to PostgreSQL transactionally
+- [x] Implement R2 write — store edition articles as JSON (full articles, in brief, editor's note, metadata block)
+- [x] Implement context cache force-deletion
+- [x] Add retry logic and error handling for Gemini API failures (cache cluster digests so failed calls can retry without recomputing)
+- [x] Add structured logging (edition ID, newspaper ID, model tier, latency, token usage, cluster count)
+- [x] Write end-to-end test: sample prompts -> full edition output across multiple newspapers
 
 ---
 
-## Phase 7: Gazette — Static Site Generator
+## Phase 7: Gazette — Static Site Generator [x]
 
-- [ ] Scaffold `apps/gazette` with 11ty
-- [ ] Design newspaper page templates (edition index, per-newspaper article pages, In Brief section, Editor's note, Curator synthesis)
-- [ ] Build persona identity cards (ideology, biases, blindspots, subscribed categories) into article templates
-- [ ] Build world timeline page from WorldLedger history
-- [ ] Build edition archive with pagination
-- [ ] Build newspaper directory — the 6 newspapers with their identity cards and category subscriptions
-- [ ] Mobile-first responsive design, WCAG 2.2 AA
-- [ ] Set up Cloudflare Pages deployment for gazette output
-- [ ] Automate: morning run completes -> gazette rebuild -> deploy
+- [x] Scaffold `apps/gazette` with 11ty v3 — package.json, project.json, eleventy.config.js
+- [x] Data files importing from workspace packages (`@org/ai-personas`, `@org/world-state`, `@org/taxonomy`)
+- [x] Sample edition JSON fixture for template development
+- [x] Design newspaper page templates (edition index, per-newspaper article pages, In Brief section, Editor's note, Curator synthesis)
+- [x] Build persona identity cards (ideology, biases, blindspots, subscribed categories) into article templates
+- [x] Build world timeline page from WorldLedger history
+- [x] Build edition archive with pagination
+- [x] Build newspaper directory — the 6 newspapers with their identity cards and category subscriptions
+- [x] Mobile-first responsive design, WCAG 2.2 AA (skip links, focus indicators, semantic HTML, ARIA landmarks, contrast ratios)
 
 ---
 
@@ -155,6 +151,8 @@
 - [ ] Set up environment variable management (secrets for API keys, Braintree keys)
 - [ ] Configure CORS between prompt UI and API
 - [ ] Set up monitoring and alerting (error rates, API latency, Gemini token spend, cluster quality metrics)
+- [ ] Set up Cloudflare Pages deployment for gazette output
+- [ ] Automate: morning run completes -> gazette rebuild -> deploy
 
 ---
 
@@ -172,6 +170,10 @@
 - [ ] Set up error tracking (Sentry or similar)
 - [ ] Define and implement backup strategy for WorldLedger in PostgreSQL
 - [ ] Define failure behaviour: if pipeline fails, publish nothing vs last successful edition vs stub
+- [ ] Refine persona system prompt templates — test each against sample events, tune voice/bias fidelity
+- [ ] Validate distillation pipeline on sample data — embed 10K-100K sample prompts, inspect clusters manually
+- [ ] Validate weight scoring — confirm high-weight prompts surface meaningfully different content than count-weighted selection
+- [ ] Validate digest quality — does the digest faithfully represent the cluster and preserve verbatim voice?
 - [ ] Launch checklist: DNS, SSL, rate limits, monitoring dashboards
 
 ---
