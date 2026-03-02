@@ -52,8 +52,11 @@ User Prompt
 |     e. Single Gemini call per newspaper        |
 |  6. Curator synthesis                          |
 |  7. Update WorldLedger in DB                   |
-|  8. Write edition articles to R2               |
-|  9. Force-delete context cache                 |
+|  8. Generate article images (Imagen)           |
+|     - Top articles with imagePrompt -> Imagen  |
+|     - Front-page hero image per newspaper      |
+|  9. Write edition articles + images to R2      |
+| 10. Force-delete context cache                 |
 +------------------------------------------------+
            |
            v
@@ -212,10 +215,20 @@ One expensive, high-quality LLM call per newspaper edition. Multiple calls would
 **Extended thinking mode** is used for the editorial reasoning phase — cross-cluster synthesis, importance calibration, story angle selection, narrative cohesion. Article prose generation follows from that plan with less thinking.
 
 **Output format:**
-- Full articles (8-18): top clusters by aggregate_weight, ~400-600 words each, grounded in verbatim prompts
-- In Brief section: remaining clusters, 2-3 sentences each
+- Full articles (8-18): top clusters by aggregate_weight, ~400-600 words each, grounded in verbatim prompts. Top articles include a nullable `imagePrompt` — a short, vivid scene description for Imagen generation, coloured by the newspaper's editorial lens.
+- `frontPageImagePrompt` (nullable): a single scene description capturing the day's dominant story for the newspaper's hero image
+- In Brief section: remaining clusters, 2-3 sentences each (no images)
 - Editor's note: cross-cluster observations, what defined the day
 - Metadata block: article-to-cluster mapping, weights used, generation timestamp
+
+### Stage 5 — Image Generation (post-Gemini)
+
+After all Gemini calls complete, articles with non-null `imagePrompt` are sent to Vertex AI Imagen for image generation. Each newspaper also gets a front-page hero image from `frontPageImagePrompt` if present.
+
+- Images are generated as WebP for size efficiency (~100 KB each)
+- Stored in R2 at `editions/{edition_id}/{newspaper_id}/{article_index}.webp` (and `hero.webp` for the front page)
+- If Imagen fails for a specific image, the article publishes without it — image failures never block the edition pipeline
+- Estimated 3-4 images per newspaper per day (top articles + hero), ~20-24 images total
 
 ## Projects
 
@@ -297,9 +310,10 @@ The core intelligence layer. Runs as a daily batch job:
    - Allocate token budget proportional to cluster importance
    - Single Gemini call with persona system prompt, ledger context, and allocated digests
 7. **Run Curator synthesis (Pro model)** — The Curator reads all generated articles and produces a meta-analysis
-8. **Update WorldLedger (Pro model)** — applies the event consequences to the ledger and writes back to PostgreSQL transactionally
-9. **Write to R2** — stores edition articles as JSON for the Gazette to consume
-10. **Force-delete context cache** — drops the Vertex AI cache immediately to avoid idle costs
+8. **Generate article images (Imagen)** — for articles with non-null `imagePrompt`, call Vertex AI Imagen. Generate front-page hero images from `frontPageImagePrompt`. Store as WebP. Failures are non-blocking.
+9. **Update WorldLedger (Pro model)** — applies the event consequences to the ledger and writes back to PostgreSQL transactionally
+10. **Write to R2** — stores edition articles as JSON and images as WebP for the Gazette to consume
+11. **Force-delete context cache** — drops the Vertex AI cache immediately to avoid idle costs
 
 ### Per-Newspaper Model Tier Map
 
@@ -394,7 +408,8 @@ Each active newspaper runs exactly one Gemini call per day. Cost scales with act
 | Extractive summarisation | ~$0 |
 | Token budget allocation | ~$0 |
 | Gemini call per newspaper | ~$3 |
-| Daily cost at 6 newspapers | ~$18 |
+| Imagen per image (~20-24 images/day) | ~$0.50-1.00 |
+| Daily cost at 6 newspapers | ~$19-20 |
 
 The per-newspaper verbatim breakpoint (all prompts included raw without summarisation) is ~22,900 prompts/day per newspaper. Below that, every newspaper runs fully verbatim. Above it, high-volume newspapers start summarising while niche ones may stay verbatim indefinitely.
 
@@ -411,6 +426,7 @@ The per-newspaper verbatim breakpoint (all prompts included raw without summaris
 | Clustering | HDBSCAN | Groups prompts into topically coherent clusters per newspaper. Local compute. |
 | Static Hosting | Cloudflare Pages | Generated newspaper HTML (public, no auth). |
 | Prompt UI Hosting | Cloudflare Pages | React SPA for prompt submission. |
+| Image Generation | Vertex AI Imagen | Article and front-page images. Called post-Gemini for top articles with non-null `imagePrompt`. Stored as WebP in R2. |
 | Payments | Braintree | Payment processing. No user data stored on our side. |
 
 ## Key Design Decisions

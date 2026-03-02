@@ -95,7 +95,7 @@ Google Cloud has many services, and they are turned off by default. You need to 
    - **Cloud SQL Admin API** — manages the database
    - **Pub/Sub API** — internal messaging between services
    - **Cloud Scheduler API** — triggers the daily newspaper generation
-   - **Vertex AI API** — the AI that writes articles
+   - **Vertex AI API** — the AI that writes articles and generates images
    - **Artifact Registry API** — stores the application container images
    - **Secret Manager API** — securely stores passwords and API keys
 
@@ -552,6 +552,7 @@ With the Google Cloud free trial, you will not pay anything for the first 90 day
 | API server (Cloud Run) | ~$0-2 | Only runs when someone makes a request; free when idle |
 | Newsroom Director (Cloud Run Job) | ~$0.50 | Runs once per day for ~10 minutes |
 | AI article generation (Vertex AI / Gemini) | ~$18 | ~$3 per newspaper x 6 newspapers per day |
+| AI image generation (Vertex AI / Imagen) | ~$15-30 | ~20-24 images/day for article and front-page illustrations |
 | AI validation & world updates | ~$2-4 | Uses the more expensive AI model for accuracy |
 | File storage (Cloudflare R2) | $0 | Free tier covers years of editions |
 | Prompt UI website (Cloudflare Pages) | $0 | Free |
@@ -559,9 +560,9 @@ With the Google Cloud free trial, you will not pay anything for the first 90 day
 | Container image storage (Artifact Registry) | ~$0.50 | Storing the two application images |
 | Daily schedule (Cloud Scheduler) | $0 | Free for up to 3 jobs |
 | Secret storage (Secret Manager) | ~$0.06 | A few secrets, rarely accessed |
-| **Total** | **~$30-35/month** | |
+| **Total** | **~$45-65/month** | |
 
-The biggest costs are the database (~$8/month, always on) and Gemini AI usage (~$20/month, proportional to number of active newspapers). Everything on Cloudflare is free.
+The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, proportional to number of active newspapers and images), followed by the database (~$8/month, always on). Everything on Cloudflare is free.
 
 > **Saving money:** If $30/month is too much after the free trial ends, the database is the first thing to look at. Services like [Neon](https://neon.tech/) or [Supabase](https://supabase.com/) offer free PostgreSQL tiers that could replace Cloud SQL.
 
