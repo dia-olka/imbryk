@@ -464,3 +464,48 @@ The per-newspaper verbatim breakpoint (all prompts included raw without summaris
 16. **One Gemini call per newspaper per day** — Cost scales linearly with active newspapers, not with prompt volume. At ~$3 per newspaper edition, 6 newspapers cost ~$18/day.
 
 17. **Overlap between newspapers is a feature** — When multiple newspapers receive the same prompt via shared category subscriptions, they produce genuinely distinct articles because each sees a different prompt pool composition and has a different editorial lens.
+
+## Failure Behaviour
+
+This section documents the defined failure behaviour at each stage of the pipeline.
+
+### Ingestion API
+
+| Failure point | Behaviour |
+|---|---|
+| Braintree webhook duplicate delivery | Idempotency check on `braintree_transaction_id`. Duplicate webhooks return 200 without re-processing. |
+| Categoriser fails (e.g. Gemini API error) | Payment ref and raw prompt are committed to the DB with status `categorisation_failed`. No `categorised_prompts` rows are created. The prompt is excluded from the next morning batch (only `accepted` prompts are fetched). Recovery: re-run categorisation against the saved prompt text. |
+| Database unreachable during webhook | FastAPI returns 500. The DB session is explicitly rolled back. Braintree will retry the webhook; the idempotency check prevents double-processing on successful retry. |
+| Partial DB write (prompt flushed, categorisation fails before commit) | The session is rolled back — no partial state persists. SQLAlchemy's session close triggers implicit rollback; `get_db()` also calls explicit rollback on error. |
+
+### Newsroom Director
+
+| Failure point | Behaviour |
+|---|---|
+| Single newspaper Gemini call fails (after retries) | That newspaper is skipped. Other newspapers continue to generate. The edition is published with whichever newspapers succeeded. |
+| All newspaper Gemini calls fail | `articles` dict is empty. No edition is created. Prompts remain `accepted` and are retried on the next morning run. |
+| Vertex AI context cache creation fails | Falls back to uncached generation for all newspapers. The pipeline continues without interruption. |
+| Coherence validation Gemini call fails (parse error) | Falls back to accepting all prompts in the failing batch — we prefer false positives over silently dropping paid prompts. |
+| WorldLedger mutation fails (LLM parse error or exception) | The ledger mutation is skipped for that day. The edition is still published. The WorldLedger is not updated; the next day's run starts from the previous ledger state. |
+| R2 write fails | The DB session is rolled back. No edition is recorded and prompts remain `accepted`. The pipeline exits with an error (Cloud Run Job reports failure and triggers alerting). Prompts are retried on the next morning run. Gemini generation cost is lost. |
+| Database unreachable during batch | The pipeline exits with an error. Cloud Run Job reports failure. No prompts are marked processed; they are retried on the next morning run. |
+| Vertex AI context cache deletion fails | Already safe — `VertexAIStrategy.delete_cache()` swallows the exception and logs a warning. Stale cache incurs idle billing until Vertex AI expires it. |
+
+### Morning Batch — Pipeline-Level Decisions
+
+- **If the batch fails entirely**: Nothing is published. Prompts stay `accepted` and are retried the next morning.
+- **If some newspapers fail**: The edition is published with the newspapers that succeeded. Partial editions are acceptable.
+- **Failed prompts (coherence rejection)**: Marked `rejected`. Payment is consumed — users paid for the attempt.
+- **Failed prompts (pipeline error)**: Left as `accepted`. Retried on the next morning run.
+- **No prompts for a newspaper**: That newspaper produces no edition for the day. This is normal; not every newspaper covers every topic.
+
+### Frontend
+
+| Failure point | Behaviour |
+|---|---|
+| Quote API unavailable | Error message shown below the orb. Submit button stays disabled. User can retry by modifying the prompt. |
+| Braintree Drop-in fails to initialise (client-token endpoint down) | Error message shown in the payment form. Pay button stays disabled. User can navigate back and retry. |
+| Payment tokenisation fails | Error message shown in the payment form. User can retry without leaving the page. |
+| Render crash in `PromptFlow` | `ErrorBoundary` shows a "Something went wrong" message with a retry button. The crash is reported to Sentry. |
+
+> **Note:** `ErrorBoundary` catches errors in React component render and lifecycle methods. It does **not** catch errors in async event handlers. Async errors (quote fetch, Braintree init, payment request) are handled individually in `useQuote` and `useBraintree` hooks and surfaced via component state.

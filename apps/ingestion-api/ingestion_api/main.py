@@ -1,5 +1,7 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
+import logging
+
 import sentry_sdk
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +39,8 @@ from ingestion_api.schemas import (
     WebhookPayload,
 )
 from ingestion_api.taxonomy import route_prompt
+
+logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -141,6 +145,32 @@ async def braintree_webhook(
     amount = float(transaction.get("amount", 0))
     prompt_text = transaction.get("custom_fields", {}).get("prompt_text", "")
 
+    # Idempotency: Braintree may redeliver the same webhook on timeout/retry.
+    # Return 200 without re-processing if we've already handled this transaction.
+    existing_payment = (
+        db.query(PaymentRef)
+        .filter_by(braintree_transaction_id=transaction_id)
+        .first()
+    )
+    if existing_payment is not None:
+        existing_prompt = (
+            db.query(Prompt).filter_by(payment_ref=transaction_id).first()
+        )
+        if existing_prompt is not None:
+            existing_cats = [
+                cp.category_id
+                for cp in db.query(CategorisedPrompt)
+                .filter_by(prompt_id=existing_prompt.id)
+                .all()
+            ]
+            routing = route_prompt(existing_cats)
+            return PromptAcceptedResponse(
+                prompt_id=existing_prompt.id,
+                status=existing_prompt.status,
+                categories=existing_cats,
+                newspapers_reached=len(routing),
+            )
+
     # Save payment ref
     payment = PaymentRef(
         braintree_transaction_id=transaction_id,
@@ -159,10 +189,21 @@ async def braintree_webhook(
     db.add(prompt)
     db.flush()
 
-    # Categorise and save
-    categories = categoriser.categorise(prompt_text)
-    for cat_id in categories:
-        db.add(CategorisedPrompt(prompt_id=prompt.id, category_id=cat_id))
+    # Categorise and save. If the categoriser fails (e.g. Gemini API error),
+    # we still commit the payment and prompt so the record is not lost.
+    # The prompt is marked 'categorisation_failed' and excluded from the next
+    # batch run; manual recovery can re-run categorisation against the saved text.
+    categories: list[str] = []
+    try:
+        categories = categoriser.categorise(prompt_text)
+        for cat_id in categories:
+            db.add(CategorisedPrompt(prompt_id=prompt.id, category_id=cat_id))
+    except Exception:
+        logger.exception(
+            "Categorisation failed for prompt %s; saving with 'categorisation_failed' status",
+            prompt.id,
+        )
+        prompt.status = "categorisation_failed"
 
     db.commit()
 
@@ -170,7 +211,7 @@ async def braintree_webhook(
 
     return PromptAcceptedResponse(
         prompt_id=prompt.id,
-        status="accepted",
+        status=prompt.status,
         categories=categories,
         newspapers_reached=len(routing),
     )

@@ -120,9 +120,16 @@ def run_morning_press(
         # Step 4: Serialize WorldLedger to synopsis
         synopsis = serialize_ledger_to_synopsis(ledger)
 
-        # Step 4b: Create context cache for synopsis (shared across newspapers)
+        # Step 4b: Create context cache for synopsis (shared across newspapers).
+        # Falls back to uncached generation if cache creation fails.
         if enable_caching:
-            cached_content = gen.create_cache(synopsis)
+            try:
+                cached_content = gen.create_cache(synopsis)
+            except Exception:
+                logger.warning(
+                    "Context cache creation failed, falling back to uncached generation",
+                    exc_info=True,
+                )
 
         # Step 5: Coherence validation — filter prompts against world state
         if enable_validation:
@@ -147,7 +154,9 @@ def run_morning_press(
             for route in routes:
                 newspaper_prompts[route.newspaper_id].append(pr)
 
-        # Step 7: For each newspaper, distill and generate
+        # Step 7: For each newspaper, distill and generate.
+        # Failures for individual newspapers are isolated — a single Gemini error
+        # skips that paper but allows the remaining newspapers to proceed.
         articles: dict[str, str] = {}
         for persona in NEWSPAPER_PERSONAS:
             prompts_for_paper = newspaper_prompts.get(persona.id, [])
@@ -163,46 +172,53 @@ def run_morning_press(
                 },
             )
 
-            # Convert to distillation Prompt objects
-            dist_prompts = [
-                DistillationPrompt(
-                    text=pr.text,
-                    payment_amount=pr.payment_amount,
-                    prompt_id=pr.prompt_id,
+            try:
+                # Convert to distillation Prompt objects
+                dist_prompts = [
+                    DistillationPrompt(
+                        text=pr.text,
+                        payment_amount=pr.payment_amount,
+                        prompt_id=pr.prompt_id,
+                    )
+                    for pr in prompts_for_paper
+                ]
+
+                # Run distillation pipeline
+                budgeted = pipeline.run(dist_prompts)
+                digests_text = pipeline.serialize_all(budgeted)
+
+                # Build the user prompt with cluster digests for this newspaper
+                user_prompt = persona.system_prompt_template.replace(
+                    "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
+                ).replace("{{CLUSTER_DIGESTS}}", digests_text)
+
+                # Call LLM — use cached generation when cache is available
+                gen_start = time.monotonic()
+                if cached_content is not None:
+                    article = gen.generate_with_cache(
+                        cached_content, user_prompt, persona.model_tier
+                    )
+                else:
+                    article = gen.generate(user_prompt, persona.model_tier)
+                gen_ms = int((time.monotonic() - gen_start) * 1000)
+
+                logger.info(
+                    "Article generated",
+                    extra={
+                        "step": "generated",
+                        "newspaper_id": persona.id,
+                        "model_tier": persona.model_tier,
+                        "latency_ms": gen_ms,
+                    },
                 )
-                for pr in prompts_for_paper
-            ]
 
-            # Run distillation pipeline
-            budgeted = pipeline.run(dist_prompts)
-            digests_text = pipeline.serialize_all(budgeted)
+                articles[persona.id] = article
 
-            # Build the user prompt with cluster digests for this newspaper
-            user_prompt = persona.system_prompt_template.replace(
-                "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
-            ).replace("{{CLUSTER_DIGESTS}}", digests_text)
-
-            # Call LLM — use cached generation when cache is available
-            gen_start = time.monotonic()
-            if cached_content is not None:
-                article = gen.generate_with_cache(
-                    cached_content, user_prompt, persona.model_tier
+            except Exception:
+                logger.exception(
+                    "Failed to generate articles for newspaper %s, skipping",
+                    persona.id,
                 )
-            else:
-                article = gen.generate(user_prompt, persona.model_tier)
-            gen_ms = int((time.monotonic() - gen_start) * 1000)
-
-            logger.info(
-                "Article generated",
-                extra={
-                    "step": "generated",
-                    "newspaper_id": persona.id,
-                    "model_tier": persona.model_tier,
-                    "latency_ms": gen_ms,
-                },
-            )
-
-            articles[persona.id] = article
 
         # Step 8: Run Curator synthesis
         if articles:
