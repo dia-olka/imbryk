@@ -19,7 +19,7 @@ addopts = """
 name = "ingestion-api"
 version = "1.0.0"
 description = "Imbryk ingestion API - user prompts and payments"
-requires-python = ">=3.9,<4"
+requires-python = ">=3.12,<4"
 readme = 'README.md'
 dependencies = [
     "fastapi>=0.128.8",
