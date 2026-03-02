@@ -13,6 +13,9 @@ if (SENTRY_DSN) {
       Sentry.browserTracingIntegration(),
     ],
     tracesSampleRate: 0.1,
+    // Zero-PII: never send default PII (user IP, cookies, headers) to Sentry.
+    // This mirrors send_default_pii=False in the backend (ingestion_api/main.py).
+    sendDefaultPii: false,
   });
 }
 
