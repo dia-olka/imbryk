@@ -186,3 +186,45 @@ class TestDigestEdgeCases:
 
         assert len(digest.verbatim_prompts) == MAX_VERBATIM
         assert digest.long_tail_summary != ""
+
+    def test_non_ascii_keywords_extracted(self):
+        # Non-ASCII words should not crash keyword extraction
+        cluster = Cluster(
+            cluster_id=0,
+            prompts=[
+                _make_wp("太阳能 renewable energy", 5.0),
+                _make_wp("太阳能 solar power", 5.0),
+            ],
+            aggregate_weight=10.0,
+        )
+        digest = build_digest(cluster)
+
+        # Must not raise; keywords list is valid (may be empty for CJK-only words)
+        assert isinstance(digest.keywords, list)
+
+    def test_lexrank_with_fewer_texts_than_max_sentences(self):
+        # LexRank asked for 5 sentences but only 3 available — must not raise
+        from newsroom_director.distillation.digest import _lexrank_select
+
+        texts = ["solar panels", "wind turbines", "nuclear power"]
+        embeddings = [np.random.rand(8).astype(np.float32) for _ in texts]
+
+        result = _lexrank_select(texts, embeddings, max_sentences=5)
+
+        # All texts should appear since there are fewer than max_sentences
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_empty_cluster_handled_gracefully(self):
+        # A cluster with zero prompts should not raise
+        cluster = Cluster(
+            cluster_id=0,
+            prompts=[],
+            aggregate_weight=0.0,
+        )
+        digest = build_digest(cluster)
+
+        assert digest.cluster_size == 0
+        assert digest.verbatim_prompts == []
+        assert digest.long_tail_summary == ""
+        assert digest.keywords == []

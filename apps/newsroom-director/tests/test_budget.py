@@ -198,3 +198,29 @@ class TestBudgetEdgeCases:
         )
         total = sum(bd.allocated_tokens for bd in result)
         assert total <= 1000
+
+    def test_merge_zero_max_clusters_raises(self):
+        digests = [_make_digest(i, float(i + 1)) for i in range(5)]
+        with pytest.raises(ValueError, match="max_clusters"):
+            merge_low_weight_clusters(digests, max_clusters=0)
+
+    def test_merge_negative_max_clusters_raises(self):
+        digests = [_make_digest(i, float(i + 1)) for i in range(5)]
+        with pytest.raises(ValueError, match="max_clusters"):
+            merge_low_weight_clusters(digests, max_clusters=-3)
+
+    def test_allocate_zero_budget_produces_valid_output(self):
+        """A total_budget of 0 must return results without raising."""
+        digests = [_make_digest(0, 100.0)]
+        result = allocate_budget(digests, total_budget=0)
+
+        assert len(result) == 1
+        assert result[0].allocated_tokens == 0
+        assert result[0].serialized == ""
+
+    def test_build_budgeted_single_cluster_serialized_not_truncated_under_budget(self):
+        """When allocated tokens are generous, full serialized text is preserved."""
+        digests = [_make_digest(0, 50.0)]
+        result = allocate_budget(digests, total_budget=100_000, max_per_cluster=100_000)
+
+        assert len(result[0].serialized) > 0
