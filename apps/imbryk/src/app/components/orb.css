@@ -1,28 +1,53 @@
-.orb {
-  position: relative;
+/* ── 3D Scene Container ── */
+.orb-scene {
+  perspective: 1000px;
   width: min(80vw, 24rem);
   height: min(80vw, 24rem);
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #4a2010, #2a1a10 60%, #1a0e08);
-  box-shadow:
-    0 0 40px rgba(139, 37, 0, 0.3),
-    0 0 80px rgba(139, 37, 0, 0.15),
-    inset 0 0 30px rgba(139, 37, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: breathe 4s ease-in-out infinite;
-  transition: box-shadow 0.3s ease;
 }
 
 @media (min-width: 768px) {
-  .orb {
+  .orb-scene {
     width: 28rem;
     height: 28rem;
   }
 }
 
-.orb--focused {
+/* ── Rotating Body ── */
+.orb-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-body--flipped {
+  transform: rotateY(180deg);
+}
+
+/* ── Shared Face Styles ── */
+.orb-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Front Face (input side) ── */
+.orb-face--front {
+  background: radial-gradient(circle at 40% 35%, #4a2010, #2a1a10 60%, #1a0e08);
+  box-shadow:
+    0 0 40px rgba(139, 37, 0, 0.3),
+    0 0 80px rgba(139, 37, 0, 0.15),
+    inset 0 0 30px rgba(139, 37, 0, 0.2);
+  animation: breathe 4s ease-in-out infinite;
+  transition: box-shadow 0.3s ease;
+}
+
+.orb-face--front.orb--focused {
   box-shadow:
     0 0 60px rgba(139, 37, 0, 0.5),
     0 0 120px rgba(139, 37, 0, 0.25),
@@ -30,10 +55,80 @@
   animation: none;
 }
 
-.orb--releasing {
+.orb-face--front.orb--divining {
+  animation: breathe 2s ease-in-out infinite;
+  box-shadow:
+    0 0 70px rgba(139, 37, 0, 0.55),
+    0 0 130px rgba(139, 37, 0, 0.3),
+    inset 0 0 45px rgba(139, 37, 0, 0.35);
+}
+
+/* ── Back Face (answer window) ── */
+.orb-face--back {
+  background: radial-gradient(circle at 40% 35%, #15152a, #0a0a1a 60%, #050510);
+  box-shadow:
+    0 0 40px rgba(26, 79, 255, 0.2),
+    0 0 80px rgba(26, 79, 255, 0.1),
+    inset 0 0 30px rgba(10, 10, 40, 0.4);
+  transform: rotateY(180deg);
+  flex-direction: column;
+  cursor: pointer;
+}
+
+/* ── Viewing Window (circular inset on back face) ── */
+.orb-viewing-window {
+  width: 72%;
+  height: 72%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0c0c2a 0%, #060618 70%, #030310 100%);
+  box-shadow:
+    inset 0 4px 12px rgba(0, 0, 0, 0.8),
+    inset 0 0 20px rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(26, 79, 255, 0.15);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* ── Blue Triangle (answer carrier) ── */
+.orb-triangle {
+  width: 80%;
+  height: 80%;
+  clip-path: polygon(50% 8%, 12% 88%, 88% 88%);
+  background: linear-gradient(to bottom, #1a4fff, #0a2a8f);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 25% 12% 10%;
+  animation: float-up 1s ease-out both;
+}
+
+.orb-triangle-text {
+  opacity: 0;
+  animation: text-appear 0.5s ease-out forwards;
+}
+
+/* ── Flip Hint ── */
+.orb-flip-hint {
+  position: absolute;
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ── Release Animation ── */
+.orb-body--releasing {
   animation: release 0.8s ease-out forwards;
 }
 
+/* ── Keyframes ── */
 @keyframes breathe {
   0%, 100% {
     box-shadow:
@@ -46,6 +141,30 @@
       0 0 60px rgba(139, 37, 0, 0.4),
       0 0 100px rgba(139, 37, 0, 0.2),
       inset 0 0 40px rgba(139, 37, 0, 0.25);
+  }
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(40px);
+    opacity: 0;
+    filter: blur(3px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes text-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -64,16 +183,56 @@
   }
 }
 
+@keyframes release-flipped {
+  0% {
+    transform: rotateY(180deg) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateY(180deg) scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: rotateY(180deg) scale(0.95);
+    opacity: 1;
+  }
+}
+
+.orb-body--flipped.orb-body--releasing {
+  animation: release-flipped 0.8s ease-out forwards;
+}
+
+/* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
-  .orb {
+  .orb-body {
+    transition: none;
+  }
+
+  .orb-face--front {
     animation: none;
   }
 
-  .orb--focused {
+  .orb-face--front.orb--focused {
     animation: none;
   }
 
-  .orb--releasing {
+  .orb-face--front.orb--divining {
     animation: none;
+  }
+
+  .orb-body--releasing,
+  .orb-body--flipped.orb-body--releasing {
+    animation: none;
+  }
+
+  .orb-triangle {
+    animation: none;
+    opacity: 1;
+    filter: none;
+  }
+
+  .orb-triangle-text {
+    animation: none;
+    opacity: 1;
   }
 }

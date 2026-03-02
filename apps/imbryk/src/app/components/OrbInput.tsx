@@ -1,39 +1,62 @@
-import { useState, useId } from 'react';
+import { useState, useId, useEffect, useRef, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { usePromptValidation } from '../hooks/usePromptValidation';
 import { PROMPT_MAX } from '../constants';
-import './orb.css';
+import type { QuoteResponse } from '../api/types';
+import { Orb3D } from './Orb3D';
+import { OrbFrontFace } from './OrbFrontFace';
+import { OrbBackFace } from './OrbBackFace';
 
 interface OrbInputProps {
   value: string;
   onChange: (value: string) => void;
-  onSubmit: () => void;
+  onProceed: () => void;
   isSubmitDisabled: boolean;
   isReleasing?: boolean;
+  quote: QuoteResponse | null;
+  isQuoteLoading: boolean;
 }
 
 export function OrbInput({
   value,
   onChange,
-  onSubmit,
+  onProceed,
   isSubmitDisabled,
   isReleasing = false,
+  quote,
+  isQuoteLoading,
 }: OrbInputProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const { charCount, isValid, validationMessage } = usePromptValidation(value);
   const textareaId = useId();
   const validationId = useId();
   const charCountId = useId();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const prevQuoteRef = useRef<QuoteResponse | null>(null);
 
-  const orbClasses = [
-    'orb',
-    isFocused && 'orb--focused',
-    isReleasing && 'orb--releasing',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  // Auto-flip to back when quote arrives
+  useEffect(() => {
+    if (quote && quote !== prevQuoteRef.current && !isQuoteLoading) {
+      const timer = setTimeout(() => setIsFlipped(true), 300);
+      prevQuoteRef.current = quote;
+      return () => clearTimeout(timer);
+    }
+    if (!quote) {
+      setIsFlipped(false);
+      prevQuoteRef.current = null;
+    }
+  }, [quote, isQuoteLoading]);
+
+  const handleFlipBack = useCallback(() => {
+    setIsFlipped(false);
+    // Refocus textarea after flip animation completes
+    setTimeout(() => {
+      const el = document.getElementById(textareaId) as HTMLTextAreaElement | null;
+      el?.focus();
+    }, 850);
+  }, [textareaId]);
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -41,46 +64,75 @@ export function OrbInput({
         Describe a world-altering event
       </Label>
 
-      <div className={orbClasses} aria-hidden="true">
-        <Textarea
-          id={textareaId}
+      <Orb3D
+        isFlipped={isFlipped}
+        isReleasing={isReleasing}
+        onFlipBack={handleFlipBack}
+      >
+        <OrbFrontFace
+          isFocused={isFocused}
+          isDivining={isQuoteLoading}
+          isHidden={isFlipped}
+          textareaId={textareaId}
+          validationId={validationId}
+          charCountId={charCountId}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          placeholder="What happens next in the world?"
-          maxLength={PROMPT_MAX}
-          aria-describedby={`${validationId} ${charCountId}`}
-          aria-invalid={charCount > 0 && !isValid}
-          className="w-[70%] max-h-[60%] resize-none bg-transparent border-none text-white placeholder:text-white/40 text-center focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin"
         />
-      </div>
+        <OrbBackFace quote={quote} isVisible={isFlipped} />
+      </Orb3D>
 
-      <div className="flex flex-col items-center gap-2 font-sans">
-        <p
-          id={charCountId}
-          aria-live="polite"
-          className="text-sm text-text-muted"
-        >
-          {charCount > 0
-            ? `${charCount}/${PROMPT_MAX} characters`
-            : '\u00A0'}
-        </p>
-        {validationMessage && charCount > 0 && !isValid && (
-          <p id={validationId} role="alert" className="text-sm text-error">
-            {validationMessage}
-          </p>
-        )}
-      </div>
-
-      <Button
-        onClick={onSubmit}
-        disabled={isSubmitDisabled}
-        size="lg"
-        className="min-w-[200px]"
+      <div
+        aria-live="polite"
+        className="sr-only"
       >
-        See which newspapers will cover this
-      </Button>
+        {isFlipped && quote
+          ? `Quote ready: $${quote.estimated_cost.toFixed(2)} for ${quote.newspapers_reached} newspapers`
+          : ''}
+      </div>
+
+      {!isFlipped && (
+        <div className="flex flex-col items-center gap-2 font-sans">
+          <p
+            id={charCountId}
+            aria-live="polite"
+            className="text-sm text-text-muted"
+          >
+            {charCount > 0
+              ? `${charCount}/${PROMPT_MAX} characters`
+              : '\u00A0'}
+          </p>
+          {validationMessage && charCount > 0 && !isValid && (
+            <p id={validationId} role="alert" className="text-sm text-error">
+              {validationMessage}
+            </p>
+          )}
+        </div>
+      )}
+
+      {isFlipped && quote ? (
+        <Button
+          onClick={onProceed}
+          disabled={isSubmitDisabled}
+          size="lg"
+          className="min-w-[200px]"
+        >
+          Proceed to payment — ${quote.estimated_cost.toFixed(2)}
+        </Button>
+      ) : (
+        <Button
+          onClick={onProceed}
+          disabled={isSubmitDisabled}
+          size="lg"
+          className="min-w-[200px] invisible"
+          aria-hidden="true"
+          tabIndex={-1}
+        >
+          Placeholder
+        </Button>
+      )}
     </div>
   );
 }

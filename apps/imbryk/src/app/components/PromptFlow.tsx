@@ -3,7 +3,6 @@ import type { FlowData, FlowAction } from './types';
 import { useQuote } from '../hooks/useQuote';
 import { usePromptValidation } from '../hooks/usePromptValidation';
 import { OrbInput } from './OrbInput';
-import { QuotePreview } from './QuotePreview';
 import { PaymentForm } from './PaymentForm';
 import { Confirmation } from './Confirmation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -80,24 +79,18 @@ export function PromptFlow() {
       <OrbInput
         value={prompt}
         onChange={setPrompt}
-        onSubmit={handleProceedToPayment}
+        onProceed={handleProceedToPayment}
         isSubmitDisabled={!isValid || !quote || isLoading}
         isReleasing={isReleasing}
+        quote={quote}
+        isQuoteLoading={isLoading}
       />
-
-      {isLoading && (
-        <p className="text-sm text-text-muted font-sans animate-pulse">
-          Checking newspaper coverage...
-        </p>
-      )}
 
       {quoteError && (
         <Alert variant="destructive" className="max-w-md">
           <AlertDescription>{quoteError}</AlertDescription>
         </Alert>
       )}
-
-      {quote && !isLoading && <QuotePreview quote={quote} />}
 
       {flow.errorMessage && (
         <Alert variant="destructive" className="max-w-md">

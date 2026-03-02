@@ -2,6 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useBraintree } from '../hooks/useBraintree';
+import { QuotePreview } from './QuotePreview';
 import type { QuoteResponse } from '../api/types';
 
 const DROPIN_CONTAINER_ID = 'braintree-dropin';
@@ -37,6 +38,14 @@ export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
           </p>
         </CardHeader>
         <CardContent>
+          <details className="mb-4">
+            <summary className="cursor-pointer text-sm text-text-muted font-sans hover:text-foreground transition-colors">
+              View newspaper details
+            </summary>
+            <div className="mt-3">
+              <QuotePreview quote={quote} />
+            </div>
+          </details>
           <div id={DROPIN_CONTAINER_ID} />
           {error && (
             <Alert variant="destructive" className="mt-4">
