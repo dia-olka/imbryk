@@ -19,7 +19,7 @@ export function OrbBackFace({ quote, isVisible }: OrbBackFaceProps) {
           </div>
         )}
       </div>
-      <span className="orb-flip-hint">Tap to edit</span>
+      <span className="orb-flip-hint" aria-hidden="true">Tap to edit</span>
     </div>
   );
 }

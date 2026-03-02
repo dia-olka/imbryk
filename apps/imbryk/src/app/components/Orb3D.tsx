@@ -36,6 +36,16 @@ export function Orb3D({
     .filter(Boolean)
     .join(' ');
 
+  const handleBodyKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (isFlipped && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        onFlipBack();
+      }
+    },
+    [isFlipped, onFlipBack]
+  );
+
   return (
     <div
       className="orb-scene"
@@ -45,7 +55,10 @@ export function Orb3D({
       <div
         className={bodyClasses}
         onClick={isFlipped ? onFlipBack : undefined}
+        onKeyDown={isFlipped ? handleBodyKeyDown : undefined}
         tabIndex={isFlipped ? 0 : -1}
+        role={isFlipped ? 'button' : undefined}
+        aria-label={isFlipped ? 'Return to editing' : undefined}
       >
         {children}
       </div>

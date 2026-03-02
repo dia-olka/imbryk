@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,13 +11,25 @@ interface ConfirmationProps {
 }
 
 export function Confirmation({ quote, onReset }: ConfirmationProps) {
+  const alertRef = useRef<HTMLDivElement>(null);
+
+  // Move focus to the success alert when confirmation mounts (state transition: payment → confirmed)
+  useEffect(() => {
+    alertRef.current?.focus();
+  }, []);
+
   return (
     <div
       className="w-full max-w-md mx-auto space-y-4"
       role="status"
       aria-live="polite"
     >
-      <Alert variant="success">
+      <Alert
+        ref={alertRef}
+        variant="success"
+        tabIndex={-1}
+        className="focus-visible:outline-none"
+      >
         <AlertTitle>Your event has been sent into the world</AlertTitle>
         <AlertDescription>
           It will appear in tomorrow morning&apos;s edition. Each newspaper will

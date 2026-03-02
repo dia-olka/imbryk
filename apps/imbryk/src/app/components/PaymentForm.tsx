@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -15,6 +16,12 @@ interface PaymentFormProps {
 
 export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
   const { isReady, isProcessing, error, requestPayment } = useBraintree(DROPIN_CONTAINER_ID);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  // Move focus to the heading when the payment form mounts (state transition: input → payment)
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
 
   const handlePay = async () => {
     const result = await requestPayment();
@@ -27,7 +34,11 @@ export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
     <div className="w-full max-w-md mx-auto space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-center font-sans">
+          <CardTitle
+            ref={headingRef}
+            tabIndex={-1}
+            className="text-center font-sans focus-visible:outline-none"
+          >
             Complete Payment
           </CardTitle>
           <p className="text-center text-2xl font-bold font-sans">
