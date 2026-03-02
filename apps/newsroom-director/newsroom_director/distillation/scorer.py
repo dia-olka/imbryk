@@ -33,6 +33,11 @@ def compute_weights(
     if not prompts:
         return []
 
+    if len(prompts) != len(embeddings):
+        raise ValueError(
+            f"Length mismatch: {len(prompts)} prompts vs {len(embeddings)} embeddings"
+        )
+
     # Normalise payment amounts to [0, 1]
     payments = np.array([p.payment_amount for p in prompts], dtype=np.float64)
     max_payment = payments.max()

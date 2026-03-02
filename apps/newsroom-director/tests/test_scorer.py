@@ -107,3 +107,43 @@ class TestComputeUniqueness:
         result = _compute_uniqueness(embeddings)
         # Each has 3 near-duplicates (including self), so uniqueness = 1/3
         assert result[0] == pytest.approx(1.0 / 3.0)
+
+    def test_all_identical_embeddings_equal_uniqueness(self):
+        n = 5
+        embeddings = [np.array([1.0, 0.0, 0.0], dtype=np.float32)] * n
+        result = _compute_uniqueness(embeddings)
+        expected = 1.0 / n
+        for val in result:
+            assert val == pytest.approx(expected)
+
+
+class TestEdgeCases:
+    def test_negative_payment_treated_as_zero(self):
+        prompts = [
+            Prompt(text="a", payment_amount=-5.0),
+            Prompt(text="b", payment_amount=10.0),
+        ]
+        embeddings = [
+            np.array([1.0, 0.0], dtype=np.float32),
+            np.array([0.0, 1.0], dtype=np.float32),
+        ]
+        result = compute_weights(prompts, embeddings)
+        # max_payment=10, so -5/10=-0.5 → payment_norm is negative but
+        # the function still runs; weight for "b" should be highest
+        assert result[1].weight > result[0].weight
+
+    def test_single_prompt_zero_payment_weight_is_one(self):
+        prompts = [Prompt(text="solo", payment_amount=0.0)]
+        embeddings = [np.array([1.0, 0.0], dtype=np.float32)]
+        result = compute_weights(prompts, embeddings)
+        # zero max_payment → all-ones normalisation, single → uniqueness 1.0
+        assert result[0].weight == pytest.approx(1.0)
+
+    def test_mismatched_lengths_raises_value_error(self):
+        prompts = [Prompt(text="a", payment_amount=1.0)]
+        embeddings = [
+            np.array([1.0, 0.0], dtype=np.float32),
+            np.array([0.0, 1.0], dtype=np.float32),
+        ]
+        with pytest.raises(ValueError, match="Length mismatch"):
+            compute_weights(prompts, embeddings)

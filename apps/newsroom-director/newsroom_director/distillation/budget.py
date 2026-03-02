@@ -37,11 +37,13 @@ def allocate_budget(
     if not digests:
         return []
 
+    # Cap the effective floor so that floor * N never exceeds total_budget
+    effective_floor = min(min_per_cluster, total_budget // len(digests))
+
     total_weight = sum(d.aggregate_weight for d in digests)
     if total_weight <= 0:
         # Equal allocation when no weight info
-        per_cluster = max(min_per_cluster, total_budget // len(digests))
-        per_cluster = min(per_cluster, max_per_cluster)
+        per_cluster = min(total_budget // len(digests), max_per_cluster)
         return [
             _build_budgeted(d, per_cluster)
             for d in digests
@@ -52,15 +54,19 @@ def allocate_budget(
     for d in digests:
         proportion = d.aggregate_weight / total_weight
         raw_tokens = int(proportion * total_budget)
-        clamped = max(min_per_cluster, min(raw_tokens, max_per_cluster))
+        clamped = max(effective_floor, min(raw_tokens, max_per_cluster))
         allocations.append((d, clamped))
 
-    # Redistribute: if total exceeds budget, scale down proportionally
-    total_allocated = sum(t for _, t in allocations)
-    if total_allocated > total_budget:
+    # Redistribute: if total exceeds budget, iteratively scale down.
+    # Re-applying the floor after scaling can push total back over budget,
+    # so we iterate until convergence.
+    for _ in range(10):  # converges quickly in practice
+        total_allocated = sum(t for _, t in allocations)
+        if total_allocated <= total_budget:
+            break
         scale = total_budget / total_allocated
         allocations = [
-            (d, max(min_per_cluster, int(t * scale)))
+            (d, max(effective_floor, int(t * scale)))
             for d, t in allocations
         ]
 
@@ -130,7 +136,9 @@ def _build_budgeted(digest: ClusterDigest, allocated_tokens: int) -> BudgetedDig
     max_chars = allocated_tokens * CHARS_PER_TOKEN
 
     if len(serialized) > max_chars:
-        serialized = serialized[:max_chars].rsplit("\n", 1)[0]
+        # Find the last complete newline before the cut point
+        cut = serialized.rfind("\n", 0, max_chars)
+        serialized = serialized[:cut] if cut > 0 else serialized[:max_chars]
 
     return BudgetedDigest(
         digest=digest,

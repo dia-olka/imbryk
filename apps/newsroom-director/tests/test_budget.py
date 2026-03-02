@@ -134,3 +134,67 @@ class TestMergeLowWeightClusters:
             d for d in result if d.cluster_id == OTHER_TOPICS_CLUSTER_ID
         )
         assert len(other.verbatim_prompts) > 0
+
+    def test_max_clusters_one_merges_all(self):
+        digests = [_make_digest(i, float(i + 1)) for i in range(5)]
+        result = merge_low_weight_clusters(digests, max_clusters=1)
+
+        assert len(result) == 1
+        assert result[0].cluster_id == OTHER_TOPICS_CLUSTER_ID
+
+
+class TestBudgetEdgeCases:
+    def test_budget_too_small_for_floors(self):
+        """When min_per_cluster * N > total_budget, allocations stay within budget."""
+        digests = [_make_digest(i, 10.0) for i in range(10)]
+        result = allocate_budget(
+            digests,
+            total_budget=1000,
+            min_per_cluster=500,
+            max_per_cluster=5000,
+        )
+        total = sum(bd.allocated_tokens for bd in result)
+        assert total <= 1000
+
+    def test_equal_weight_equal_allocation(self):
+        digests = [_make_digest(i, 50.0) for i in range(4)]
+        result = allocate_budget(
+            digests,
+            total_budget=10000,
+            min_per_cluster=100,
+            max_per_cluster=5000,
+        )
+        tokens = [bd.allocated_tokens for bd in result]
+        assert all(t == tokens[0] for t in tokens)
+
+    def test_single_cluster_capped_at_max(self):
+        digests = [_make_digest(0, 100.0)]
+        result = allocate_budget(
+            digests,
+            total_budget=1_000_000,
+            max_per_cluster=50_000,
+        )
+        assert result[0].allocated_tokens <= 50_000
+
+    def test_redistribution_does_not_exceed_budget(self):
+        """Many clusters with floors — after redistribution total <= budget."""
+        digests = [_make_digest(i, float(100 - i)) for i in range(20)]
+        result = allocate_budget(
+            digests,
+            total_budget=5000,
+            min_per_cluster=200,
+            max_per_cluster=5000,
+        )
+        total = sum(bd.allocated_tokens for bd in result)
+        assert total <= 5000
+
+    def test_zero_weight_allocation_within_budget(self):
+        """Zero-weight clusters don't exceed total budget."""
+        digests = [_make_digest(i, 0.0) for i in range(10)]
+        result = allocate_budget(
+            digests,
+            total_budget=1000,
+            min_per_cluster=500,
+        )
+        total = sum(bd.allocated_tokens for bd in result)
+        assert total <= 1000

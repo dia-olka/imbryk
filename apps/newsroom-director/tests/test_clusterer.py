@@ -74,3 +74,44 @@ class TestClusterPrompts:
 
         # With fewer than min_cluster_size, all go in one cluster
         assert clusters[0].aggregate_weight == pytest.approx(10.0)
+
+    def test_single_prompt_returns_one_cluster(self):
+        prompts = [_make_wp("solo", 5.0, [1.0, 0.0])]
+        clusters = cluster_prompts(prompts)
+
+        assert len(clusters) == 1
+        assert len(clusters[0].prompts) == 1
+
+    def test_two_prompts_returns_one_cluster(self):
+        prompts = [
+            _make_wp("a", 1.0, [1.0, 0.0]),
+            _make_wp("b", 2.0, [0.0, 1.0]),
+        ]
+        clusters = cluster_prompts(prompts, min_cluster_size=5)
+
+        assert len(clusters) == 1
+        assert len(clusters[0].prompts) == 2
+
+    def test_all_identical_embeddings_handled(self):
+        """HDBSCAN may label all as noise when embeddings are identical."""
+        prompts = [
+            _make_wp(f"same_{i}", 1.0, [1.0, 0.0, 0.0])
+            for i in range(10)
+        ]
+        clusters = cluster_prompts(prompts, min_cluster_size=5, min_samples=3)
+
+        assert len(clusters) >= 1
+        total = sum(len(c.prompts) for c in clusters)
+        assert total == 10
+
+    def test_all_noise_returns_noise_cluster(self):
+        """Widely spread points → all noise → collected in cluster -1."""
+        # Spread points far apart so no dense cluster forms
+        prompts = [
+            _make_wp(f"p{i}", 1.0, [float(i * 100), float(i * 100)])
+            for i in range(10)
+        ]
+        clusters = cluster_prompts(prompts, min_cluster_size=5, min_samples=5)
+
+        total = sum(len(c.prompts) for c in clusters)
+        assert total == 10

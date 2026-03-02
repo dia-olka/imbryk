@@ -2,6 +2,31 @@
 
 Groups prompts into topically coherent clusters and ranks them by
 aggregate weight (sum of member prompt weights).
+
+HDBSCAN parameter guidance by data volume
+==========================================
++--------------+------------------+--------------+---------------------------+
+| Prompt count | min_cluster_size | min_samples  | Notes                     |
++--------------+------------------+--------------+---------------------------+
+| 10 – 50      | 3                | 2            | Small pool — keep clusters |
+|              |                  |              | tiny; most points may be   |
+|              |                  |              | noise-labelled.            |
+| 50 – 200     | 5 (default)      | 3 (default)  | Balanced; good starting    |
+|              |                  |              | point for daily volumes.   |
+| 200 – 1 000  | 10               | 5            | Larger clusters, fewer     |
+|              |                  |              | noise points.              |
+| 1 000+       | 15 – 25          | 7 – 10       | High volume; raise both to |
+|              |                  |              | avoid micro-clusters.      |
++--------------+------------------+--------------+---------------------------+
+
+General rules:
+- min_cluster_size sets the smallest group HDBSCAN will form. Lower values
+  produce more (smaller) clusters; higher values merge small topics together.
+- min_samples controls density: higher values mean a point needs more
+  neighbours to be considered core, producing tighter clusters and more noise.
+- When all embeddings are nearly identical (low variance), HDBSCAN may label
+  everything as noise (-1). The pipeline handles this by collecting noise
+  points into a single "unclustered" group.
 """
 
 from __future__ import annotations

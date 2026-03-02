@@ -87,3 +87,25 @@ class TestDistillationPipeline:
 
         for bd in result:
             assert bd.allocated_tokens > 0
+
+    def test_all_identical_prompts(self, pipeline):
+        prompts = [
+            Prompt(text="identical prompt text", payment_amount=10.0)
+            for _ in range(5)
+        ]
+        result = pipeline.run(prompts)
+
+        assert len(result) >= 1
+        total = sum(bd.digest.cluster_size for bd in result)
+        assert total == 5
+
+    def test_zero_payment_prompts(self, pipeline):
+        prompts = [
+            Prompt(text=f"Free prompt {i}", payment_amount=0.0)
+            for i in range(3)
+        ]
+        result = pipeline.run(prompts)
+
+        assert len(result) >= 1
+        total = sum(bd.digest.cluster_size for bd in result)
+        assert total == 3

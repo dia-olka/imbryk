@@ -140,3 +140,49 @@ class TestExtractKeywords:
         # "an" is a stop word, "AI" is only 2 chars, "is" is a stop word
         assert "an" not in keywords
         assert "ai" not in keywords
+
+    def test_empty_keywords_all_stop_words(self):
+        keywords = _extract_keywords(["the and or but in on at to for of"])
+        assert keywords == []
+
+
+class TestDigestEdgeCases:
+    def test_single_prompt_verbatim_only(self):
+        cluster = Cluster(
+            cluster_id=0,
+            prompts=[_make_wp("only prompt", 10.0)],
+            aggregate_weight=10.0,
+        )
+        digest = build_digest(cluster)
+
+        assert len(digest.verbatim_prompts) == 1
+        assert digest.long_tail_summary == ""
+
+    def test_exactly_max_verbatim_no_long_tail(self):
+        from newsroom_director.distillation.digest import MAX_VERBATIM
+
+        prompts = [_make_wp(f"prompt {i}", float(20 - i)) for i in range(MAX_VERBATIM)]
+        cluster = Cluster(
+            cluster_id=0,
+            prompts=prompts,
+            aggregate_weight=sum(wp.weight for wp in prompts),
+        )
+        digest = build_digest(cluster)
+
+        assert len(digest.verbatim_prompts) == MAX_VERBATIM
+        assert digest.long_tail_summary == ""
+
+    def test_one_over_max_verbatim_has_long_tail(self):
+        from newsroom_director.distillation.digest import MAX_VERBATIM
+
+        count = MAX_VERBATIM + 1
+        prompts = [_make_wp(f"prompt {i}", float(count - i)) for i in range(count)]
+        cluster = Cluster(
+            cluster_id=0,
+            prompts=prompts,
+            aggregate_weight=sum(wp.weight for wp in prompts),
+        )
+        digest = build_digest(cluster)
+
+        assert len(digest.verbatim_prompts) == MAX_VERBATIM
+        assert digest.long_tail_summary != ""
