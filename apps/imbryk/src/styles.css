@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* layout helpers to make min-h-screen / 100dvh work reliably */
+html,
+body,
+#root {
+  height: 100%;
+}
+
 @theme {
   --color-bg: #faf9f7;
   --color-surface: #ffffff;

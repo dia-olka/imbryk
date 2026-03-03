@@ -6,7 +6,8 @@ import { PromptFlow } from './components/PromptFlow';
 
 export function App() {
   return (
-    <div className="flex flex-col min-h-screen">
+    // use dynamic viewport units to avoid mobile address‑bar scrolling issues
+    <div className="flex flex-col min-h-[100dvh]">
       <SkipLink />
       <Header />
       <main id="main-content" className="flex-1 px-4 py-8 md:py-12">
