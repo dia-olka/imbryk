@@ -40,6 +40,7 @@ def compute_weights(
 
     # Normalise payment amounts to [0, 1]
     payments = np.array([p.payment_amount for p in prompts], dtype=np.float64)
+    payments = np.maximum(payments, 0.0)  # Clamp negative amounts to zero
     max_payment = payments.max()
     if max_payment > 0:
         payment_norms = payments / max_payment

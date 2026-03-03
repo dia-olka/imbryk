@@ -72,6 +72,37 @@ class TestPromptEmbedder:
     def test_embed_weighted_empty(self, embedder):
         assert embedder.embed_weighted([]) == []
 
+    def test_long_prompt_does_not_error(self, embedder):
+        # sentence-transformers truncates to its token limit; verify no error is raised
+        # and a valid embedding is returned
+        long_text = "renewable energy solar panels " * 100  # ~600 tokens
+        prompts = [Prompt(text=long_text, payment_amount=5.0)]
+        result = embedder.embed(prompts)
+
+        assert len(result) == 1
+        assert result[0].shape[0] > 0
+
+    def test_non_ascii_text_handled(self, embedder):
+        # CJK, Arabic, and emoji should not crash the embedder
+        prompts = [
+            Prompt(text="太阳能电池板效率下降", payment_amount=5.0),      # Chinese
+            Prompt(text="كفاءة الألواح الشمسية تنخفض", payment_amount=5.0),  # Arabic
+            Prompt(text="Solar panel efficiency 🌞 dropping ⚡", payment_amount=5.0),  # Emoji
+        ]
+        result = embedder.embed(prompts)
+
+        assert len(result) == 3
+        for embedding in result:
+            assert embedding.shape[0] > 0
+
+    def test_empty_string_prompt_handled(self, embedder):
+        # An empty string is a degenerate but valid input; must not raise
+        prompts = [Prompt(text="", payment_amount=5.0)]
+        result = embedder.embed(prompts)
+
+        assert len(result) == 1
+        assert result[0].shape[0] > 0
+
 
 def _cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))

@@ -115,3 +115,40 @@ class TestClusterPrompts:
 
         total = sum(len(c.prompts) for c in clusters)
         assert total == 10
+
+    def test_exactly_min_cluster_size_goes_to_hdbscan(self):
+        """Exactly min_cluster_size points must go to HDBSCAN (boundary condition)."""
+        min_size = 5
+        # Points are spread — HDBSCAN may or may not cluster them,
+        # but the path through code must reach HDBSCAN (not the early-return path)
+        prompts = [
+            _make_wp(f"p{i}", 1.0, [float(i), 0.0])
+            for i in range(min_size)
+        ]
+        clusters = cluster_prompts(prompts, min_cluster_size=min_size)
+
+        # All prompts must be returned regardless of HDBSCAN outcome
+        total = sum(len(c.prompts) for c in clusters)
+        assert total == min_size
+
+    def test_three_prompts_with_default_params(self):
+        """3 prompts with default min_cluster_size=5 → single early-return cluster."""
+        prompts = [
+            _make_wp("a", 1.0, [1.0, 0.0, 0.0]),
+            _make_wp("b", 2.0, [0.0, 1.0, 0.0]),
+            _make_wp("c", 3.0, [0.0, 0.0, 1.0]),
+        ]
+        clusters = cluster_prompts(prompts)  # default min_cluster_size=5
+
+        assert len(clusters) == 1
+        assert clusters[0].cluster_id == 0
+        assert len(clusters[0].prompts) == 3
+        assert clusters[0].aggregate_weight == pytest.approx(6.0)
+
+    def test_four_prompts_with_default_params(self):
+        """4 prompts with default min_cluster_size=5 → single early-return cluster."""
+        prompts = [_make_wp(f"p{i}", float(i + 1), [float(i), 0.0]) for i in range(4)]
+        clusters = cluster_prompts(prompts)
+
+        assert len(clusters) == 1
+        assert len(clusters[0].prompts) == 4

@@ -85,6 +85,9 @@ def merge_low_weight_clusters(
     Used on high-volume days when there are too many clusters to fit
     in the context window effectively.
     """
+    if max_clusters < 1:
+        raise ValueError(f"max_clusters must be >= 1, got {max_clusters}")
+
     if len(digests) <= max_clusters:
         return list(digests)
 

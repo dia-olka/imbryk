@@ -128,9 +128,38 @@ class TestEdgeCases:
             np.array([0.0, 1.0], dtype=np.float32),
         ]
         result = compute_weights(prompts, embeddings)
-        # max_payment=10, so -5/10=-0.5 → payment_norm is negative but
-        # the function still runs; weight for "b" should be highest
+        # Negative payment is clamped to 0; weight for "b" should be highest
         assert result[1].weight > result[0].weight
+
+    def test_negative_payment_produces_non_negative_weight(self):
+        # Negative payment amounts must be clamped to 0, not produce negative weights
+        prompts = [
+            Prompt(text="a", payment_amount=-100.0),
+            Prompt(text="b", payment_amount=10.0),
+        ]
+        embeddings = [
+            np.array([1.0, 0.0], dtype=np.float32),
+            np.array([0.0, 1.0], dtype=np.float32),
+        ]
+        result = compute_weights(prompts, embeddings)
+
+        assert result[0].weight >= 0.0
+        assert result[1].weight >= 0.0
+
+    def test_all_negative_payments_equal_weights(self):
+        # When all payments are negative, all are clamped to 0 → equal fallback
+        prompts = [
+            Prompt(text="a", payment_amount=-5.0),
+            Prompt(text="b", payment_amount=-10.0),
+        ]
+        embeddings = [
+            np.array([1.0, 0.0], dtype=np.float32),
+            np.array([0.0, 1.0], dtype=np.float32),
+        ]
+        result = compute_weights(prompts, embeddings)
+
+        # Both clamped to 0 → max_payment=0 → equal payment_norms=1 → equal weights
+        assert result[0].weight == pytest.approx(result[1].weight)
 
     def test_single_prompt_zero_payment_weight_is_one(self):
         prompts = [Prompt(text="solo", payment_amount=0.0)]
