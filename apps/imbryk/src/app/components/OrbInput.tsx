@@ -7,6 +7,7 @@ import type { QuoteResponse } from '../api/types';
 import { Orb3D } from './Orb3D';
 import { OrbFrontFace } from './OrbFrontFace';
 import { OrbBackFace } from './OrbBackFace';
+import { NEWSPAPER_DISPLAY } from './newspaper-display';
 
 interface OrbInputProps {
   value: string;
@@ -89,7 +90,7 @@ export function OrbInput({
         className="sr-only"
       >
         {isFlipped && quote
-          ? `Quote ready: $${quote.estimated_cost.toFixed(2)} for ${quote.newspapers_reached} newspapers`
+          ? `Quote ready: $${quote.estimated_cost.toFixed(2)} for ${quote.newspapers_reached} newspaper${quote.newspapers_reached !== 1 ? 's' : ''}: ${quote.newspapers.map((n) => NEWSPAPER_DISPLAY[n.newspaper_id]?.paperName ?? n.newspaper_id).join(', ')}`
           : ''}
       </div>
 
