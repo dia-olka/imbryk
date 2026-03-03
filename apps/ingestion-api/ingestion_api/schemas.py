@@ -43,3 +43,7 @@ class EditionSummary(BaseModel):
     edition_id: str
     date: str
     newspaper_count: int
+
+
+class ClientTokenResponse(BaseModel):
+    client_token: str

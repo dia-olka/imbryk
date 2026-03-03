@@ -30,6 +30,7 @@ from ingestion_api.models import (
 )
 from ingestion_api.pricing import calculate_cost
 from ingestion_api.schemas import (
+    ClientTokenResponse,
     EditionSummary,
     HealthResponse,
     PromptAcceptedResponse,
@@ -122,14 +123,20 @@ async def braintree_webhook(
     import braintree
 
     from ingestion_api.config import (
+        BRAINTREE_ENVIRONMENT,
         BRAINTREE_MERCHANT_ID,
         BRAINTREE_PRIVATE_KEY,
         BRAINTREE_PUBLIC_KEY,
     )
 
+    _bt_env = (
+        braintree.Environment.Production
+        if BRAINTREE_ENVIRONMENT == "production"
+        else braintree.Environment.Sandbox
+    )
     gateway = braintree.BraintreeGateway(
         braintree.Configuration(
-            environment=braintree.Environment.Sandbox,
+            environment=_bt_env,
             merchant_id=BRAINTREE_MERCHANT_ID,
             public_key=BRAINTREE_PUBLIC_KEY,
             private_key=BRAINTREE_PRIVATE_KEY,
@@ -215,6 +222,35 @@ async def braintree_webhook(
         categories=categories,
         newspapers_reached=len(routing),
     )
+
+
+@app.get("/payments/client-token", response_model=ClientTokenResponse)
+async def get_client_token():
+    """Generate a Braintree client token for Drop-in UI initialisation."""
+    import braintree
+
+    from ingestion_api.config import (
+        BRAINTREE_ENVIRONMENT,
+        BRAINTREE_MERCHANT_ID,
+        BRAINTREE_PRIVATE_KEY,
+        BRAINTREE_PUBLIC_KEY,
+    )
+
+    _bt_env = (
+        braintree.Environment.Production
+        if BRAINTREE_ENVIRONMENT == "production"
+        else braintree.Environment.Sandbox
+    )
+    gateway = braintree.BraintreeGateway(
+        braintree.Configuration(
+            environment=_bt_env,
+            merchant_id=BRAINTREE_MERCHANT_ID,
+            public_key=BRAINTREE_PUBLIC_KEY,
+            private_key=BRAINTREE_PRIVATE_KEY,
+        )
+    )
+    client_token = gateway.client_token.generate({})
+    return ClientTokenResponse(client_token=client_token)
 
 
 @app.get("/editions", response_model=list[EditionSummary])
