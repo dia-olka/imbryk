@@ -26,7 +26,7 @@ export default defineConfig(() => ({
   //  plugins: [],
   // },
   build: {
-    outDir: './dist',
+    outDir: '../../dist/apps/imbryk',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
