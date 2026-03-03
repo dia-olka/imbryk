@@ -4,8 +4,8 @@ export type {
   CategoryId,
   NewspaperSubscription,
   RoutingResult,
-} from './lib/taxonomy.types.js';
-export { CATEGORIES, CATEGORY_GROUPS, CATEGORY_IDS } from './lib/categories.js';
+} from './lib/taxonomy.types';
+export { CATEGORIES, CATEGORY_GROUPS, CATEGORY_IDS } from './lib/categories';
 export {
   SOVEREIGN_SUBSCRIPTION,
   ASPIRANT_SUBSCRIPTION,
@@ -14,5 +14,5 @@ export {
   RADICAL_SUBSCRIPTION,
   HEDONIST_SUBSCRIPTION,
   NEWSPAPER_SUBSCRIPTIONS,
-} from './lib/subscriptions.js';
-export { routePrompt, countNewspapersReached } from './lib/router.js';
+} from './lib/subscriptions';
+export { routePrompt, countNewspapersReached } from './lib/router';
