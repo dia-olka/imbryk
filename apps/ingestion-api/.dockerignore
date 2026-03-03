@@ -5,5 +5,4 @@ tests/
 dist/
 *.db
 .ruff_cache
-README.md
 project.json

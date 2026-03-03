@@ -14,6 +14,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how the system works and [PLAN.md](PL
 4. [Step 2 — Braintree (Payment Processing)](#step-2--braintree-payment-processing)
 5. [Step 3 — Cloudflare (Websites & File Storage)](#step-3--cloudflare-websites--file-storage)
 6. [Step 4 — Connect Everything](#step-4--connect-everything)
+   - [Step 4.5 — Set Up Automatic Deployment](#45-set-up-automatic-deployment-github-actions)
 7. [Step 5 — Deploy the Code](#step-5--deploy-the-code)
 8. [Step 6 — Set Up the Daily Schedule](#step-6--set-up-the-daily-schedule)
 9. [Day-to-Day Operations](#day-to-day-operations)
@@ -351,7 +352,12 @@ Now you need to tell the backend services about each other. This is done by depl
 
 ### 4.1 Build and Upload the Application Images
 
-These commands package the application code into container images and upload them to Google Cloud. Run them from the project root directory:
+After the initial deployment (Step 5), container images are built and pushed **automatically** by the CD workflow whenever you push to `main`. See [Step 4.5](#45-set-up-automatic-deployment-github-actions) to set this up.
+
+For the **first deployment only**, you need to build and push the images manually so that the `gcloud run deploy` and `gcloud run jobs create` commands in Step 5 have an image to reference.
+
+<details>
+<summary>Manual build commands (first-time setup / fallback)</summary>
 
 ```sh
 # Set your project and registry path
@@ -359,15 +365,107 @@ PROJECT_ID=your-project-id
 REPO=us-central1-docker.pkg.dev/$PROJECT_ID/imbryk
 
 # Build and upload the Ingestion API
-docker build -f apps/ingestion-api/Dockerfile -t $REPO/ingestion-api:latest .
+docker build -f apps/ingestion-api/Dockerfile -t $REPO/ingestion-api:latest apps/ingestion-api
 docker push $REPO/ingestion-api:latest
 
 # Build and upload the Newsroom Director
-docker build -f apps/newsroom-director/Dockerfile -t $REPO/newsroom-director:latest .
+docker build -f apps/newsroom-director/Dockerfile -t $REPO/newsroom-director:latest apps/newsroom-director
 docker push $REPO/newsroom-director:latest
 ```
 
 > **Note:** You need Docker installed for this step. If you do not have Docker, download it from [docker.com/get-started](https://www.docker.com/get-started/). The newsroom-director image is large (~2 GB) because it includes the AI model for text processing. The upload may take several minutes depending on your internet speed.
+
+</details>
+
+---
+
+### 4.5 Set Up Automatic Deployment (GitHub Actions)
+
+After the initial manual deployment (Step 5), all subsequent deploys are handled automatically. Pushing code to `main` triggers a CD workflow that builds container images, deploys to Cloud Run, and runs database migrations.
+
+The workflow uses **Workload Identity Federation** — a keyless authentication method where GitHub Actions proves its identity to Google Cloud without storing any credentials.
+
+#### Create a Workload Identity Pool and Provider
+
+Run these commands once (requires the `gcloud` CLI from Step 1.7):
+
+```sh
+PROJECT_ID=your-project-id
+GITHUB_ORG=your-github-org   # e.g. "dia-olka"
+GITHUB_REPO=your-repo-name   # e.g. "imbryk"
+
+# Create the Workload Identity Pool
+gcloud iam workload-identity-pools create github \
+  --location=global \
+  --display-name="GitHub Actions"
+
+# Create the Provider (links GitHub OIDC tokens to the pool)
+gcloud iam workload-identity-pools providers create-oidc github-actions \
+  --location=global \
+  --workload-identity-pool=github \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --attribute-condition="assertion.repository=='$GITHUB_ORG/$GITHUB_REPO'"
+
+# Allow the GitHub Actions provider to impersonate the service account
+SA=imbryk-pipeline@$PROJECT_ID.iam.gserviceaccount.com
+
+gcloud iam service-accounts add-iam-policy-binding $SA \
+  --role=roles/iam.workloadIdentityUser \
+  --member="principalSet://iam.googleapis.com/projects/$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')/locations/global/workloadIdentityPools/github/attribute.repository/$GITHUB_ORG/$GITHUB_REPO"
+
+# Grant the service account permissions to push images and deploy
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:$SA" \
+  --role=roles/artifactregistry.writer
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:$SA" \
+  --role=roles/run.admin
+
+gcloud iam service-accounts add-iam-policy-binding $SA \
+  --role=roles/iam.serviceAccountUser \
+  --member="serviceAccount:$SA"
+```
+
+#### Configure GitHub Repository Secrets and Variables
+
+In your GitHub repository, go to **Settings > Secrets and variables > Actions** and add:
+
+**Variables** (Settings > Variables > New repository variable):
+
+| Variable | Value | Example |
+|---|---|---|
+| `GCP_PROJECT_ID` | Your Google Cloud project ID | `imbryk-123456` |
+| `GCP_WIF_PROVIDER` | The full Workload Identity provider resource name | `projects/123456/locations/global/workloadIdentityPools/github/providers/github-actions` |
+| `GCP_SERVICE_ACCOUNT` | The service account email | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com` |
+| `GCP_REGION` | Google Cloud region (optional, defaults to `us-central1`) | `us-central1` |
+
+To find the full `GCP_WIF_PROVIDER` value:
+
+```sh
+gcloud iam workload-identity-pools providers describe github-actions \
+  --location=global \
+  --workload-identity-pool=github \
+  --format='value(name)'
+```
+
+**Secrets** (Settings > Secrets > New repository secret):
+
+| Secret | Value |
+|---|---|
+| `DB_PASSWORD` | The database password from Step 1.5 |
+
+#### How It Works
+
+The CD workflow (`.github/workflows/cd.yml`) runs after CI passes on `main`:
+
+1. Detects which services changed (ingestion-api, newsroom-director, or both)
+2. Builds and pushes Docker images to Artifact Registry
+3. Deploys the ingestion-api to Cloud Run and runs database migrations
+4. Updates the newsroom-director Cloud Run job
+
+The newsroom-director build uses GitHub Actions cache for Docker layers, which significantly speeds up builds of the ~2 GB image.
 
 ---
 
@@ -378,7 +476,9 @@ docker push $REPO/newsroom-director:latest
 This is the backend that receives prompts, processes payments, and talks to the AI for categorisation.
 
 ```sh
-PROJECT_ID=your-project-id
+# Replace with your actual Google Cloud project ID (lowercase, e.g. imbryk-123456)
+# Run ALL lines below in the same terminal session
+PROJECT_ID=imbryk
 REPO=us-central1-docker.pkg.dev/$PROJECT_ID/imbryk
 SA=imbryk-pipeline@$PROJECT_ID.iam.gserviceaccount.com
 
@@ -386,15 +486,13 @@ gcloud run deploy ingestion-api \
   --image=$REPO/ingestion-api:latest \
   --region=us-central1 \
   --service-account=$SA \
-  --add-cloudsql-instances=$PROJECT_ID:us-central1:imbryk-db \
-  --set-secrets="\
-    DATABASE_URL=database-url:latest,\
-    BRAINTREE_MERCHANT_ID=braintree-merchant-id:latest,\
-    BRAINTREE_PUBLIC_KEY=braintree-public-key:latest,\
-    BRAINTREE_PRIVATE_KEY=braintree-private-key:latest" \
-  --set-env-vars="\
-    VERTEX_AI_PROJECT=$PROJECT_ID,\
-    CORS_ALLOWED_ORIGINS=https://imbryk.pages.dev" \
+  --set-cloudsql-instances="${PROJECT_ID}:us-central1:imbryk-db" \
+  --set-secrets=DATABASE_URL=database-url:latest \
+  --set-secrets=BRAINTREE_MERCHANT_ID=braintree-merchant-id:latest \
+  --set-secrets=BRAINTREE_PUBLIC_KEY=braintree-public-key:latest \
+  --set-secrets=BRAINTREE_PRIVATE_KEY=braintree-private-key:latest \
+  --set-env-vars=VERTEX_AI_PROJECT="${PROJECT_ID}" \
+  --set-env-vars=CORS_ALLOWED_ORIGINS=https://imbryk.pages.dev \
   --memory=512Mi \
   --cpu=1 \
   --min-instances=0 \
@@ -408,42 +506,52 @@ After this command completes, it will print a URL like `https://ingestion-api-ab
 
 Also update the `CORS_ALLOWED_ORIGINS` value to match your actual Cloudflare Pages URL if it differs from the example above.
 
+> **Subsequent updates are automatic.** After setting up the CD workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions)), pushing changes to `main` will automatically build a new image and update this Cloud Run service.
+
 ### 5.2 Run Database Migrations
 
-The database needs its tables set up before it can store anything. This creates the required table structure.
+The database needs its tables set up before it can store anything. Run this manually for the **first deployment**. After that, migrations run automatically as part of the CD workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions)).
+
+<details>
+<summary>First-time setup / manual fallback</summary>
 
 ```sh
 # Start the Cloud SQL proxy (connects your computer to the cloud database)
-cloud-sql-proxy $PROJECT_ID:us-central1:imbryk-db &
+cloud-sql-proxy "${PROJECT_ID}:us-central1:imbryk-db" &
 
 # Run the migration (creates all database tables)
-DATABASE_URL="postgresql://postgres:YOUR_DB_PASSWORD@127.0.0.1:5432/imbryk" \
-  uv run alembic upgrade head
+cd apps/ingestion-api
+DATABASE_URL="postgresql+pg8000://postgres:YOUR_DB_PASSWORD@127.0.0.1:5432/imbryk" \
+uv run alembic upgrade head
 ```
 
 > **Note:** You need the `cloud-sql-proxy` tool for this. Install it from [cloud.google.com/sql/docs/postgres/connect-auth-proxy](https://cloud.google.com/sql/docs/postgres/connect-auth-proxy). Replace `YOUR_DB_PASSWORD` with the password you set in Step 1.5.
+
+</details>
 
 ### 5.3 Deploy the Newsroom Director
 
 This is the daily job that generates newspaper articles.
 
 ```sh
+PROJECT_ID=imbryk
+REPO=us-central1-docker.pkg.dev/$PROJECT_ID/imbryk
+SA=imbryk-pipeline@$PROJECT_ID.iam.gserviceaccount.com
+
 gcloud run jobs create newsroom-director \
   --image=$REPO/newsroom-director:latest \
   --region=us-central1 \
   --service-account=$SA \
-  --add-cloudsql-instances=$PROJECT_ID:us-central1:imbryk-db \
-  --set-secrets="\
-    DATABASE_URL=database-url:latest,\
-    R2_ACCOUNT_ID=r2-account-id:latest,\
-    R2_ACCESS_KEY_ID=r2-access-key-id:latest,\
-    R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest" \
-  --set-env-vars="\
-    VERTEX_AI_PROJECT=$PROJECT_ID,\
-    VERTEX_AI_LOCATION=us-central1,\
-    R2_BUCKET_NAME=imbryk-editions,\
-    ENABLE_VALIDATION=true,\
-    ENABLE_CACHING=true" \
+  --set-cloudsql-instances="${PROJECT_ID}:us-central1:imbryk-db" \
+  --set-secrets=DATABASE_URL=database-url:latest \
+  --set-secrets=R2_ACCOUNT_ID=r2-account-id:latest \
+  --set-secrets=R2_ACCESS_KEY_ID=r2-access-key-id:latest \
+  --set-secrets=R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest \
+  --set-env-vars=VERTEX_AI_PROJECT=$PROJECT_ID \
+  --set-env-vars=VERTEX_AI_LOCATION=us-central1 \
+  --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
+  --set-env-vars=ENABLE_VALIDATION=true \
+  --set-env-vars=ENABLE_CACHING=true \
   --memory=4Gi \
   --cpu=2 \
   --task-timeout=30m \
@@ -451,6 +559,8 @@ gcloud run jobs create newsroom-director \
 ```
 
 > **Why 4 GB memory?** The newsroom director loads an AI text-processing model into memory. This needs more memory than the API.
+
+> **Subsequent updates are automatic.** After setting up the CD workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions)), pushing changes to `main` will automatically build a new image and update this Cloud Run job.
 
 ---
 
@@ -469,12 +579,14 @@ Or in the Console: go to **Pub/Sub > Topics**, click **"Create Topic"**, name it
 ### 6.2 Create the Daily Schedule
 
 ```sh
+PROJECT_ID=imbryk
 SA=imbryk-pipeline@$PROJECT_ID.iam.gserviceaccount.com
 
 gcloud scheduler jobs create http morning-press \
+  --location=us-central1 \
   --schedule="0 6 * * *" \
   --time-zone="UTC" \
-  --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT_ID/jobs/newsroom-director:run" \
+  --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/newsroom-director:run" \
   --http-method=POST \
   --oauth-service-account-email=$SA
 ```
@@ -501,24 +613,13 @@ Or in the Console: go to **Cloud Run > Jobs**, click `newsroom-director`, then c
 
 ### Updating the Application Code
 
-When new code is pushed to the repository:
+Push to `main` — everything updates automatically:
 
-1. The Cloudflare Pages websites (prompt UI and gazette) update automatically via git integration
-2. For the backend services, rebuild and re-upload the images:
+- **Frontend websites** (prompt UI and gazette) update via Cloudflare Pages git integration
+- **Backend services** (ingestion-api and newsroom-director) update via the CD GitHub Actions workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions))
+- **Database migrations** run automatically as part of the CD workflow
 
-```sh
-# Rebuild the API
-docker build -f apps/ingestion-api/Dockerfile -t $REPO/ingestion-api:latest .
-docker push $REPO/ingestion-api:latest
-gcloud run services update ingestion-api \
-  --image=$REPO/ingestion-api:latest --region=us-central1
-
-# Rebuild the Newsroom Director
-docker build -f apps/newsroom-director/Dockerfile -t $REPO/newsroom-director:latest .
-docker push $REPO/newsroom-director:latest
-gcloud run jobs update newsroom-director \
-  --image=$REPO/newsroom-director:latest --region=us-central1
-```
+The CD workflow only rebuilds services whose code actually changed, so pushing a frontend-only change will not trigger a backend redeploy.
 
 ### Checking Logs
 
