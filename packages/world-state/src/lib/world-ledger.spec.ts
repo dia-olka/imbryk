@@ -14,20 +14,20 @@ describe('WorldLedger template', () => {
 
 describe('INITIAL_WORLD_LEDGER', () => {
   it('should have an epoch set', () => {
-    expect(INITIAL_WORLD_LEDGER.epoch).toBe('Year Zero — The Morning After');
+    expect(INITIAL_WORLD_LEDGER.epoch).toBe('March 2026 — The World as It Is');
   });
 
   it('should have a non-empty synopsis', () => {
     expect(INITIAL_WORLD_LEDGER.synopsis.length).toBeGreaterThan(100);
   });
 
-  it('should have 6 nations', () => {
-    expect(INITIAL_WORLD_LEDGER.geopolitics.nations).toHaveLength(6);
+  it('should have 15 nations', () => {
+    expect(INITIAL_WORLD_LEDGER.geopolitics.nations).toHaveLength(15);
   });
 
-  it('should include the Atlantic Republic', () => {
+  it('should include the United States', () => {
     const names = INITIAL_WORLD_LEDGER.geopolitics.nations.map((n: { name: string }) => n.name);
-    expect(names).toContain('Atlantic Republic');
+    expect(names).toContain('United States');
   });
 
   it('should have alliances', () => {
@@ -60,7 +60,7 @@ describe('INITIAL_WORLD_LEDGER', () => {
   });
 
   it('should have environment data', () => {
-    expect(INITIAL_WORLD_LEDGER.environment.globalTemperatureAnomaly).toBe(1.8);
+    expect(INITIAL_WORLD_LEDGER.environment.globalTemperatureAnomaly).toBe(1.47);
     expect(INITIAL_WORLD_LEDGER.environment.crises.length).toBeGreaterThan(0);
   });
 });
@@ -84,13 +84,13 @@ describe('serializeLedgerToSynopsis', () => {
 
   it('should contain nation names', () => {
     const result = serializeLedgerToSynopsis(INITIAL_WORLD_LEDGER);
-    expect(result).toContain('Atlantic Republic');
-    expect(result).toContain('Eastern Compact');
+    expect(result).toContain('United States');
+    expect(result).toContain('China');
   });
 
   it('should contain the epoch', () => {
     const result = serializeLedgerToSynopsis(INITIAL_WORLD_LEDGER);
-    expect(result).toContain('EPOCH: Year Zero');
+    expect(result).toContain('EPOCH: March 2026');
   });
 
   it('should handle an empty ledger gracefully', () => {
@@ -125,18 +125,18 @@ describe('applyMutation', () => {
     const mutated = applyMutation(INITIAL_WORLD_LEDGER, {
       updateConflicts: [
         {
-          name: 'Caspian Basin Standoff',
+          name: 'Russia-Ukraine War',
           status: 'active',
-          description: 'Hostilities have resumed along the corridor.',
+          description: 'The front line has stabilised across the Donbas with intense fighting.',
         },
       ],
     });
 
     const updated = mutated.geopolitics.conflicts.find(
-      (c: { name: string }) => c.name === 'Caspian Basin Standoff'
+      (c: { name: string }) => c.name === 'Russia-Ukraine War'
     );
     expect(updated?.status).toBe('active');
-    expect(updated?.description).toContain('Hostilities have resumed');
+    expect(updated?.description).toContain('stabilised across the Donbas');
   });
 
   it('should append history events', () => {
