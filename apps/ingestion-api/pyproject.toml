@@ -26,6 +26,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "uvicorn[standard]>=0.39.0",
     "sqlalchemy>=2.0.36",
+    "pg8000>=1.31",
     "alembic>=1.13.3",
     "slowapi>=0.1.9",
     "braintree>=4.30.0",
