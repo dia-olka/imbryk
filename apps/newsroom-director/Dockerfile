@@ -2,11 +2,17 @@ FROM python:3.12-slim AS base
 
 WORKDIR /app
 
+# Install build tools required for packages like hdbscan
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv for fast dependency installation
 RUN pip install --no-cache-dir uv
 
 # Copy dependency files first for layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # Install dependencies (includes torch, sentence-transformers, hdbscan)
 RUN uv pip install --system .

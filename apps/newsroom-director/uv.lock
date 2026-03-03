@@ -919,15 +919,15 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "alembic", specifier = ">=1.13" },
+    { name = "alembic", specifier = ">=1.13.3" },
     { name = "boto3", specifier = ">=1.35.0" },
     { name = "google-cloud-aiplatform", specifier = ">=1.139.0" },
     { name = "hdbscan", specifier = ">=0.8.41" },
-    { name = "numpy", specifier = "<2" },
+    { name = "numpy", specifier = ">=1.24,<2" },
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "sentence-transformers", specifier = ">=5.1.2" },
-    { name = "sqlalchemy", specifier = ">=2.0" },
-    { name = "torch", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.4" },
+    { name = "sqlalchemy", specifier = ">=2.0.36" },
+    { name = "torch", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.6.0" },
     { name = "torch", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = ">=2.1,<2.3" },
     { name = "transformers", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = ">=4.45,<5" },
 ]

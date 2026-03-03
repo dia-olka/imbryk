@@ -53,6 +53,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# Un-ignore frontend source lib directories (caught by the Python lib/ rule above)
+!apps/*/src/lib/
 parts/
 sdist/
 var/
@@ -263,3 +265,5 @@ Thumbs.db
 
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
+.env.local
+apps/ingestion-api/imbryk.db
