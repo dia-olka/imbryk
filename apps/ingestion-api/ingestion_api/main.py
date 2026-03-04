@@ -226,7 +226,7 @@ async def braintree_webhook(
 
 @app.get("/payments/client-token", response_model=ClientTokenResponse)
 async def get_client_token():
-    """Generate a Braintree client token for Drop-in UI initialisation."""
+    """Generate a Braintree client token for Drop-in UI initialisation. No auth required as this is used on the client side before payment."""
     import braintree
 
     from ingestion_api.config import (

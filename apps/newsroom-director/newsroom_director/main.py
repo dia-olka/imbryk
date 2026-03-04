@@ -1,7 +1,7 @@
 """Imbryk Morning Press — AI newspaper generation orchestrator.
 
 Orchestrates the daily newspaper generation pipeline:
-1. Fetch unprocessed prompts from DB
+1. Fetch unprocessed paid prompts from DB
 2. Load/initialise WorldLedger
 3. Route prompts to newspapers via taxonomy
 4. Serialize WorldLedger synopsis & create context cache
