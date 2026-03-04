@@ -107,9 +107,10 @@ jobs:
           done
 
           # Install alembic and dependencies
-          pip install --quiet uv
           cd apps/ingestion-api
-          uv pip install --system .
+          python -m venv /tmp/migration-env
+          source /tmp/migration-env/bin/activate
+          pip install --quiet -e .
 
           # Run migrations
           DATABASE_URL="postgresql+pg8000://postgres:${{ secrets.DB_PASSWORD }}@127.0.0.1:5432/imbryk" \

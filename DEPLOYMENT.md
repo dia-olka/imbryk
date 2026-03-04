@@ -518,13 +518,16 @@ The database needs its tables set up before it can store anything. Run this manu
 <summary>First-time setup / manual fallback</summary>
 
 ```sh
+# Activate the Python virtual environment
+source apps/ingestion-api/.venv/bin/activate
+
 # Start the Cloud SQL proxy (connects your computer to the cloud database)
 cloud-sql-proxy "${PROJECT_ID}:us-central1:imbryk-db" &
 
 # Run the migration (creates all database tables)
 cd apps/ingestion-api
 DATABASE_URL="postgresql+pg8000://postgres:YOUR_DB_PASSWORD@127.0.0.1:5432/imbryk" \
-uv run alembic upgrade head
+alembic upgrade head
 ```
 
 > **Note:** You need the `cloud-sql-proxy` tool for this. Install it from [cloud.google.com/sql/docs/postgres/connect-auth-proxy](https://cloud.google.com/sql/docs/postgres/connect-auth-proxy). Replace `YOUR_DB_PASSWORD` with the password you set in Step 1.5.
