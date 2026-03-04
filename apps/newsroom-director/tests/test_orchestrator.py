@@ -318,3 +318,77 @@ class TestOrchestrator:
         # Curator and mutation should use regular generate (not cached)
         # At minimum: validation call(s) + curator + mutation
         assert len(gen.calls) >= 2
+
+    def test_edition_index_written(self, test_db_url):
+        """After pipeline completes, storage should have an index."""
+        gen = StubGenerationStrategy()
+        storage = StubEditionStorage()
+        pipeline = StubDistillationPipeline()
+
+        run_morning_press(
+            database_url=test_db_url,
+            generation_strategy=gen,
+            storage=storage,
+            distillation_pipeline=pipeline,
+        )
+
+        assert storage._index is not None
+        assert len(storage._index) >= 1
+        # Index entries should have edition_id and date
+        entry = storage._index[0]
+        assert "edition_id" in entry
+        assert "date" in entry
+
+    def test_deploy_hook_triggered(self, test_db_url, monkeypatch):
+        """Deploy hook is called when CF_DEPLOY_HOOK_URL is set."""
+        import newsroom_director.main as main_mod
+
+        hook_calls = []
+
+        def fake_urlopen(req, timeout=None):
+            hook_calls.append(req.full_url)
+
+            class FakeResp:
+                status = 200
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *args):
+                    pass
+
+            return FakeResp()
+
+        monkeypatch.setattr(main_mod, "CF_DEPLOY_HOOK_URL", "https://deploy.example.com/hook")
+        monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+        gen = StubGenerationStrategy()
+        storage = StubEditionStorage()
+        pipeline = StubDistillationPipeline()
+
+        run_morning_press(
+            database_url=test_db_url,
+            generation_strategy=gen,
+            storage=storage,
+            distillation_pipeline=pipeline,
+        )
+
+        assert len(hook_calls) == 1
+        assert hook_calls[0] == "https://deploy.example.com/hook"
+
+    def test_deploy_hook_skipped_when_not_set(self, test_db_url, monkeypatch):
+        """Deploy hook is not called when CF_DEPLOY_HOOK_URL is empty."""
+        import newsroom_director.main as main_mod
+        monkeypatch.setattr(main_mod, "CF_DEPLOY_HOOK_URL", "")
+
+        gen = StubGenerationStrategy()
+        storage = StubEditionStorage()
+        pipeline = StubDistillationPipeline()
+
+        # Should not raise
+        run_morning_press(
+            database_url=test_db_url,
+            generation_strategy=gen,
+            storage=storage,
+            distillation_pipeline=pipeline,
+        )

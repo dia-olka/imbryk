@@ -288,6 +288,15 @@ R2 is Cloudflare's file storage. The daily newspaper generation job saves articl
 4. **Bucket name:** `imbryk-editions`
 5. **Location:** Automatic
 6. Click **"Create Bucket"**
+7. **Connect a custom domain** (so the gazette can read editions via a production-ready, cached URL):
+   - Click on the `imbryk-editions` bucket
+   - Go to **Settings > Public access**
+   - Under **Custom Domains**, click **"Connect Domain"**
+   - Enter a subdomain on your Cloudflare-managed domain, e.g. `editions.yourdomain.com`
+   - Cloudflare will automatically create a CNAME record and enable caching
+   - Write down the custom domain URL (e.g. `https://editions.yourdomain.com`) — you will need it when setting up the gazette (Step 3.6) and the newsroom director (Step 5.3)
+
+> **Why a custom domain instead of the r2.dev URL?** The default `r2.dev` public URL is rate-limited and bypasses Cloudflare's CDN cache. A custom domain gives you production-grade performance, caching, and the ability to use Cloudflare Access if needed later.
 
 ### 3.3 Create R2 API Credentials
 
@@ -339,12 +348,15 @@ Your prompt UI will be live at `https://imbryk.pages.dev` (or whatever project n
    - **Build command:** `npx nx build gazette`
    - **Build output directory:** `dist/apps/gazette`
    - `NODE_VERSION` = `20`
+   - `R2_PUBLIC_URL` = the custom domain URL from Step 3.2 (e.g. `https://editions.yourdomain.com`)
 2. Click **"Save and Deploy"**
 3. Set up a **Deploy Hook** (for automatic rebuilds after each newspaper edition):
    - Go to the gazette project **Settings > Builds & Deployments**
    - Scroll to **Deploy Hooks**
    - Click **"Add Deploy Hook"**, give it a name like `newsroom-rebuild`, select the `main` branch
    - Copy the hook URL and save it as a secret in Google Cloud Secret Manager with the name `cf-deploy-hook-url`
+
+> **How the deploy hook works:** After the newsroom director generates a new edition, it writes the edition JSON and an index manifest to R2, then automatically POSTs to this hook URL to trigger a gazette rebuild. The gazette build fetches edition data from R2 via the custom domain.
 
 ---
 
@@ -443,6 +455,7 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 | `GCP_SERVICE_ACCOUNT` | The service account email | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com` |
 | `GCP_REGION` | Google Cloud region (optional, defaults to `us-central1`) | `us-central1` |
 | `SENTRY_DSN` | Sentry error tracking URL (leave empty to disable) | `https://abc123@o0.ingest.sentry.io/0` |
+| `R2_PUBLIC_URL` | Custom domain URL for the R2 bucket | `https://editions.yourdomain.com` |
 
 To find the full `GCP_WIF_PROVIDER` value:
 
@@ -554,9 +567,11 @@ gcloud run jobs create newsroom-director \
   --set-secrets=R2_ACCOUNT_ID=r2-account-id:latest \
   --set-secrets=R2_ACCESS_KEY_ID=r2-access-key-id:latest \
   --set-secrets=R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest \
+  --set-secrets=CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest \
   --set-env-vars=VERTEX_AI_PROJECT=$PROJECT_ID \
   --set-env-vars=VERTEX_AI_LOCATION=us-central1 \
   --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
+  --set-env-vars=R2_PUBLIC_URL=https://editions.yourdomain.com \
   --set-env-vars=ENABLE_IMAGES=true \
   --set-env-vars=ENABLE_VALIDATION=true \
   --set-env-vars=ENABLE_CACHING=true \
@@ -776,12 +791,14 @@ These are all the configuration values used by the backend services. Most are st
 | `R2_ACCESS_KEY_ID` | Secret | R2 API access key |
 | `R2_SECRET_ACCESS_KEY` | Secret | R2 API secret key |
 | `R2_BUCKET_NAME` | Env var | The R2 bucket name (default: `imbryk-editions`) |
+| `R2_PUBLIC_URL` | Env var | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to generate public image URLs |
 | `ENABLE_IMAGES` | Env var | Generate article and hero images via Imagen (default: `true`) |
 | `ENABLE_VALIDATION` | Env var | Check prompt coherence before generating (default: `true`) |
 | `ENABLE_CACHING` | Env var | Cache AI context to save money (default: `true`) |
 | `SENTRY_DSN` | Env var | Error tracking URL (optional — leave empty to disable) |
 | `TOTAL_BUDGET_TOKENS` | Env var | Max AI tokens per newspaper (default: `800000`) |
 | `MAX_CLUSTERS` | Env var | Max topic groups per newspaper (default: `30`) |
+| `CF_DEPLOY_HOOK_URL` | Secret | Cloudflare Pages deploy hook URL — triggers gazette rebuild after a new edition is published |
 
 ### Prompt UI (Cloudflare Pages)
 
@@ -796,3 +813,4 @@ These are all the configuration values used by the backend services. Most are st
 | Variable | Where to set | What it is |
 |---|---|---|
 | `NODE_VERSION` | Cloudflare Pages env vars | Node.js version (set to `20`) |
+| `R2_PUBLIC_URL` | Cloudflare Pages env vars | Custom domain URL of the R2 bucket (e.g. `https://editions.yourdomain.com`) — when set, the gazette fetches editions from R2 instead of using the local fixture |

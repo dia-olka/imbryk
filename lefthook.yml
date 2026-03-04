@@ -1,0 +1,11 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:ts:
+      glob: "**/*.{ts,tsx}" 
+      run: npx nx run-many --targets=lint --all --exclude=ingestion-api,newsroom-director --fix --files={staged_files}
+      stage_fixed: true
+    lint:py:
+      glob: "**/*.{py}"
+      run: npx nx run-many --targets=lint --projects=ingestion-api,newsroom-director --fix --files={staged_files}
+      stage_fixed: true

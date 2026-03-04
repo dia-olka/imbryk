@@ -4,7 +4,7 @@ const md = markdownIt({ html: false, breaks: true, linkify: true });
 
 export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy('src/css');
-  // make logo and favicon available at site root
+  // make logo and favicon icons available at site root
   eleventyConfig.addPassthroughCopy('src/favicon.svg');
   eleventyConfig.addPassthroughCopy('src/logo.svg');
 

@@ -106,3 +106,66 @@ class TestR2EditionStorage:
         assert "edition_id" in data
         assert "date" in data
         assert "articles" in data
+
+    def test_write_image_returns_custom_domain_url(self, mock_s3_client):
+        storage = R2EditionStorage(
+            account_id="test-acct",
+            access_key_id="key",
+            secret_access_key="secret",
+            bucket_name="test-bucket",
+            public_url="https://editions.example.com",
+        )
+
+        url = storage.write_image("2026-03-01", "sovereign", "hero.webp", b"img")
+
+        assert url == "https://editions.example.com/editions/2026-03-01/sovereign/hero.webp"
+
+    def test_write_image_strips_trailing_slash(self, mock_s3_client):
+        storage = R2EditionStorage(
+            account_id="test-acct",
+            access_key_id="key",
+            secret_access_key="secret",
+            bucket_name="test-bucket",
+            public_url="https://editions.example.com/",
+        )
+
+        url = storage.write_image("2026-03-01", "owner", "0.webp", b"img")
+
+        assert url == "https://editions.example.com/editions/2026-03-01/owner/0.webp"
+
+    def test_write_index(self, mock_s3_client):
+        storage = R2EditionStorage(
+            account_id="test-acct",
+            access_key_id="key",
+            secret_access_key="secret",
+            bucket_name="test-bucket",
+        )
+
+        index = [
+            {"edition_id": "2026-03-02", "date": "2026-03-02", "newspaper_ids": ["sovereign"]},
+            {"edition_id": "2026-03-01", "date": "2026-03-01", "newspaper_ids": ["owner"]},
+        ]
+        storage.write_index(index)
+
+        call_kwargs = mock_s3_client.put_object.call_args[1]
+        assert call_kwargs["Bucket"] == "test-bucket"
+        assert call_kwargs["Key"] == "editions/index.json"
+        assert call_kwargs["ContentType"] == "application/json"
+
+        body = json.loads(call_kwargs["Body"].decode("utf-8"))
+        assert len(body) == 2
+        assert body[0]["edition_id"] == "2026-03-02"
+
+    def test_write_index_empty(self, mock_s3_client):
+        storage = R2EditionStorage(
+            account_id="test-acct",
+            access_key_id="key",
+            secret_access_key="secret",
+            bucket_name="test-bucket",
+        )
+
+        storage.write_index([])
+
+        body_bytes = mock_s3_client.put_object.call_args[1]["Body"]
+        data = json.loads(body_bytes.decode("utf-8"))
+        assert data == []

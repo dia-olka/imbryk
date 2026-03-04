@@ -165,4 +165,5 @@ jobs:
           gcloud run jobs update newsroom-director \
             --image=${{ env.IMAGE_REGISTRY }}/newsroom-director:${{ env.DEPLOY_SHA }} \
             --region=${{ env.GCP_REGION }} \
-            --update-env-vars=SENTRY_DSN=${{ vars.SENTRY_DSN }}
+            --update-env-vars=SENTRY_DSN=${{ vars.SENTRY_DSN }},R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }} \
+            --update-secrets=CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest

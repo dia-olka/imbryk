@@ -1,6 +1,5 @@
 """Tests for the image generation pipeline step."""
 
-import pytest
 
 from newsroom_director.image_gen.client import StubImageClient
 from newsroom_director.image_gen.pipeline import (

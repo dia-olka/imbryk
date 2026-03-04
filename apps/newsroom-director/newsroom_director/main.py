@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 import sentry_sdk
 
 from .config import (
+    CF_DEPLOY_HOOK_URL,
     DATABASE_URL,
     LOG_LEVEL_INT,
     R2_ACCOUNT_ID,
@@ -58,7 +59,11 @@ from .db import (
 from .distillation.pipeline import DistillationPipeline
 from .distillation.types import Prompt as DistillationPrompt
 from .generation import GenerationStrategy, StubGenerationStrategy, VertexAIStrategy
-from .image_gen import ImageGenerationStrategy, StubImageClient, generate_images_for_newspaper
+from .image_gen import (
+    ImageGenerationStrategy,
+    StubImageClient,
+    generate_images_for_newspaper,
+)
 from .logging_config import configure_logging
 from .personas import (
     CURATOR_PERSONA,
@@ -321,6 +326,12 @@ def run_morning_press(
 
         session.commit()
 
+        # Step 13: Write index manifest to R2
+        _write_edition_index(store, edition_id, edition_date, articles)
+
+        # Step 14: Trigger gazette rebuild via Cloudflare deploy hook
+        _trigger_deploy_hook()
+
         total_ms = int((time.monotonic() - start_time) * 1000)
         summary = {
             "edition_id": edition_id,
@@ -351,6 +362,80 @@ def run_morning_press(
         if cached_content is not None:
             gen.delete_cache(cached_content)
         session.close()
+
+
+def _write_edition_index(
+    store: EditionStorage,
+    edition_id: str,
+    edition_date: str,
+    articles: dict[str, str],
+) -> None:
+    """Build and write an index.json manifest listing all editions."""
+    try:
+        existing = store.list_editions()
+        # Collect known edition dates from existing index entries
+        known_dates: set[str] = set()
+        index_entries: list[dict] = []
+        for entry in existing:
+            # Entries from list_editions have {key, last_modified}
+            key = entry.get("key", "")
+            if key.endswith(".json") and key != "editions/index.json":
+                parts = key.split("/")
+                if len(parts) >= 3:
+                    date = parts[1]
+                    known_dates.add(date)
+                    index_entries.append(
+                        {
+                            "edition_id": parts[2].replace(".json", ""),
+                            "date": date,
+                            "newspaper_ids": [],
+                        }
+                    )
+
+        # Add current edition if not already present
+        if edition_date not in known_dates:
+            newspaper_ids = [k for k in articles if k != "curator"]
+            index_entries.append(
+                {
+                    "edition_id": edition_id,
+                    "date": edition_date,
+                    "newspaper_ids": newspaper_ids,
+                }
+            )
+
+        # Sort by date descending (newest first)
+        index_entries.sort(key=lambda e: e["date"], reverse=True)
+        store.write_index(index_entries)
+    except Exception:
+        logger.warning(
+            "Failed to write edition index, gazette will use stale index",
+            exc_info=True,
+        )
+
+
+def _trigger_deploy_hook() -> None:
+    """POST to Cloudflare Pages deploy hook to trigger gazette rebuild.
+
+    Best-effort: logs a warning on failure but never raises.
+    """
+    if not CF_DEPLOY_HOOK_URL:
+        logger.info("CF_DEPLOY_HOOK_URL not set, skipping gazette rebuild trigger")
+        return
+
+    try:
+        import urllib.request
+
+        req = urllib.request.Request(CF_DEPLOY_HOOK_URL, method="POST", data=b"")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            logger.info(
+                "Gazette deploy hook triggered",
+                extra={"status": resp.status},
+            )
+    except Exception:
+        logger.warning(
+            "Failed to trigger gazette deploy hook",
+            exc_info=True,
+        )
 
 
 def _format_all_articles(articles: dict[str, str]) -> str:

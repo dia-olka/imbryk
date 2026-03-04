@@ -11,6 +11,7 @@ from .config import (
     R2_ACCESS_KEY_ID,
     R2_ACCOUNT_ID,
     R2_BUCKET_NAME,
+    R2_PUBLIC_URL,
     R2_SECRET_ACCESS_KEY,
 )
 from .storage import EditionStorage
@@ -27,9 +28,11 @@ class R2EditionStorage(EditionStorage):
         access_key_id: str | None = None,
         secret_access_key: str | None = None,
         bucket_name: str | None = None,
+        public_url: str | None = None,
     ) -> None:
         acct = account_id or R2_ACCOUNT_ID
         self._bucket = bucket_name or R2_BUCKET_NAME
+        self._public_url = (public_url or R2_PUBLIC_URL).rstrip("/")
         self._client = boto3.client(
             "s3",
             endpoint_url=f"https://{acct}.r2.cloudflarestorage.com",
@@ -79,7 +82,7 @@ class R2EditionStorage(EditionStorage):
                 "key": key,
             },
         )
-        return f"https://{self._bucket}.r2.dev/{key}"
+        return f"{self._public_url}/{key}"
 
     def list_editions(self) -> list[dict]:
         response = self._client.list_objects_v2(
@@ -91,3 +94,17 @@ class R2EditionStorage(EditionStorage):
                 {"key": obj["Key"], "last_modified": str(obj["LastModified"])}
             )
         return editions
+
+    def write_index(self, editions: list[dict]) -> None:
+        """Write editions/index.json manifest to R2."""
+        body = json.dumps(editions, ensure_ascii=False)
+        self._client.put_object(
+            Bucket=self._bucket,
+            Key="editions/index.json",
+            Body=body.encode("utf-8"),
+            ContentType="application/json",
+        )
+        logger.info(
+            "Index manifest written to R2",
+            extra={"edition_count": len(editions)},
+        )

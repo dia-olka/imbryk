@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from newsroom_director.image_gen.client import (
     ImagenClient,
     StubImageClient,
