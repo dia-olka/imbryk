@@ -1,5 +1,8 @@
 """Tests for the end-to-end distillation pipeline."""
 
+from unittest.mock import MagicMock
+
+import numpy as np
 import pytest
 
 from newsroom_director.distillation.embedder import PromptEmbedder
@@ -125,8 +128,6 @@ class TestDistillationPipeline:
 
     def test_large_prompt_count_with_mock_embedder(self):
         """1000 prompts with a deterministic mock embedder must complete without error."""
-        import numpy as np
-        from unittest.mock import MagicMock
 
         n = 1000
         # Produce random but reproducible embeddings
@@ -149,8 +150,6 @@ class TestDistillationPipeline:
 
     def test_noise_only_clusters_handled(self):
         """When HDBSCAN labels everything as noise, the pipeline must still return results."""
-        import numpy as np
-        from unittest.mock import MagicMock
 
         # Highly dispersed embeddings → HDBSCAN produces only noise
         n = 10
