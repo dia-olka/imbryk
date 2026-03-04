@@ -34,6 +34,6 @@ describe('App Shell', () => {
 
   it('should render IMBRYK header', () => {
     render(<App />);
-    expect(screen.getByText('IMBRYK')).toBeTruthy();
+    expect(screen.getByText('Whisper')).toBeTruthy();
   });
 });
