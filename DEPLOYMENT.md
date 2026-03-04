@@ -151,6 +151,7 @@ The database stores prompts, payment records, and the world state.
    - **Region:** `us-central1` (Iowa) — this is a good default that keeps costs low
    - **Machine type:** under "Machine Configuration", pick **Shared core > db-f1-micro** (the cheapest option, ~$8/month)
    - **Storage:** 10 GB, enable auto-increase
+   - **Flags:** click **"Add Flag"**, search for `cloudsql.iam_authentication`, set it to `on`
 5. Click **"Create Instance"** — this takes a few minutes
 
 Once the instance is ready:
@@ -160,6 +161,105 @@ Once the instance is ready:
 8. Click **"Create Database"**
 9. Enter name: `imbryk`
 10. Click **"Create"**
+
+### 1.5a Enable IAM Database Authentication
+
+This lets your Google account (and the service account) log in to the database using Google credentials instead of a password — no password to manage or leak.
+
+If you did not enable the flag during instance creation, enable it now:
+
+1. Go to **SQL > imbryk-db > Edit**
+2. Scroll to **Flags**
+3. Click **"Add Flag"**, search for `cloudsql.iam_authentication`, set it to `on`
+4. Click **"Save"** — the instance will restart (takes ~1 minute)
+
+Or with `gcloud`:
+
+```sh
+gcloud sql instances patch imbryk-db \
+  --database-flags=cloudsql.iam_authentication=on
+```
+
+#### Add Your Google Account as an IAM Database User
+
+```sh
+# Replace with your Google account email
+gcloud sql users create YOUR_EMAIL@gmail.com \
+  --instance=imbryk-db \
+  --type=cloud_iam_user
+```
+
+Or in the Console:
+1. Go to **SQL > imbryk-db > Users**
+2. Click **"Add User Account"**
+3. Select **"Cloud IAM"**
+4. Enter your Google email address
+5. Click **"Add"**
+
+#### Add the Service Account as an IAM Database User
+
+```sh
+PROJECT_ID=imbryk
+SA=imbryk-pipeline@$PROJECT_ID.iam.gserviceaccount.com
+
+gcloud sql users create $SA \
+  --instance=imbryk-db \
+  --type=cloud_iam_service_account
+```
+
+#### Grant Database Permissions
+
+Connect to the database once using the `postgres` password (Cloud Shell, see below) and run:
+
+```sql
+-- Grant your Google account access
+GRANT ALL PRIVILEGES ON DATABASE imbryk TO "YOUR_EMAIL@gmail.com";
+
+-- Grant the service account access
+GRANT ALL PRIVILEGES ON DATABASE imbryk TO "imbryk-pipeline@YOUR_PROJECT_ID.iam.gserviceaccount.com";
+```
+
+#### Connecting via Cloud Shell (IAM)
+
+1. Open **Cloud Shell** (the `>_` icon in the top-right of the Google Cloud Console)
+2. Run:
+
+```sh
+# Authenticate (already done in Cloud Shell, but run if needed)
+gcloud auth login
+
+# Connect — Cloud Shell handles IAM token automatically
+gcloud sql connect imbryk-db \
+  --user=YOUR_EMAIL@gmail.com \
+  --database=imbryk
+```
+
+> **No password prompt** — your Google identity is used automatically. If it asks for a password anyway, press **Enter** (blank) or check that `cloudsql.iam_authentication` is enabled.
+
+#### Connecting Locally (IAM via Cloud SQL Proxy)
+
+If you want to connect from your own machine without a password:
+
+1. Install the Cloud SQL Auth Proxy: [cloud.google.com/sql/docs/postgres/connect-auth-proxy](https://cloud.google.com/sql/docs/postgres/connect-auth-proxy)
+2. Run:
+
+```sh
+# Start the proxy (uses your gcloud credentials automatically)
+cloud-sql-proxy "$PROJECT_ID:us-central1:imbryk-db" --auto-iam-authn &
+
+# Connect with psql — no password needed
+psql "host=127.0.0.1 dbname=imbryk user=YOUR_EMAIL@gmail.com sslmode=disable"
+```
+
+#### Update the Database URL for the Service Account (IAM)
+
+When the service account connects via IAM, the connection string in Secret Manager changes slightly — no password field:
+
+```
+postgresql+pg8000://imbryk-pipeline@YOUR_PROJECT_ID.iam.gserviceaccount.com@/imbryk?unix_sock=/cloudsql/YOUR_PROJECT_ID:us-central1:imbryk-db/.s.PGSQL.5432&enable_iam_auth=true
+```
+
+Update the `database-url` secret in Secret Manager with this value (see Step 1.6).
 
 ### 1.6 Store the Database Password Securely
 
