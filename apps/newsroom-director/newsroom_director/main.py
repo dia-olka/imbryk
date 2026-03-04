@@ -3,7 +3,7 @@
 Orchestrates the daily newspaper generation pipeline:
 1. Fetch unprocessed paid prompts from DB
 2. Load/initialise WorldLedger
-3. Route prompts to newspapers via taxonomy
+3. Route prompts to n ewspapers via taxonomy
 4. Serialize WorldLedger synopsis & create context cache
 5. Run coherence validation on prompts
 6. Run distillation pipeline per newspaper
