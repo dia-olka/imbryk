@@ -1,8 +1,14 @@
 """Application configuration via environment variables."""
 
+import logging
 import os
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./imbryk.db")
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+
+# Logging level
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_LEVEL_INT = getattr(logging, LOG_LEVEL, logging.WARNING)
 
 VERTEX_AI_PROJECT = os.getenv("VERTEX_AI_PROJECT", "")
 VERTEX_AI_LOCATION = os.getenv("VERTEX_AI_LOCATION", "us-central1")

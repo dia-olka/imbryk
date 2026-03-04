@@ -12,13 +12,19 @@ from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
 from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
-from ingestion_api.config import CORS_ALLOWED_ORIGINS, RATE_LIMIT_QUOTE, SENTRY_DSN
+from ingestion_api.config import CORS_ALLOWED_ORIGINS, RATE_LIMIT_QUOTE, SENTRY_DSN, _log_level_int
 
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         traces_sample_rate=0.1,
         send_default_pii=False,
+        integrations=[
+            sentry_sdk.integrations.logging.LoggingIntegration(
+                level=_log_level_int,  # Capture logs at configured level or higher
+                event_level=logging.ERROR,  # Send only ERROR logs as Sentry events
+            ),
+        ],
     )
 from ingestion_api.database import get_db
 from ingestion_api.models import (
@@ -56,11 +62,31 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Log API startup for visibility in Cloud Logging & Sentry."""
+    logger.info(
+        "Imbryk Ingestion API started",
+        extra={"allowed_origins": CORS_ALLOWED_ORIGINS},
+    )
+
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    logger.warning("Rate limit exceeded for %s", request.client)
     return JSONResponse(
         status_code=429,
         content={"detail": "Rate limit exceeded"},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler for unexpected errors — logs to console & Sentry."""
+    logger.exception("Unhandled exception in %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
     )
 
 

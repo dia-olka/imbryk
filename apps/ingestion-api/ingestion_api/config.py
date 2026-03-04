@@ -1,8 +1,13 @@
 """Application configuration."""
 
+import logging
 import os
 
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+
+# Logging level
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+_log_level_int = getattr(logging, LOG_LEVEL, logging.WARNING)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./imbryk.db")
 

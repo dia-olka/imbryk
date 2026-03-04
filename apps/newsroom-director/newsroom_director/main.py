@@ -23,7 +23,22 @@ import time
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from .config import DATABASE_URL, R2_ACCOUNT_ID, VERTEX_AI_LOCATION, VERTEX_AI_PROJECT
+import sentry_sdk
+
+from .config import DATABASE_URL, R2_ACCOUNT_ID, SENTRY_DSN, LOG_LEVEL_INT, VERTEX_AI_LOCATION, VERTEX_AI_PROJECT
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+        integrations=[
+            sentry_sdk.integrations.logging.LoggingIntegration(
+                level=LOG_LEVEL_INT,  # Capture logs at configured level or higher
+                event_level=logging.ERROR,  # Send only ERROR logs as Sentry events
+            ),
+        ],
+    )
 from .db import (
     fetch_unprocessed_prompts,
     get_engine,
@@ -274,8 +289,9 @@ def run_morning_press(
 
         return summary
 
-    except Exception:
+    except Exception as exc:
         session.rollback()
+        logger.exception("Morning Press pipeline failed: %s", exc)
         raise
     finally:
         # Force-delete context cache to avoid stale billing

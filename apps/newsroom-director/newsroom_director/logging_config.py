@@ -34,8 +34,16 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(log_entry, ensure_ascii=False)
 
 
-def configure_logging(level: int = logging.INFO) -> None:
-    """Set up JSON-formatted structured logging."""
+def configure_logging(level: int | None = None) -> None:
+    """Set up JSON-formatted structured logging.
+    
+    Args:
+        level: Logging level (defaults to LOG_LEVEL_INT from config, or INFO if not specified).
+    """
+    if level is None:
+        from .config import LOG_LEVEL_INT
+        level = LOG_LEVEL_INT
+    
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JSONFormatter())
 
