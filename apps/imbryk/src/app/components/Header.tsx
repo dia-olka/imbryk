@@ -9,7 +9,7 @@ export function Header() {
         />
         <div>
           <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-text">
-            IMBRYK
+            Whisper
           </h1>
           <p className="text-text-muted text-sm mt-1 font-sans">
             Shape the world. One event at a time.

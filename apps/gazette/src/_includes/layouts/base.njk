@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title | default("Imbryk Gazette") }}</title>
+  <!-- favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -11,7 +13,10 @@
 
   <header role="banner" class="site-header">
     <div class="site-header__inner">
-      <a href="/" class="site-title">Imbryk Gazette</a>
+      <a href="/" class="site-logo">
+        <img src="/logo.svg" alt="Imbryk logo" class="site-logo__image" />
+        <span class="site-title">Gazette</span>
+      </a>
       <nav aria-label="Primary navigation">
         <ul class="nav-list" role="list">
           <li><a href="/"{% if page.url == "/" %} aria-current="page"{% endif %}>Today</a></li>

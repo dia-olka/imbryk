@@ -100,6 +100,19 @@ a:hover {
   padding: var(--space-md);
 }
 
+/* logo + caption next to each other */
+.site-logo {
+  display: flex;
+  align-items: center;
+}
+.site-logo__image {
+  height: var(--type-2xl);
+  margin-right: var(--space-sm);
+}
+.site-logo .site-title {
+  margin-bottom: 0; /* remove extra space when wrapped with logo */
+}
+
 .site-header__inner {
   max-width: var(--measure);
   margin: 0 auto;

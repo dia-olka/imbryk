@@ -1,5 +1,8 @@
 export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy('src/css');
+  // make logo and favicon available at site root
+  eleventyConfig.addPassthroughCopy('src/favicon.svg');
+  eleventyConfig.addPassthroughCopy('src/logo.svg');
 
   eleventyConfig.addFilter('dateDisplay', (value) => {
     if (!value) return '';
