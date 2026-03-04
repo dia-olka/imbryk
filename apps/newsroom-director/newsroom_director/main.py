@@ -25,7 +25,14 @@ from datetime import datetime, timezone
 
 import sentry_sdk
 
-from .config import DATABASE_URL, R2_ACCOUNT_ID, SENTRY_DSN, LOG_LEVEL_INT, VERTEX_AI_LOCATION, VERTEX_AI_PROJECT
+from .config import (
+    DATABASE_URL,
+    LOG_LEVEL_INT,
+    R2_ACCOUNT_ID,
+    SENTRY_DSN,
+    VERTEX_AI_LOCATION,
+    VERTEX_AI_PROJECT,
+)
 
 if SENTRY_DSN:
     sentry_sdk.init(

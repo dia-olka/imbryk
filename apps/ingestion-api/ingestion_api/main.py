@@ -12,7 +12,12 @@ from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
 from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
-from ingestion_api.config import CORS_ALLOWED_ORIGINS, RATE_LIMIT_QUOTE, SENTRY_DSN, _log_level_int
+from ingestion_api.config import (
+    CORS_ALLOWED_ORIGINS,
+    RATE_LIMIT_QUOTE,
+    SENTRY_DSN,
+    _log_level_int,
+)
 
 if SENTRY_DSN:
     sentry_sdk.init(

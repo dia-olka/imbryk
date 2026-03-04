@@ -51,7 +51,7 @@
           "body": "The North African water crisis has reached a critical inflection point as the UN Successor Agency reports that over 200,000 people have been displaced from the Sahel corridor in the past month alone, with projections suggesting the number could triple by year's end.\n\nDesalination plants built under the Southern Union's emergency infrastructure programme are operating at only 40% capacity due to energy shortages and supply chain disruptions. Council Chair Amara Diallo called for an emergency session of the Fracture Accords to address what she described as 'a humanitarian catastrophe that respects no borders.'\n\nThe European Commonwealth has pledged additional humanitarian aid but refugee processing centres along the Mediterranean coast are already overwhelmed. Civil society organisations warn that the displacement is fuelling resentment and creating fertile ground for extremist recruitment.\n\nClimate scientists point to a feedback loop: deforestation and overgrazing accelerate desertification, which reduces rainfall, which drives further displacement — a cycle that cannot be broken without massive coordinated investment in regenerative agriculture and water infrastructure.",
           "length": 950,
           "clusters": [3],
-          "weight": 0.90,
+          "weight": 0.9,
           "word_count": 172
         },
         {
@@ -78,7 +78,7 @@
       "editors_note": "We lead with the stories the power-focused papers will bury below the fold. While navies posture in the Malacca Strait, 200,000 people are walking away from their homes because the water ran out. The coral collapse is equally urgent — an irreversible loss happening on our watch.",
       "metadata": {
         "article_to_cluster_mapping": { "0": 3, "1": 3 },
-        "weights_used": { "0": 0.90, "1": 0.78 },
+        "weights_used": { "0": 0.9, "1": 0.78 },
         "generation_timestamp": "2026-03-01T06:05:00Z"
       }
     },
@@ -139,6 +139,86 @@
         "article_to_cluster_mapping": { "0": 2 },
         "weights_used": { "0": 0.82 },
         "generation_timestamp": "2026-03-01T06:15:00Z"
+      }
+    },
+    {
+      "newspaper_id": "moralist",
+      "newspaper_name": "The Moralist",
+      "articles": [
+        {
+          "headline": "Autonomous Weapons Treaty Is a Moral Imperative — Not a Strategic Calculation",
+          "body": "Prime Minister Holm's Tromsø Protocol is not a question of strategy. It is a question of civilisational conscience. The proposal to require human authorisation for lethal force by AI systems should not be controversial — it should be self-evident.\n\nThe Atlantic Republic's dismissal of the treaty as 'strategically naive' reveals a profound moral bankruptcy at the heart of the world's most powerful military bloc. When did the capacity to kill without human judgement become a strategic asset rather than a moral catastrophe?\n\nThe Eastern Compact's silence is equally damning. Their state media's characterisation of the treaty as an infringement on 'sovereign defence prerogatives' treats the right to deploy autonomous killing machines as though it were a fundamental liberty.\n\nWhat both great powers fail to grasp — or choose to ignore — is that the question is not whether autonomous weapons are effective. The question is whether a civilisation that delegates the decision to take human life to an algorithm deserves to call itself civilised at all.",
+          "length": 880,
+          "clusters": [2],
+          "weight": 0.88,
+          "word_count": 166
+        },
+        {
+          "headline": "The Displacement Crisis Demands Moral Courage, Not Aid Packages",
+          "body": "Two hundred thousand people have walked away from their homes in the Sahel corridor. The international response has been to pledge money. Money is necessary but insufficient. What is required is moral courage.\n\nThe European Commonwealth's humanitarian aid is welcome, but its simultaneous tightening of refugee processing at Mediterranean centres reveals a painful hypocrisy. You cannot claim to care about displaced people while ensuring they remain displaced far from your borders.\n\nThe Southern Union's Council Chair Amara Diallo is right to call for an emergency session of the Fracture Accords, and the Atlantic Republic and Eastern Compact are wrong to block it with procedural objections. When 200,000 people are homeless, procedure is not a principle — it is an excuse.\n\nThe traditional values that once bound communities together — solidarity, hospitality, mutual obligation — are being eroded not by modernity but by the calculated indifference of states that have forgotten what those values require.",
+          "length": 830,
+          "clusters": [3],
+          "weight": 0.82,
+          "word_count": 162
+        }
+      ],
+      "in_brief": [
+        {
+          "headline": "AI job losses raise questions about duty of care",
+          "summary": "The 15,000 tech workers laid off in the Atlantic Republic deserve more than severance packages. Employers who profit from automation bear a moral obligation to the workers they displace — an obligation no algorithm can fulfil.",
+          "clusters": [2]
+        },
+        {
+          "headline": "Analog Revival offers hope for human connection",
+          "summary": "The opening of Copenhagen's first community print house is a small but meaningful act of resistance against the digital isolation that corrodes civic life. Sometimes the old ways are not outdated — they are essential.",
+          "clusters": [5]
+        }
+      ],
+      "editors_note": "Today we choose to lead with conscience rather than spectacle. The autonomous weapons debate is not a policy discussion — it is a referendum on what kind of world we wish to inhabit. The displacement crisis is not a logistical challenge — it is a moral test we are currently failing.",
+      "metadata": {
+        "article_to_cluster_mapping": { "0": 2, "1": 3 },
+        "weights_used": { "0": 0.88, "1": 0.82 },
+        "generation_timestamp": "2026-03-01T06:20:00Z"
+      }
+    },
+    {
+      "newspaper_id": "hedonist",
+      "newspaper_name": "The Hedonist",
+      "articles": [
+        {
+          "headline": "Coral Reefs Are Dying and So Is Your Next Holiday — Here's Where to Go Instead",
+          "body": "Look, we're not going to pretend the Pacific coral collapse isn't happening. It is. It's awful. But if you had a diving trip planned to the Great Barrier Reef's successor systems, you need a Plan B, and we've got you covered.\n\nThe Norwegian fjord dive scene is having a moment — cold water, yes, but the kelp forests are spectacular and the marine life is genuinely surprising. Iceland's Silfra fissure remains one of the clearest underwater visibility spots on Earth.\n\nCloser to the tropics, the Red Sea coral systems remain relatively healthy, and the Southern Union's East African coast has some of the best-preserved reef ecosystems left. Book now before everyone else figures this out.\n\nMeanwhile, the Analog Revival movement in Copenhagen has opened a community print house. Sounds niche, but the café attached to it is already being called the best flat white in Scandinavia. Worth the trip.",
+          "length": 790,
+          "clusters": [3, 5],
+          "weight": 0.75,
+          "word_count": 158
+        },
+        {
+          "headline": "The Gene Therapy Breakthrough You Should Actually Be Excited About",
+          "body": "Forget aircraft carriers and trade wars for a minute. The European Commonwealth just reported a 94% remission rate in CRISPR-based sickle cell therapy trials. Ninety-four percent. That's not incremental progress — that's a genuine medical revolution.\n\nSickle cell disease affects millions, predominantly in the Southern Union and across sub-Saharan regions. A functional cure could transform life expectancy and quality of life for entire populations. This is the kind of story that gets buried under geopolitical noise, and it shouldn't be.\n\nThe trial results also suggest the underlying CRISPR platform could be adapted for other genetic conditions. We're potentially looking at the beginning of a new era in medicine — one where genetic diseases become treatable conditions rather than life sentences.\n\nIs it too early to celebrate? Maybe. But in a week full of naval standoffs and job cuts, we'll take good news where we can find it.",
+          "length": 810,
+          "clusters": [4],
+          "weight": 0.8,
+          "word_count": 154
+        }
+      ],
+      "in_brief": [
+        {
+          "headline": "Fusion energy futures: the hot new investment",
+          "summary": "The Northern Shield has launched fusion energy futures trading. We don't pretend to understand derivatives, but if fusion actually works, early investors will be very happy people. Just don't bet the holiday fund.",
+          "clusters": [4]
+        },
+        {
+          "headline": "Meridian currency surge: your next travel hack?",
+          "summary": "The Meridian currency is surging against the Atlantic Dollar. If you're planning travel to Southern Union-aligned destinations, now might be the time to convert. Currency arbitrage as a lifestyle choice? We're here for it.",
+          "clusters": [0]
+        }
+      ],
+      "editors_note": "Life is too short for doom-scrolling. Yes, the world has problems. But it also has gene therapy breakthroughs, spectacular dive sites, and excellent coffee. We report the news you can actually use.",
+      "metadata": {
+        "article_to_cluster_mapping": { "0": 3, "1": 4 },
+        "weights_used": { "0": 0.75, "1": 0.8 },
+        "generation_timestamp": "2026-03-01T06:25:00Z"
       }
     }
   ],

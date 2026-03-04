@@ -442,6 +442,7 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 | `GCP_WIF_PROVIDER` | The full Workload Identity provider resource name | `projects/123456/locations/global/workloadIdentityPools/github/providers/github-actions` |
 | `GCP_SERVICE_ACCOUNT` | The service account email | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com` |
 | `GCP_REGION` | Google Cloud region (optional, defaults to `us-central1`) | `us-central1` |
+| `SENTRY_DSN` | Sentry error tracking URL (leave empty to disable) | `https://abc123@o0.ingest.sentry.io/0` |
 
 To find the full `GCP_WIF_PROVIDER` value:
 
@@ -495,6 +496,7 @@ gcloud run deploy ingestion-api \
   --set-secrets=BRAINTREE_PRIVATE_KEY=braintree-private-key:latest \
   --set-env-vars=VERTEX_AI_PROJECT="${PROJECT_ID}" \
   --set-env-vars=CORS_ALLOWED_ORIGINS=https://imbryk.pages.dev \
+  --set-env-vars=SENTRY_DSN="" \
   --memory=512Mi \
   --cpu=1 \
   --min-instances=0 \
@@ -557,6 +559,7 @@ gcloud run jobs create newsroom-director \
   --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
   --set-env-vars=ENABLE_VALIDATION=true \
   --set-env-vars=ENABLE_CACHING=true \
+  --set-env-vars=SENTRY_DSN="" \
   --memory=4Gi \
   --cpu=2 \
   --task-timeout=30m \
@@ -774,6 +777,7 @@ These are all the configuration values used by the backend services. Most are st
 | `R2_BUCKET_NAME` | Env var | The R2 bucket name (default: `imbryk-editions`) |
 | `ENABLE_VALIDATION` | Env var | Check prompt coherence before generating (default: `true`) |
 | `ENABLE_CACHING` | Env var | Cache AI context to save money (default: `true`) |
+| `SENTRY_DSN` | Env var | Error tracking URL (optional — leave empty to disable) |
 | `TOTAL_BUDGET_TOKENS` | Env var | Max AI tokens per newspaper (default: `800000`) |
 | `MAX_CLUSTERS` | Env var | Max topic groups per newspaper (default: `30`) |
 

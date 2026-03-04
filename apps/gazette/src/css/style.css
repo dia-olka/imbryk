@@ -31,6 +31,19 @@
   --radius: 3px;
 }
 
+/* === Utilities === */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* === Reset === */
 *,
 *::before,
@@ -48,15 +61,24 @@ body {
   background-color: var(--color-bg);
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   line-height: 1.2;
   font-weight: 700;
 }
 
-h1 { font-size: var(--type-2xl); }
-h2 { font-size: var(--type-xl); }
-h3 { font-size: var(--type-lg); }
+h1 {
+  font-size: var(--type-2xl);
+}
+h2 {
+  font-size: var(--type-xl);
+}
+h3 {
+  font-size: var(--type-lg);
+}
 
 a {
   color: var(--color-link);
@@ -153,7 +175,7 @@ a:hover {
 }
 
 .nav-list a:hover,
-.nav-list a[aria-current="page"] {
+.nav-list a[aria-current='page'] {
   color: var(--color-text);
   border-bottom: 2px solid var(--color-accent);
 }
@@ -510,7 +532,9 @@ main {
 
 /* === Responsive === */
 @media (min-width: 48rem) {
-  h1 { font-size: var(--type-3xl); }
+  h1 {
+    font-size: var(--type-3xl);
+  }
 
   .site-header__inner {
     display: flex;

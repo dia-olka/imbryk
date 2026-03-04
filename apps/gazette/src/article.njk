@@ -1,0 +1,48 @@
+---
+pagination:
+  data: articlePages
+  size: 1
+  alias: ap
+permalink: "edition/{{ ap.editionDate }}/{{ ap.newspaperId }}/{{ ap.slug }}/index.html"
+layout: layouts/base.njk
+eleventyComputed:
+  title: "{{ ap.article.headline }} — {{ ap.newspaperName }} — Imbryk Gazette"
+---
+
+{% set persona = personas.newspapers | findPersona(ap.newspaperId) %}
+
+{% set breadcrumbs = [
+  {label: "Home", url: "/"},
+  {label: ap.editionDate | dateDisplay, url: "/edition/" + ap.editionDate + "/"},
+  {label: ap.newspaperName, url: "/edition/" + ap.editionDate + "/" + ap.newspaperId + "/"},
+  {label: ap.article.headline, url: ""}
+] %}
+{% include "breadcrumb.njk" %}
+
+{% set siblingNewspaperIds = ap.allNewspaperIds %}
+{% set currentNewspaperId = ap.newspaperId %}
+{% set siblingEditionDate = ap.editionDate %}
+{% include "sibling-nav.njk" %}
+
+<div class="newspaper" style="{{ ap.cssVars }}">
+
+  <article>
+    <h1 class="article-full__title">{{ ap.article.headline }}</h1>
+
+    <p class="article-full__meta">
+      {{ ap.newspaperName }} · {{ ap.editionDate | dateDisplay }} · {{ ap.article.word_count }} words
+    </p>
+
+    <div class="article-full__body">
+      {{ ap.article.body | markdown | safe }}
+    </div>
+  </article>
+
+  {% set prevArticle = ap.prevArticle %}
+  {% set nextArticle = ap.nextArticle %}
+  {% set articleEditionDate = ap.editionDate %}
+  {% set articleNewspaperId = ap.newspaperId %}
+  {% set articleNewspaperName = ap.newspaperName %}
+  {% include "article-nav.njk" %}
+
+</div>

@@ -89,6 +89,8 @@ jobs:
           service: ingestion-api
           image: ${{ env.IMAGE_REGISTRY }}/ingestion-api:${{ env.DEPLOY_SHA }}
           region: ${{ env.GCP_REGION }}
+          env_vars: |
+            SENTRY_DSN=${{ vars.SENTRY_DSN }}
 
       - name: Run database migrations
         run: |
@@ -162,4 +164,5 @@ jobs:
         run: |
           gcloud run jobs update newsroom-director \
             --image=${{ env.IMAGE_REGISTRY }}/newsroom-director:${{ env.DEPLOY_SHA }} \
-            --region=${{ env.GCP_REGION }}
+            --region=${{ env.GCP_REGION }} \
+            --update-env-vars=SENTRY_DSN=${{ vars.SENTRY_DSN }}

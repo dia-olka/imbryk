@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { QuoteResponse } from '../api/types';
 import { NEWSPAPER_DISPLAY } from './newspaper-display';
+import { GAZETTE_URL } from '../constants';
 
 interface ConfirmationProps {
   quote: QuoteResponse;
@@ -33,7 +34,15 @@ export function Confirmation({ quote, onReset }: ConfirmationProps) {
         <AlertTitle>Your event has been sent into the world</AlertTitle>
         <AlertDescription>
           It will appear in tomorrow morning&apos;s edition. Each newspaper will
-          cover it from their own angle.
+          cover it from their own angle.{' '}
+          <a
+            href={GAZETTE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-semibold"
+          >
+            Read it in The Gazette ↗
+          </a>
         </AlertDescription>
       </Alert>
 
@@ -49,9 +58,14 @@ export function Confirmation({ quote, onReset }: ConfirmationProps) {
               const display = NEWSPAPER_DISPLAY[n.newspaper_id];
               return (
                 <li key={n.newspaper_id} className="font-sans">
-                  <span className="font-semibold">
+                  <a
+                    href={`${GAZETTE_URL}/edition/${new Date(Date.now() + 86400000).toISOString().split('T')[0]}/${n.newspaper_id}/`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline-offset-2 hover:underline"
+                  >
                     {display?.paperName ?? n.newspaper_id}
-                  </span>
+                  </a>
                   {display?.tagline && (
                     <span className="text-text-muted text-sm ml-2 italic">
                       — {display.tagline}

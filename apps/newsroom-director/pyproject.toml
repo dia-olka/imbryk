@@ -33,6 +33,7 @@ dependencies = [
     "torch>=2.1,<2.3; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "transformers>=4.45,<5; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "boto3>=1.35.0",
+    "sentry-sdk>=2.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -1,0 +1,18 @@
+{# Breadcrumb navigation component
+   Usage: {% include "breadcrumb.njk" %}
+   Expects `breadcrumbs` variable: array of {label, url} objects.
+   Last item is current page (no link). #}
+
+{% if breadcrumbs and breadcrumbs.length %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <ol>
+    {% for crumb in breadcrumbs %}
+      {% if loop.last %}
+        <li><span aria-current="page">{{ crumb.label }}</span></li>
+      {% else %}
+        <li><a href="{{ crumb.url }}">{{ crumb.label }}</a></li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}

@@ -4,3 +4,5 @@ export const BASE_PRICE = 1.0;
 export const DEBOUNCE_MS = 500;
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+export const GAZETTE_URL =
+  import.meta.env.VITE_GAZETTE_URL ?? 'https://imbryk-gazette.pages.dev';

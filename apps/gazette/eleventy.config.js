@@ -1,3 +1,7 @@
+import markdownIt from 'markdown-it';
+
+const md = markdownIt({ html: false, breaks: true, linkify: true });
+
 export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy('src/css');
   // make logo and favicon available at site root
@@ -22,10 +26,19 @@ export default function (eleventyConfig) {
 
   eleventyConfig.addFilter('markdown', (value) => {
     if (!value) return '';
-    return value
-      .split('\n\n')
-      .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-      .join('\n');
+    return md.render(value);
+  });
+
+  eleventyConfig.addFilter('truncateWords', (value, count) => {
+    if (!value) return '';
+    const words = value.split(/\s+/);
+    if (words.length <= count) return value;
+    return words.slice(0, count).join(' ') + '…';
+  });
+
+  eleventyConfig.addFilter('head', (array, n) => {
+    if (!Array.isArray(array)) return [];
+    return array.slice(0, n);
   });
 
   eleventyConfig.addFilter('findPersona', (personas, newspaperId) => {

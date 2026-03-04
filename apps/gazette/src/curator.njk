@@ -3,7 +3,7 @@ pagination:
   data: editions
   size: 1
   alias: edition
-permalink: "edition/{{ edition.edition_id }}/curator/index.html"
+permalink: "edition/{{ edition.date }}/curator/index.html"
 layout: layouts/base.njk
 eleventyComputed:
   title: "Curator Synthesis — {{ edition.date | dateDisplay }} — Imbryk Gazette"
@@ -11,61 +11,82 @@ eleventyComputed:
 
 {% set synthesis = edition.curator_synthesis %}
 {% set curator = personas.curator %}
+{% set allNewspaperIds = [] %}
+{% for newspaper in edition.newspapers %}
+  {% set _ = allNewspaperIds.push(newspaper.newspaper_id) %}
+{% endfor %}
 
-<div class="page-header">
-  <h1>{{ curator.paperName }}</h1>
-  <p class="subtitle">{{ curator.tagline }}</p>
-  <p class="date"><time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time></p>
-</div>
+{% set breadcrumbs = [
+  {label: "Home", url: "/"},
+  {label: edition.date | dateDisplay, url: "/edition/" + edition.date + "/"},
+  {label: curator.paperName, url: ""}
+] %}
+{% include "breadcrumb.njk" %}
 
-{% if synthesis %}
-  <section class="synthesis-section" aria-labelledby="analysis-heading">
-    <h2 id="analysis-heading">Analysis</h2>
-    {{ synthesis.analysis | markdown | safe }}
-  </section>
+{% set siblingNewspaperIds = allNewspaperIds %}
+{% set currentNewspaperId = "curator" %}
+{% set siblingEditionDate = edition.date %}
+{% include "sibling-nav.njk" %}
 
-  {% if synthesis.consensus.length %}
-    <section class="synthesis-section" aria-labelledby="consensus-heading">
-      <h2 id="consensus-heading">Points of Consensus</h2>
-      <ul>
-        {% for point in synthesis.consensus %}
-          <li>{{ point }}</li>
+<div class="newspaper" style="{{ curator.cssVars }}">
+
+  {% set mastheadName = curator.paperName %}
+  {% set mastheadTagline = curator.tagline %}
+  {% set mastheadDate = edition.date %}
+  {% include "newspaper-masthead.njk" %}
+
+  {% if synthesis %}
+    <section class="synthesis-section" aria-labelledby="analysis-heading">
+      <h2 id="analysis-heading">Analysis</h2>
+      {{ synthesis.analysis | markdown | safe }}
+    </section>
+
+    {% if synthesis.consensus.length %}
+      <section class="synthesis-section" aria-labelledby="consensus-heading">
+        <h2 id="consensus-heading">Points of Consensus</h2>
+        <ul>
+          {% for point in synthesis.consensus %}
+            <li>{{ point }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    {% if synthesis.disagreements %}
+      <section class="synthesis-section" aria-labelledby="disagreements-heading">
+        <h2 id="disagreements-heading">Points of Disagreement</h2>
+        {% for topic, positions in synthesis.disagreements %}
+          <div class="disagreement-topic">
+            <h3>{{ topic }}</h3>
+            <ul>
+              {% for position in positions %}
+                <li>{{ position }}</li>
+              {% endfor %}
+            </ul>
+          </div>
         {% endfor %}
-      </ul>
-    </section>
+      </section>
+    {% endif %}
+
+    {% if synthesis.watch_list %}
+      <section class="synthesis-section" aria-labelledby="watch-heading">
+        <h2 id="watch-heading">What to Watch</h2>
+        {% for topic, items in synthesis.watch_list %}
+          <div class="watch-topic">
+            <h3>{{ topic }}</h3>
+            <ul>
+              {% for item in items %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
+  {% else %}
+    <p>No curator synthesis available for this edition.</p>
   {% endif %}
 
-  {% if synthesis.disagreements %}
-    <section class="synthesis-section" aria-labelledby="disagreements-heading">
-      <h2 id="disagreements-heading">Points of Disagreement</h2>
-      {% for topic, positions in synthesis.disagreements %}
-        <div class="disagreement-topic">
-          <h3>{{ topic }}</h3>
-          <ul>
-            {% for position in positions %}
-              <li>{{ position }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% endfor %}
-    </section>
-  {% endif %}
+  <a href="/edition/{{ edition.date }}/" class="back-link">← Back to edition overview</a>
 
-  {% if synthesis.watch_list %}
-    <section class="synthesis-section" aria-labelledby="watch-heading">
-      <h2 id="watch-heading">What to Watch</h2>
-      {% for topic, items in synthesis.watch_list %}
-        <div class="watch-topic">
-          <h3>{{ topic }}</h3>
-          <ul>
-            {% for item in items %}
-              <li>{{ item }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% endfor %}
-    </section>
-  {% endif %}
-{% else %}
-  <p>No curator synthesis available for this edition.</p>
-{% endif %}
+</div>

@@ -3,36 +3,42 @@ pagination:
   data: editions
   size: 1
   alias: edition
-permalink: "edition/{{ edition.edition_id }}/index.html"
+permalink: "edition/{{ edition.date }}/index.html"
 layout: layouts/base.njk
 eleventyComputed:
   title: "Edition {{ edition.date | dateDisplay }} — Imbryk Gazette"
 ---
+
+{% set breadcrumbs = [
+  {label: "Home", url: "/"},
+  {label: edition.date | dateDisplay, url: ""}
+] %}
+{% include "breadcrumb.njk" %}
 
 <div class="page-header">
   <h1>Edition</h1>
   <p class="date"><time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time></p>
 </div>
 
-<ul class="newspaper-list" role="list">
+<ul class="bento-grid" role="list">
   {% for newspaper in edition.newspapers %}
-    {% set persona = personas.newspapers | findPersona(newspaper.newspaper_id) %}
-    <li class="newspaper-list-item">
-      <h2><a href="/edition/{{ edition.edition_id }}/{{ newspaper.newspaper_id }}/">{{ newspaper.newspaper_name }}</a></h2>
-      {% if persona %}
-        <p class="tagline">{{ persona.tagline }}</p>
-      {% endif %}
-      <p class="summary">
-        {{ newspaper.articles.length }} article{{ "s" if newspaper.articles.length != 1 }}{% if newspaper.in_brief.length %}, {{ newspaper.in_brief.length }} in brief{% endif %}
-      </p>
-    </li>
+    {% set cardPersona = personas.newspapers | findPersona(newspaper.newspaper_id) %}
+    {% set cardNewspaper = newspaper %}
+    {% set cardEditionDate = edition.date %}
+    {% include "newspaper-card.njk" %}
   {% endfor %}
-</ul>
 
-{% if edition.curator_synthesis %}
-  <hr class="section-divider">
-  <section aria-labelledby="curator-heading">
-    <h2 id="curator-heading"><a href="/edition/{{ edition.edition_id }}/curator/">The Curator's Synthesis</a></h2>
-    <p>{{ edition.curator_synthesis.analysis | truncate(300) }}</p>
-  </section>
-{% endif %}
+  {# Curator card #}
+  {% if edition.curator_synthesis %}
+    <li>
+      <a href="/edition/{{ edition.date }}/curator/"
+         class="newspaper-card"
+         style="{{ personas.curator.cssVars }}">
+        <h2 class="newspaper-card__name">{{ personas.curator.paperName }}</h2>
+        <p class="newspaper-card__tagline">{{ personas.curator.tagline }}</p>
+        <p class="article-preview__excerpt">{{ edition.curator_synthesis.analysis | truncateWords(25) }}</p>
+        <p class="newspaper-card__count">Synthesis &amp; Analysis</p>
+      </a>
+    </li>
+  {% endif %}
+</ul>

@@ -4,7 +4,10 @@
   "license": "MIT",
   "scripts": {
     "start": "nx serve imbryk",
-    "build": "nx build imbryk"
+    "build": "nx build imbryk",
+    "format": "npx nx format:write",
+    "lint": "npx nx run-many --target=lint --all",
+    "test": "npx nx run-many --target=test --all"
   },
   "private": true,
   "devDependencies": {

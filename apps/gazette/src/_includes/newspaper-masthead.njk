@@ -1,0 +1,19 @@
+{# Newspaper masthead component
+   Usage: {% include "newspaper-masthead.njk" %}
+   Expects:
+     - mastheadName: newspaper display name
+     - mastheadTagline: tagline text
+     - mastheadDate: edition date (raw, will be formatted)
+#}
+
+<header class="newspaper-masthead">
+  <h1 class="newspaper-masthead__name">{{ mastheadName }}</h1>
+  {% if mastheadTagline %}
+    <p class="newspaper-masthead__tagline">{{ mastheadTagline }}</p>
+  {% endif %}
+  {% if mastheadDate %}
+    <p class="newspaper-masthead__date">
+      <time datetime="{{ mastheadDate | dateISO }}">{{ mastheadDate | dateDisplay }}</time>
+    </p>
+  {% endif %}
+</header>

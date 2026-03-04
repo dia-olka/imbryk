@@ -1,0 +1,30 @@
+{# Article prev/next navigation
+   Usage: {% include "article-nav.njk" %}
+   Expects:
+     - prevArticle: { slug, headline } or null
+     - nextArticle: { slug, headline } or null
+     - articleEditionDate: edition date for URLs
+     - articleNewspaperId: newspaper ID for URLs
+     - articleNewspaperName: newspaper display name for back link
+#}
+
+<nav class="article-nav" aria-label="Article navigation">
+  {% if prevArticle %}
+    <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ prevArticle.slug }}/">
+      <span class="article-nav__label">← Previous</span>
+      {{ prevArticle.headline }}
+    </a>
+  {% else %}
+    <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/">
+      <span class="article-nav__label">←</span>
+      Back to {{ articleNewspaperName }}
+    </a>
+  {% endif %}
+
+  {% if nextArticle %}
+    <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ nextArticle.slug }}/" class="article-nav__next">
+      <span class="article-nav__label">Next →</span>
+      {{ nextArticle.headline }}
+    </a>
+  {% endif %}
+</nav>

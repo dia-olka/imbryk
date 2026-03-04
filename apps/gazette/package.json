@@ -6,8 +6,10 @@
   "dependencies": {
     "@11ty/eleventy": "^3.0.0",
     "@org/ai-personas": "*",
+    "@org/taxonomy": "*",
     "@org/world-state": "*",
-    "@org/taxonomy": "*"
+    "@sindresorhus/slugify": "^2.2.1",
+    "markdown-it": "^14.1.1"
   },
   "devDependencies": {
     "tsx": "^4.19.0"

@@ -1,0 +1,28 @@
+{# Newspaper bento card component
+   Usage: {% include "newspaper-card.njk" %}
+   Expects:
+     - cardNewspaper: newspaper object from edition data (newspaper_id, newspaper_name, articles, in_brief)
+     - cardPersona: persona object (paperName, tagline, cssVars)
+     - cardEditionDate: edition date for URL
+#}
+
+<li>
+  <a href="/edition/{{ cardEditionDate }}/{{ cardNewspaper.newspaper_id }}/"
+     class="newspaper-card"
+     style="{{ cardPersona.cssVars if cardPersona else '' }}">
+    <h2 class="newspaper-card__name">{{ cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name }}</h2>
+    {% if cardPersona and cardPersona.tagline %}
+      <p class="newspaper-card__tagline">{{ cardPersona.tagline }}</p>
+    {% endif %}
+    {% if cardNewspaper.articles.length %}
+      <ul class="newspaper-card__headlines" role="list">
+        {% for article in cardNewspaper.articles | head(3) %}
+          <li>{{ article.headline }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    <p class="newspaper-card__count">
+      {{ cardNewspaper.articles.length }} article{{ "s" if cardNewspaper.articles.length != 1 }}{% if cardNewspaper.in_brief.length %}, {{ cardNewspaper.in_brief.length }} in brief{% endif %}
+    </p>
+  </a>
+</li>

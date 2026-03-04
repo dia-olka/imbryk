@@ -1,0 +1,15 @@
+{# Article preview card component
+   Usage: {% include "article-preview.njk" %}
+   Expects:
+     - previewArticle: { headline, body, word_count, slug, clusters }
+     - previewEditionDate: edition date for URL
+     - previewNewspaperId: newspaper ID for URL
+#}
+
+<a href="/edition/{{ previewEditionDate }}/{{ previewNewspaperId }}/{{ previewArticle.slug }}/" class="article-preview">
+  <article>
+    <h3 class="article-preview__title">{{ previewArticle.headline }}</h3>
+    <p class="article-preview__excerpt">{{ previewArticle.body | truncateWords(30) }}</p>
+    <p class="article-preview__meta">{{ previewArticle.word_count }} words</p>
+  </article>
+</a>

@@ -12,7 +12,7 @@ title: "Archive — Imbryk Gazette"
   <ul class="edition-list" role="list">
     {% for edition in editions %}
       <li class="edition-list-item">
-        <a href="/edition/{{ edition.edition_id }}/">
+        <a href="/edition/{{ edition.date }}/">
           <time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time>
         </a>
         — {{ edition.newspapers.length }} newspaper{{ "s" if edition.newspapers.length != 1 }}
