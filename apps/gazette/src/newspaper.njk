@@ -44,41 +44,31 @@ eleventyComputed:
     </figure>
   {% endif %}
 
-  {% if persona %}
-    <details class="identity-card">
-      <summary><strong>About this newspaper</strong></summary>
-      <p class="detail-label">Ideology</p>
-      <p>{{ persona.ideology }}</p>
-      <p class="detail-label">Political Leaning</p>
-      <p>{{ persona.politicalLeaning }}</p>
-      <p class="detail-label">Editorial Biases</p>
-      <ul>
-        {% for bias in persona.biases %}
-          <li>{{ bias }}</li>
-        {% endfor %}
-      </ul>
-      <p class="detail-label">Blindspots</p>
-      <ul>
-        {% for blindspot in persona.blindspots %}
-          <li>{{ blindspot }}</li>
-        {% endfor %}
-      </ul>
-    </details>
-  {% endif %}
-
-  <section aria-labelledby="articles-heading">
+  <section id="articles" aria-labelledby="articles-heading">
     <h2 id="articles-heading" class="visually-hidden">Articles</h2>
 
-    {% for article in np.articles %}
-      {% set previewArticle = article %}
-      {% set previewEditionDate = np.editionDate %}
-      {% set previewNewspaperId = np.newspaperId %}
-      {% include "article-preview.njk" %}
-    {% endfor %}
+    <div class="newspaper-articles">
+      {% for article in np.articles %}
+        {% set previewArticle = article %}
+        {% set previewEditionDate = np.editionDate %}
+        {% set previewNewspaperId = np.newspaperId %}
+        {% if loop.first %}
+          {% set previewIsLead = true %}
+          {% set previewTruncate = 80 %}
+        {% elif loop.index <= 3 %}
+          {% set previewIsLead = false %}
+          {% set previewTruncate = 50 %}
+        {% else %}
+          {% set previewIsLead = false %}
+          {% set previewTruncate = 30 %}
+        {% endif %}
+        {% include "article-preview.njk" %}
+      {% endfor %}
+    </div>
   </section>
 
   {% if np.inBrief.length %}
-    <section class="in-brief" aria-labelledby="in-brief-heading">
+    <section id="in-brief" class="in-brief" aria-labelledby="in-brief-heading">
       <h2 id="in-brief-heading">In Brief</h2>
 
       {% for item in np.inBrief %}
@@ -91,7 +81,7 @@ eleventyComputed:
   {% endif %}
 
   {% if np.editorsNote %}
-    <aside class="editors-note" aria-label="Editor's note">
+    <aside id="editors-note" class="editors-note" aria-label="Editor's note">
       <h2>Editor's Note</h2>
       <p>{{ np.editorsNote }}</p>
     </aside>

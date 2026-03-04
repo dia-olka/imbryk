@@ -5,32 +5,38 @@ title: "Today's Edition — Imbryk Gazette"
 
 {% set edition = editions | latestEdition %}
 
-<div class="page-header">
-  <h1>Today's Edition</h1>
+<div class="edition-header">
+  <p class="edition-header__label">Gazette</p>
+  <h1 class="edition-header__date">Today's Edition</h1>
   {% if edition %}
-    <p class="date"><time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time></p>
+    <p class="edition-header__sub"><time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time></p>
   {% endif %}
 </div>
 
 {% if edition %}
-  <ul class="bento-grid" role="list">
+  <ul class="front-page-grid" role="list">
     {% for newspaper in edition.newspapers %}
       {% set cardPersona = personas.newspapers | findPersona(newspaper.newspaper_id) %}
       {% set cardNewspaper = newspaper %}
       {% set cardEditionDate = edition.date %}
-      {% include "newspaper-card.njk" %}
+      {% include "front-page-card.njk" %}
     {% endfor %}
 
     {# Curator card #}
     {% if edition.curator_synthesis %}
       <li>
         <a href="/edition/{{ edition.date }}/curator/"
-           class="newspaper-card"
-           style="{{ personas.curator.cssVars }}">
-          <h2 class="newspaper-card__name">{{ personas.curator.paperName }}</h2>
-          <p class="newspaper-card__tagline">{{ personas.curator.tagline }}</p>
-          <p class="article-preview__excerpt">{{ edition.curator_synthesis.analysis | truncateWords(25) }}</p>
-          <p class="newspaper-card__count">Synthesis &amp; Analysis</p>
+           class="front-page-card front-page-card--curator"
+           style="{{ personas.curator.cssVars }}"
+           aria-label="{{ personas.curator.paperName }} — Synthesis &amp; Analysis">
+          <div class="front-page-card__masthead">
+            <h2 class="front-page-card__name">{{ personas.curator.paperName }}</h2>
+            <p class="front-page-card__tagline">{{ personas.curator.tagline }}</p>
+          </div>
+          <div class="front-page-card__footer">
+            <p class="front-page-card__headline">{{ edition.curator_synthesis.analysis | truncateWords(20) }}</p>
+            <p class="front-page-card__count">Synthesis &amp; Analysis</p>
+          </div>
         </a>
       </li>
     {% endif %}

@@ -1,23 +1,30 @@
 {# Article preview card component
    Usage: {% include "article-preview.njk" %}
    Expects:
-     - previewArticle: { headline, body, word_count, slug, clusters }
+     - previewArticle: { headline, body, word_count, slug, clusters, image_url, imagePrompt }
      - previewEditionDate: edition date for URL
      - previewNewspaperId: newspaper ID for URL
+     - previewIsLead: (optional) true for lead article — gets full-width treatment
+     - previewTruncate: (optional) word count for excerpt, default 30
 #}
 
-<a href="/edition/{{ previewEditionDate }}/{{ previewNewspaperId }}/{{ previewArticle.slug }}/" class="article-preview">
-  <article>
+{% set truncateCount = previewTruncate if previewTruncate else 30 %}
+
+<a href="/edition/{{ previewEditionDate }}/{{ previewNewspaperId }}/{{ previewArticle.slug }}/"
+   class="article-preview{% if previewIsLead %} article-preview--lead{% endif %}">
+  <article id="{{ previewArticle.slug }}">
     {% if previewArticle.image_url %}
       <img src="{{ previewArticle.image_url }}"
            alt="{{ previewArticle.imagePrompt }}"
-           loading="lazy"
+           loading="{% if previewIsLead %}eager{% else %}lazy{% endif %}"
            width="400"
            height="225"
            class="article-preview__image">
     {% endif %}
-    <h3 class="article-preview__title">{{ previewArticle.headline }}</h3>
-    <p class="article-preview__excerpt">{{ previewArticle.body | truncateWords(30) }}</p>
-    <p class="article-preview__meta">{{ previewArticle.word_count }} words</p>
+    <div class="article-preview__body">
+      <h3 class="article-preview__title">{{ previewArticle.headline }}</h3>
+      <p class="article-preview__excerpt">{{ previewArticle.body | truncateWords(truncateCount) }}</p>
+      <p class="article-preview__meta">{{ previewArticle.word_count }} words</p>
+    </div>
   </article>
 </a>
