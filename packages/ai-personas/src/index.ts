@@ -1,4 +1,9 @@
-export type { NewsroomPersona } from './lib/persona.types.js';
+export type {
+  NewsroomPersona,
+  Article,
+  InBriefItem,
+  NewspaperEditionOutput,
+} from './lib/persona.types.js';
 export {
   SOVEREIGN,
   ASPIRANT,

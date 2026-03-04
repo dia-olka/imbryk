@@ -187,6 +187,11 @@ main {
   padding: var(--space-xl) var(--space-md);
 }
 
+/* Widen layout when bento grid is present */
+main:has(.bento-grid) {
+  max-width: 72rem;
+}
+
 /* === Site Footer === */
 .site-footer {
   border-top: 1px solid var(--color-border);
@@ -224,6 +229,68 @@ main {
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* === Article Images === */
+.article-full__image {
+  margin: var(--space-lg) 0;
+}
+
+.article-full__image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.article-full__image figcaption {
+  font-size: var(--type-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: var(--space-xs);
+}
+
+.article-preview__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius) var(--radius) 0 0;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+/* === Newspaper Hero Image === */
+.newspaper__hero {
+  margin: 0 0 var(--space-xl);
+}
+
+.newspaper__hero-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.newspaper__hero figcaption {
+  font-size: var(--type-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: var(--space-xs);
+}
+
+/* === Newspaper Card Hero === */
+.newspaper-card__hero {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius) var(--radius) 0 0;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  margin-bottom: var(--space-sm);
 }
 
 /* === Identity Card === */
@@ -465,6 +532,150 @@ main {
   margin-top: var(--space-sm);
   list-style: none;
   padding: 0;
+}
+
+/* === Bento Grid === */
+.bento-grid {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-md);
+  /* mobile: single column */
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 36rem) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* first card spans full width as a hero */
+  .bento-grid > li:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .bento-grid > li:first-child .newspaper-card {
+    flex-direction: row;
+    min-height: 14rem;
+  }
+
+  .bento-grid > li:first-child .newspaper-card__hero {
+    width: 50%;
+    aspect-ratio: auto;
+    border-radius: var(--radius) 0 0 var(--radius);
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 64rem) {
+  .bento-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* hero still spans 2 cols */
+  .bento-grid > li:first-child {
+    grid-column: 1 / 3;
+  }
+
+  /* curator / last card can span remaining space */
+  .bento-grid > li:last-child:nth-child(even) {
+    grid-column: span 2;
+  }
+}
+
+/* === Newspaper Card === */
+.newspaper-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  background: var(--np-bg, var(--color-surface));
+  color: var(--np-text, var(--color-text));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.newspaper-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  color: var(--np-text, var(--color-text));
+}
+
+.newspaper-card:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.newspaper-card__body {
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* When there's no __body wrapper, pad the direct children */
+.newspaper-card > .newspaper-card__name {
+  padding: var(--space-md) var(--space-lg) 0;
+}
+
+.newspaper-card > .newspaper-card__tagline,
+.newspaper-card > .newspaper-card__count,
+.newspaper-card > .article-preview__excerpt {
+  padding: 0 var(--space-lg);
+}
+
+.newspaper-card > .newspaper-card__count:last-child,
+.newspaper-card > .article-preview__excerpt:last-child {
+  padding-bottom: var(--space-lg);
+}
+
+.newspaper-card__name {
+  font-family: var(--np-heading-font, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-size: var(--type-lg);
+  font-weight: 700;
+  margin-bottom: var(--space-xs);
+  color: var(--np-accent, var(--color-text));
+}
+
+.newspaper-card__tagline {
+  font-family: var(--np-body-font, Georgia, 'Times New Roman', Times, serif);
+  font-style: italic;
+  font-size: var(--type-sm);
+  color: var(--np-text, var(--color-text-muted));
+  opacity: 0.8;
+  margin-bottom: var(--space-sm);
+}
+
+.newspaper-card__headlines {
+  list-style: none;
+  padding: 0 var(--space-lg);
+  margin: var(--space-sm) 0;
+  flex: 1;
+}
+
+.newspaper-card__headlines li {
+  font-size: var(--type-sm);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  line-height: 1.4;
+}
+
+.newspaper-card__headlines li:last-child {
+  border-bottom: none;
+}
+
+.newspaper-card__count {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: var(--type-xs);
+  color: var(--np-text, var(--color-text-muted));
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: auto;
+  padding-top: var(--space-sm);
 }
 
 /* === Newspaper List (homepage / archive) === */

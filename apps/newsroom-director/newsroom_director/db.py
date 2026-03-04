@@ -98,6 +98,7 @@ class EditionArticleRow(Base):
     )
     newspaper_id = Column(String(64), nullable=False)
     content_json = Column(Text, nullable=False)
+    image_url = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
 

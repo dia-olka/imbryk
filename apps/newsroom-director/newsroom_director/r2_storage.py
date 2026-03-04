@@ -57,6 +57,30 @@ class R2EditionStorage(EditionStorage):
             extra={"edition_id": edition_id, "key": key},
         )
 
+    def write_image(
+        self,
+        edition_id: str,
+        newspaper_id: str,
+        filename: str,
+        image_bytes: bytes,
+    ) -> str:
+        key = f"editions/{edition_id}/{newspaper_id}/{filename}"
+        self._client.put_object(
+            Bucket=self._bucket,
+            Key=key,
+            Body=image_bytes,
+            ContentType="image/webp",
+        )
+        logger.info(
+            "Image written to R2",
+            extra={
+                "edition_id": edition_id,
+                "newspaper_id": newspaper_id,
+                "key": key,
+            },
+        )
+        return f"https://{self._bucket}.r2.dev/{key}"
+
     def list_editions(self) -> list[dict]:
         response = self._client.list_objects_v2(
             Bucket=self._bucket, Prefix="editions/"

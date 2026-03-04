@@ -8,6 +8,14 @@
 
 <a href="/edition/{{ previewEditionDate }}/{{ previewNewspaperId }}/{{ previewArticle.slug }}/" class="article-preview">
   <article>
+    {% if previewArticle.image_url %}
+      <img src="{{ previewArticle.image_url }}"
+           alt="{{ previewArticle.imagePrompt }}"
+           loading="lazy"
+           width="400"
+           height="225"
+           class="article-preview__image">
+    {% endif %}
     <h3 class="article-preview__title">{{ previewArticle.headline }}</h3>
     <p class="article-preview__excerpt">{{ previewArticle.body | truncateWords(30) }}</p>
     <p class="article-preview__meta">{{ previewArticle.word_count }} words</p>

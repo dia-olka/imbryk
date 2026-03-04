@@ -557,6 +557,7 @@ gcloud run jobs create newsroom-director \
   --set-env-vars=VERTEX_AI_PROJECT=$PROJECT_ID \
   --set-env-vars=VERTEX_AI_LOCATION=us-central1 \
   --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
+  --set-env-vars=ENABLE_IMAGES=true \
   --set-env-vars=ENABLE_VALIDATION=true \
   --set-env-vars=ENABLE_CACHING=true \
   --set-env-vars=SENTRY_DSN="" \
@@ -775,6 +776,7 @@ These are all the configuration values used by the backend services. Most are st
 | `R2_ACCESS_KEY_ID` | Secret | R2 API access key |
 | `R2_SECRET_ACCESS_KEY` | Secret | R2 API secret key |
 | `R2_BUCKET_NAME` | Env var | The R2 bucket name (default: `imbryk-editions`) |
+| `ENABLE_IMAGES` | Env var | Generate article and hero images via Imagen (default: `true`) |
 | `ENABLE_VALIDATION` | Env var | Check prompt coherence before generating (default: `true`) |
 | `ENABLE_CACHING` | Env var | Cache AI context to save money (default: `true`) |
 | `SENTRY_DSN` | Env var | Error tracking URL (optional — leave empty to disable) |

@@ -5,6 +5,8 @@
     {
       "newspaper_id": "sovereign",
       "newspaper_name": "The Sovereign",
+      "frontPageImagePrompt": "A vast aircraft carrier cutting through the Strait of Malacca at dusk, flanked by smaller escort vessels, with commercial shipping silhouettes in the hazy background and navigation lights glowing against a steel-grey sky.",
+      "heroImageUrl": "https://imbryk-editions.r2.dev/editions/yz-d2-001/sovereign/hero.webp",
       "articles": [
         {
           "headline": "Malacca Strait Incidents Escalate as Atlantic Republic Deploys Additional Carrier Group",
@@ -12,7 +14,9 @@
           "length": 850,
           "clusters": [0, 1],
           "weight": 0.85,
-          "word_count": 142
+          "word_count": 142,
+          "imagePrompt": "A carrier strike group formation in the Strait of Malacca at twilight, electronic warfare interference patterns visible as shimmering distortions over the water, commercial vessels stopped in the background.",
+          "image_url": "https://imbryk-editions.r2.dev/editions/yz-d2-001/sovereign/0.webp"
         },
         {
           "headline": "Northern Shield Proposes Autonomous Weapons Treaty — Atlantic Republic Signals Opposition",
@@ -20,7 +24,9 @@
           "length": 900,
           "clusters": [2],
           "weight": 0.72,
-          "word_count": 156
+          "word_count": 156,
+          "imagePrompt": "A formal diplomatic chamber in Tromsø with Northern Shield Prime Minister standing at a podium presenting documents, delegates from multiple nations seated in a semicircle, austere institutional lighting.",
+          "image_url": "https://imbryk-editions.r2.dev/editions/yz-d2-001/sovereign/1.webp"
         }
       ],
       "in_brief": [
@@ -45,6 +51,8 @@
     {
       "newspaper_id": "aspirant",
       "newspaper_name": "The Aspirant",
+      "frontPageImagePrompt": "A vast column of displaced families walking along a dusty Sahel corridor road, carrying belongings, with empty water containers, golden light casting long shadows — documentary realism.",
+      "heroImageUrl": "https://imbryk-editions.r2.dev/editions/yz-d2-001/aspirant/hero.webp",
       "articles": [
         {
           "headline": "Water Crisis Displaces 200,000 in Southern Union as International Aid Falls Short",
@@ -52,7 +60,9 @@
           "length": 950,
           "clusters": [3],
           "weight": 0.9,
-          "word_count": 172
+          "word_count": 172,
+          "imagePrompt": "A long line of displaced families crossing a dry Sahel landscape at dawn, carrying water containers and bundles, a desalination plant visible but dormant in the background, warm earthy tones.",
+          "image_url": "https://imbryk-editions.r2.dev/editions/yz-d2-001/aspirant/0.webp"
         },
         {
           "headline": "Coral Collapse Threatens Food Security for Millions Across Pacific Rim",
@@ -60,7 +70,9 @@
           "length": 750,
           "clusters": [3, 4],
           "weight": 0.78,
-          "word_count": 134
+          "word_count": 134,
+          "imagePrompt": null,
+          "image_url": null
         }
       ],
       "in_brief": [
@@ -85,6 +97,8 @@
     {
       "newspaper_id": "owner",
       "newspaper_name": "The Owner",
+      "frontPageImagePrompt": null,
+      "heroImageUrl": null,
       "articles": [
         {
           "headline": "Malacca Disruption Triggers Supply Chain Repricing — Shipping Futures Spike 18%",
@@ -92,7 +106,9 @@
           "length": 850,
           "clusters": [0, 1],
           "weight": 0.88,
-          "word_count": 152
+          "word_count": 152,
+          "imagePrompt": "A vast trading floor with screens showing spiking shipping futures charts in red, maritime maps of the Malacca Strait on wall displays, traders in sharp silhouette against blue-lit monitors.",
+          "image_url": "https://imbryk-editions.r2.dev/editions/yz-d2-001/owner/0.webp"
         }
       ],
       "in_brief": [
@@ -117,6 +133,8 @@
     {
       "newspaper_id": "radical",
       "newspaper_name": "The Radical",
+      "frontPageImagePrompt": null,
+      "heroImageUrl": null,
       "articles": [
         {
           "headline": "15,000 Tech Workers Axed While AI Autonomy Directive Removes Human Oversight",
@@ -124,7 +142,9 @@
           "length": 900,
           "clusters": [2, 0],
           "weight": 0.82,
-          "word_count": 178
+          "word_count": 178,
+          "imagePrompt": "A surveillance camera mounted on a sterile corporate building overlooking a queue of laid-off workers carrying cardboard boxes, harsh fluorescent lighting, high contrast desaturated tones.",
+          "image_url": "https://imbryk-editions.r2.dev/editions/yz-d2-001/radical/0.webp"
         }
       ],
       "in_brief": [
@@ -144,6 +164,8 @@
     {
       "newspaper_id": "moralist",
       "newspaper_name": "The Moralist",
+      "frontPageImagePrompt": "A solemn gathering in a house of worship, candles lit, congregation bowing heads in prayer, warm golden light through stained glass windows, an atmosphere of moral gravity.",
+      "heroImageUrl": "https://imbryk-editions.r2.dev/editions/yz-d2-001/moralist/hero.webp",
       "articles": [
         {
           "headline": "Autonomous Weapons Treaty Is a Moral Imperative — Not a Strategic Calculation",
@@ -151,7 +173,9 @@
           "length": 880,
           "clusters": [2],
           "weight": 0.88,
-          "word_count": 166
+          "word_count": 166,
+          "imagePrompt": "A stark podium with the Tromsø Protocol document illuminated by a single warm spotlight, surrounded by shadowed silhouettes of military autonomous drones standing idle, a moral contrast between human law and machine warfare.",
+          "image_url": "https://imbryk-editions.r2.dev/editions/yz-d2-001/moralist/0.webp"
         },
         {
           "headline": "The Displacement Crisis Demands Moral Courage, Not Aid Packages",
@@ -159,7 +183,9 @@
           "length": 830,
           "clusters": [3],
           "weight": 0.82,
-          "word_count": 162
+          "word_count": 162,
+          "imagePrompt": null,
+          "image_url": null
         }
       ],
       "in_brief": [
@@ -184,6 +210,8 @@
     {
       "newspaper_id": "hedonist",
       "newspaper_name": "The Hedonist",
+      "frontPageImagePrompt": "A spectacular underwater scene of vibrant kelp forests in a Norwegian fjord, shafts of golden sunlight piercing the crystal-clear water, a diver silhouetted against the light, hyper-vivid saturated colours.",
+      "heroImageUrl": "https://imbryk-editions.r2.dev/editions/yz-d2-001/hedonist/hero.webp",
       "articles": [
         {
           "headline": "Coral Reefs Are Dying and So Is Your Next Holiday — Here's Where to Go Instead",
@@ -191,7 +219,9 @@
           "length": 790,
           "clusters": [3, 5],
           "weight": 0.75,
-          "word_count": 158
+          "word_count": 158,
+          "imagePrompt": "A split-screen underwater panorama: bleached white dead coral on the left dissolving into vibrant Norwegian kelp forest on the right, vivid saturated colours, cinematic wide-angle.",
+          "image_url": "https://imbryk-editions.r2.dev/editions/yz-d2-001/hedonist/0.webp"
         },
         {
           "headline": "The Gene Therapy Breakthrough You Should Actually Be Excited About",
@@ -199,7 +229,9 @@
           "length": 810,
           "clusters": [4],
           "weight": 0.8,
-          "word_count": 154
+          "word_count": 154,
+          "imagePrompt": null,
+          "image_url": null
         }
       ],
       "in_brief": [

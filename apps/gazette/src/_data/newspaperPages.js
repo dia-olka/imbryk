@@ -36,6 +36,8 @@ export default function () {
       articles: articlesWithSlugs,
       inBrief: newspaper.in_brief,
       editorsNote: newspaper.editors_note,
+      frontPageImagePrompt: newspaper.frontPageImagePrompt || null,
+      heroImageUrl: newspaper.heroImageUrl || null,
       metadata: newspaper.metadata,
       allNewspaperIds,
       designTokens: tokens,

@@ -30,6 +30,20 @@ eleventyComputed:
   {% set mastheadDate = np.editionDate %}
   {% include "newspaper-masthead.njk" %}
 
+  {% if np.heroImageUrl %}
+    <figure class="newspaper__hero">
+      <img src="{{ np.heroImageUrl }}"
+           alt="{{ np.frontPageImagePrompt }}"
+           loading="eager"
+           width="800"
+           height="450"
+           srcset="{{ np.heroImageUrl }} 800w"
+           sizes="(max-width: 800px) 100vw, 800px"
+           class="newspaper__hero-img">
+      <figcaption>{{ np.frontPageImagePrompt }}</figcaption>
+    </figure>
+  {% endif %}
+
   {% if persona %}
     <details class="identity-card">
       <summary><strong>About this newspaper</strong></summary>

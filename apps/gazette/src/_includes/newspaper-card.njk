@@ -10,6 +10,14 @@
   <a href="/edition/{{ cardEditionDate }}/{{ cardNewspaper.newspaper_id }}/"
      class="newspaper-card"
      style="{{ cardPersona.cssVars if cardPersona else '' }}">
+    {% if cardNewspaper.heroImageUrl %}
+      <img src="{{ cardNewspaper.heroImageUrl }}"
+           alt="{{ cardNewspaper.frontPageImagePrompt }}"
+           loading="lazy"
+           width="400"
+           height="225"
+           class="newspaper-card__hero">
+    {% endif %}
     <h2 class="newspaper-card__name">{{ cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name }}</h2>
     {% if cardPersona and cardPersona.tagline %}
       <p class="newspaper-card__tagline">{{ cardPersona.tagline }}</p>

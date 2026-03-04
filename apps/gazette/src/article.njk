@@ -33,6 +33,19 @@ eleventyComputed:
       {{ ap.newspaperName }} · {{ ap.editionDate | dateDisplay }} · {{ ap.article.word_count }} words
     </p>
 
+    {% if ap.article.image_url %}
+      <figure class="article-full__image">
+        <img src="{{ ap.article.image_url }}"
+             alt="{{ ap.article.imagePrompt }}"
+             loading="lazy"
+             width="800"
+             height="450"
+             srcset="{{ ap.article.image_url }} 800w"
+             sizes="(max-width: 800px) 100vw, 800px">
+        <figcaption>{{ ap.article.imagePrompt }}</figcaption>
+      </figure>
+    {% endif %}
+
     <div class="article-full__body">
       {{ ap.article.body | markdown | safe }}
     </div>

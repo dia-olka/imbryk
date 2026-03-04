@@ -58,6 +58,7 @@ from .db import (
 from .distillation.pipeline import DistillationPipeline
 from .distillation.types import Prompt as DistillationPrompt
 from .generation import GenerationStrategy, StubGenerationStrategy, VertexAIStrategy
+from .image_gen import ImageGenerationStrategy, StubImageClient, generate_images_for_newspaper
 from .logging_config import configure_logging
 from .personas import (
     CURATOR_PERSONA,
@@ -85,6 +86,7 @@ def run_morning_press(
     generation_strategy: GenerationStrategy | None = None,
     storage: EditionStorage | None = None,
     distillation_pipeline: DistillationPipeline | None = None,
+    imagen_client: ImageGenerationStrategy | None = None,
     enable_validation: bool = True,
     enable_caching: bool = True,
 ) -> dict:
@@ -95,6 +97,7 @@ def run_morning_press(
         generation_strategy: LLM generation backend (defaults to stub).
         storage: Edition output storage (defaults to stub).
         distillation_pipeline: Override for the distillation pipeline.
+        imagen_client: Image generation backend (defaults to stub).
         enable_validation: Run coherence validation on prompts.
         enable_caching: Use Vertex AI context caching when available.
 
@@ -108,6 +111,7 @@ def run_morning_press(
     gen = generation_strategy or StubGenerationStrategy()
     store = storage or StubEditionStorage()
     pipeline = distillation_pipeline or DistillationPipeline()
+    img_client = imagen_client or StubImageClient()
 
     # Step 1: Connect to DB
     engine = get_engine(db_url)
@@ -262,6 +266,48 @@ def run_morning_press(
                 ledger = apply_mutation(ledger, mutation)
                 save_world_ledger(session, ledger_to_dict(ledger))
 
+        # Step 9b: Image generation — parse article JSON, generate images,
+        # embed image URLs back into the content.
+        image_counts = 0
+        for newspaper_id, content in list(articles.items()):
+            if newspaper_id == "curator":
+                continue
+            parsed = _try_parse_edition_json(content)
+            if parsed is None:
+                continue
+            article_list = parsed.get("articles", [])
+            front_page_prompt = parsed.get("frontPageImagePrompt")
+
+            result = generate_images_for_newspaper(
+                newspaper_id=newspaper_id,
+                articles=article_list,
+                front_page_image_prompt=front_page_prompt,
+                imagen_client=img_client,
+                storage=store,
+                edition_id=str(
+                    datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                ),
+            )
+
+            # Embed image URLs into articles
+            for idx, url in result.article_image_urls.items():
+                if idx < len(article_list):
+                    article_list[idx]["image_url"] = url
+                    image_counts += 1
+            if result.hero_image_url:
+                parsed["heroImageUrl"] = result.hero_image_url
+                image_counts += 1
+
+            # Re-serialize back to JSON string
+            articles[newspaper_id] = json.dumps(
+                parsed, ensure_ascii=False
+            )
+
+        logger.info(
+            "Image generation complete",
+            extra={"step": "images", "image_count": image_counts},
+        )
+
         # Step 10: Save edition to DB
         edition_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         edition_id = save_edition(session, edition_date, articles)
@@ -313,6 +359,29 @@ def _format_all_articles(articles: dict[str, str]) -> str:
     for newspaper_id, content in articles.items():
         sections.append(f"=== {newspaper_id.upper()} ===\n{content}")
     return "\n\n".join(sections)
+
+
+def _try_parse_edition_json(content: str) -> dict | None:
+    """Attempt to parse a newspaper edition content string as JSON.
+
+    The Gemini output may be raw JSON or wrapped in markdown code fences.
+    Returns the parsed dict, or None if parsing fails.
+    """
+    text = content.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        lines = lines[1:]  # remove opening fence
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning(
+            "Could not parse newspaper content as JSON for image generation"
+        )
+        return None
 
 
 def _build_mutation_prompt(
@@ -581,6 +650,21 @@ def cli_main() -> None:
         logger.warning("R2_ACCOUNT_ID not set, using StubEditionStorage")
         store = StubEditionStorage()
 
+    # Choose image generation backend
+    enable_images = os.getenv("ENABLE_IMAGES", "true").lower() == "true"
+    img_client: ImageGenerationStrategy
+    if enable_images and VERTEX_AI_PROJECT:
+        from .image_gen import ImagenClient
+
+        img_client = ImagenClient(
+            project=VERTEX_AI_PROJECT,
+            location=VERTEX_AI_LOCATION,
+        )
+    else:
+        if not enable_images:
+            logger.info("Image generation disabled via ENABLE_IMAGES=false")
+        img_client = StubImageClient(should_fail=not enable_images)
+
     enable_validation = os.getenv("ENABLE_VALIDATION", "true").lower() == "true"
     enable_caching = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 
@@ -588,6 +672,7 @@ def cli_main() -> None:
         database_url=db_url,
         generation_strategy=gen,
         storage=store,
+        imagen_client=img_client,
         enable_validation=enable_validation,
         enable_caching=enable_caching,
     )
