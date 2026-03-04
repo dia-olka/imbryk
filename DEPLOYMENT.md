@@ -99,6 +99,7 @@ Google Cloud has many services, and they are turned off by default. You need to 
    - **Vertex AI API** — the AI that writes articles and generates images
    - **Artifact Registry API** — stores the application container images
    - **Secret Manager API** — securely stores passwords and API keys
+   - **IAM Service Account Credentials API** — required for service account authentication
 
 > **Note:** Enabling an API does not cost anything. You are only charged when you actually use the service.
 
@@ -112,7 +113,8 @@ gcloud services enable \
   cloudscheduler.googleapis.com \
   aiplatform.googleapis.com \
   artifactregistry.googleapis.com \
-  secretmanager.googleapis.com
+  secretmanager.googleapis.com \
+  iamcredentials.googleapis.com
 ```
 
 ### 1.4 Create a Service Account
