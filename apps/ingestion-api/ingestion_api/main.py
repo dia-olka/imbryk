@@ -3,6 +3,7 @@
 import logging
 
 import sentry_sdk
+import sentry_sdk.integrations.logging
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
