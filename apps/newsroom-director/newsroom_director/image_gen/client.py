@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 
+from .. import config
 from ..retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -29,9 +30,11 @@ class ImagenClient(ImageGenerationStrategy):
         self,
         project: str,
         location: str = "us-central1",
+        model: str | None = None,
     ) -> None:
         self._project = project
         self._location = location
+        self._model = model or config.IMAGE_GENERATION_MODEL
         self._initialized = False
 
     def _init_vertex(self) -> None:
@@ -53,7 +56,7 @@ class ImagenClient(ImageGenerationStrategy):
 
             def _call() -> bytes:
                 model = ImageGenerationModel.from_pretrained(
-                    "imagen-3.0-generate-002"
+                    self._model
                 )
                 response = model.generate_images(
                     prompt=prompt,

@@ -6,14 +6,15 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
+from . import config
 from .retry import with_retry
 
 logger = logging.getLogger(__name__)
 
-# Gemini model names by tier
+# Gemini model names by tier — sourced from config (env-overridable)
 MODEL_MAP = {
-    "pro": "gemini-2.0-pro",
-    "flash": "gemini-2.0-flash",
+    "pro": config.GENERATION_MODEL_PRO,
+    "flash": config.GENERATION_MODEL_FLASH,
 }
 
 

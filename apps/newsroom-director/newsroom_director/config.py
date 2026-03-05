@@ -13,6 +13,11 @@ LOG_LEVEL_INT = getattr(logging, LOG_LEVEL, logging.WARNING)
 VERTEX_AI_PROJECT = os.getenv("VERTEX_AI_PROJECT", "")
 VERTEX_AI_LOCATION = os.getenv("VERTEX_AI_LOCATION", "us-central1")
 
+# Generative model names — override per environment without code changes
+GENERATION_MODEL_PRO = os.getenv("GENERATION_MODEL_PRO", "gemini-3.1-pro-preview")
+GENERATION_MODEL_FLASH = os.getenv("GENERATION_MODEL_FLASH", "gemini-2.0-flash")
+IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "imagen-3.0-generate-002")
+
 TOTAL_BUDGET_TOKENS = int(os.getenv("TOTAL_BUDGET_TOKENS", "800000"))
 MAX_CLUSTERS = int(os.getenv("MAX_CLUSTERS", "30"))
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from ingestion_api import config
 from ingestion_api.taxonomy import CATEGORY_ID_SET, CATEGORY_IDS
 
 # When AI cannot classify a prompt (gibberish, empty, unparseable response),
@@ -31,9 +32,15 @@ class StubCategoriser(CategoriserStrategy):
 class GeminiFlashCategoriser(CategoriserStrategy):
     """Calls Gemini Flash to classify prompt into 1-K categories."""
 
-    def __init__(self, project: str | None = None, location: str = "us-central1"):
+    def __init__(
+        self,
+        project: str | None = None,
+        location: str = "us-central1",
+        model: str | None = None,
+    ):
         self._project = project
         self._location = location
+        self._model = model or config.CATEGORISER_MODEL
 
     def categorise(self, prompt_text: str) -> list[str]:
         import vertexai
@@ -42,7 +49,7 @@ class GeminiFlashCategoriser(CategoriserStrategy):
         if self._project:
             vertexai.init(project=self._project, location=self._location)
 
-        model = GenerativeModel("gemini-2.0-flash")
+        model = GenerativeModel(self._model)
         category_list = ", ".join(CATEGORY_IDS)
         system_prompt = (
             "You are a news categoriser. Given a user prompt, classify it into "

@@ -876,6 +876,7 @@ These are all the configuration values used by the backend services. Most are st
 | `DATABASE_URL` | Secret | Connection string for the PostgreSQL database |
 | `VERTEX_PROJECT` | Env var | Your Google Cloud project ID |
 | `VERTEX_LOCATION` | Env var | Google Cloud region for AI (default: `us-central1`) |
+| `CATEGORISER_MODEL` | Env var | Vertex AI model used for prompt categorisation (default: `gemini-3.1-flash-lite-preview`) |
 | `BRAINTREE_MERCHANT_ID` | Secret | Your Braintree Merchant ID |
 | `BRAINTREE_PUBLIC_KEY` | Secret | Your Braintree Public Key |
 | `BRAINTREE_PRIVATE_KEY` | Secret | Your Braintree Private Key |
@@ -897,6 +898,9 @@ These are all the configuration values used by the backend services. Most are st
 | `ENABLE_IMAGES` | Env var | Generate article and hero images via Imagen (default: `true`) |
 | `ENABLE_VALIDATION` | Env var | Check prompt coherence before generating (default: `true`) |
 | `ENABLE_CACHING` | Env var | Cache AI context to save money (default: `true`) |
+| `GENERATION_MODEL_PRO` | Env var | Gemini model for premium newspaper generation (default: `gemini-3.1-pro-preview`) |
+| `GENERATION_MODEL_FLASH` | Env var | Gemini model for standard newspaper generation (default: `gemini-2.0-flash`) |
+| `IMAGE_GENERATION_MODEL` | Env var | Vertex AI Imagen model for article images (default: `gemini-3-pro-image-preview`) |
 | `SENTRY_DSN` | Env var | Error tracking URL (optional — leave empty to disable) |
 | `TOTAL_BUDGET_TOKENS` | Env var | Max AI tokens per newspaper (default: `800000`) |
 | `MAX_CLUSTERS` | Env var | Max topic groups per newspaper (default: `30`) |

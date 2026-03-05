@@ -54,7 +54,6 @@ def test_gemini_categoriser_falls_back_on_invalid_json(monkeypatch):
     mock_model.generate_content.return_value = mock_response
 
     mock_model_class = MagicMock(return_value=mock_model)
-    mock_vertexai = MagicMock()
 
     monkeypatch.setattr(
         "vertexai.init", MagicMock()
