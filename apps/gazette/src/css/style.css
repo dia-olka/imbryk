@@ -140,10 +140,10 @@ a:hover {
   max-width: 80rem;
   margin: 0 auto;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-sm) var(--space-lg);
+  gap: var(--space-sm) var(--space-md);
 }
 
 .site-title {

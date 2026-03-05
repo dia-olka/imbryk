@@ -6,7 +6,7 @@ export function Footer() {
     >
       <div className="mx-auto max-w-3xl text-center text-sm text-text-muted font-sans">
         <p>
-          &copy; {new Date().getFullYear()} Imbryk. All events are fictional.
+          &copy; {new Date().getFullYear()} Imbryk. Shape the world.
         </p>
       </div>
     </footer>

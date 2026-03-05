@@ -49,9 +49,9 @@ class GenerationStrategy(ABC):
 class VertexAIStrategy(GenerationStrategy):
     """Calls Gemini via the Vertex AI SDK."""
 
-    def __init__(self, project: str, location: str = "us-central1") -> None:
+    def __init__(self, project: str, location: str | None = None) -> None:
         self._project = project
-        self._location = location
+        self._location = location or config.VERTEX_AI_LOCATION
         self._initialized = False
 
     def _init_vertex(self) -> None:

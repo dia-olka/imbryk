@@ -13,9 +13,6 @@ export function Header() {
           <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-text">
             Whisper
           </h1>
-          <p className="text-text-muted text-sm mt-1 font-sans">
-            Shape the world. One event at a time.
-          </p>
         </div>
         <nav className="ml-auto" aria-label="Gazette">
           <a

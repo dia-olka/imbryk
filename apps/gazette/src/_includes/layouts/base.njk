@@ -68,10 +68,9 @@
       <nav aria-label="Primary navigation">
         <ul class="nav-list" role="list">
           <li><a href="/"{% if page.url == "/" %} aria-current="page"{% endif %}>Today</a></li>
-          <li><a href="/newspapers/"{% if page.url == "/newspapers/" %} aria-current="page"{% endif %}>Newspapers</a></li>
           <li><a href="/timeline/"{% if page.url == "/timeline/" %} aria-current="page"{% endif %}>World</a></li>
           <li><a href="/archive/"{% if page.url == "/archive/" %} aria-current="page"{% endif %}>Archive</a></li>
-          <li><a href="https://imbryk.pages.dev" class="submit-cta" rel="noopener" target="_blank" aria-label="Submit a news event">Submit News <span aria-hidden="true">↗</span></a></li>
+          <li><a href="{{ site.submitUrl }}" class="submit-cta" rel="noopener" target="_blank" aria-label="Submit a news event">Submit News <span aria-hidden="true">↗</span></a></li>
         </ul>
       </nav>
     </div>
@@ -82,7 +81,7 @@
   </main>
 
   <footer role="contentinfo" class="site-footer">
-    <p>Imbryk Gazette — AI-generated newspapers exploring how the world's most powerful AI systems predict events will reshape civilisation.</p>
+    <p>Imbryk Gazette — <a href="/newspapers/">AI-generated newspapers</a> exploring how the world's most powerful AI systems predict events will reshape civilisation.</p>
   </footer>
 </body>
 </html>

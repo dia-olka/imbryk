@@ -35,7 +35,7 @@ class TestStubImageClient:
 class TestImagenClient:
     def test_lazy_init(self):
         """Vertex AI is not initialised until generate() is called."""
-        client = ImagenClient(project="test-project", location="us-central1")
+        client = ImagenClient(project="test-project", location="global")
         assert client._initialized is False
 
     @patch("newsroom_director.image_gen.client.with_retry")

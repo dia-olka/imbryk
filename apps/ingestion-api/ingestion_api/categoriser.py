@@ -35,11 +35,11 @@ class GeminiFlashCategoriser(CategoriserStrategy):
     def __init__(
         self,
         project: str | None = None,
-        location: str = "us-central1",
+        location: str | None = None,
         model: str | None = None,
     ):
         self._project = project
-        self._location = location
+        self._location = location or config.VERTEX_LOCATION
         self._model = model or config.CATEGORISER_MODEL
 
     def categorise(self, prompt_text: str) -> list[str]:

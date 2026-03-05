@@ -48,4 +48,6 @@ Thumbs.db
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
 .env.local
+.env
+!.env.example
 apps/ingestion-api/imbryk.db

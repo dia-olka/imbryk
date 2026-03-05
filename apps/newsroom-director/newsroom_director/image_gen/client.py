@@ -29,11 +29,11 @@ class ImagenClient(ImageGenerationStrategy):
     def __init__(
         self,
         project: str,
-        location: str = "us-central1",
+        location: str | None = None,
         model: str | None = None,
     ) -> None:
         self._project = project
-        self._location = location
+        self._location = location or config.VERTEX_AI_LOCATION
         self._model = model or config.IMAGE_GENERATION_MODEL
         self._initialized = False
 

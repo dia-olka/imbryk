@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import markdownIt from 'markdown-it';
 
 const md = markdownIt({ html: false, breaks: true, linkify: true });

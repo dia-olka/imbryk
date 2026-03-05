@@ -608,7 +608,7 @@ gcloud run deploy ingestion-api \
   --set-secrets=BRAINTREE_PUBLIC_KEY=braintree-public-key:latest \
   --set-secrets=BRAINTREE_PRIVATE_KEY=braintree-private-key:latest \
   --set-env-vars=VERTEX_PROJECT="${PROJECT_ID}" \
-  --set-env-vars=VERTEX_LOCATION=us-central1 \
+  --set-env-vars=VERTEX_LOCATION=global \
   --set-env-vars=CORS_ALLOWED_ORIGINS=https://imbryk.pages.dev \
   --set-env-vars=SENTRY_DSN="" \
   --memory=512Mi \
@@ -670,7 +670,7 @@ gcloud run jobs create newsroom-director \
   --set-secrets=R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest \
   --set-secrets=CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest \
   --set-env-vars=VERTEX_AI_PROJECT=$PROJECT_ID \
-  --set-env-vars=VERTEX_AI_LOCATION=us-central1 \
+  --set-env-vars=VERTEX_AI_LOCATION=global \
   --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
   --set-env-vars=R2_PUBLIC_URL=https://editions.yourdomain.com \
   --set-env-vars=ENABLE_IMAGES=true \
@@ -875,7 +875,7 @@ These are all the configuration values used by the backend services. Most are st
 |---|---|---|
 | `DATABASE_URL` | Secret | Connection string for the PostgreSQL database |
 | `VERTEX_PROJECT` | Env var | Your Google Cloud project ID |
-| `VERTEX_LOCATION` | Env var | Google Cloud region for AI (default: `us-central1`) |
+| `VERTEX_LOCATION` | Env var | Google Cloud region for AI (default: `global`) |
 | `CATEGORISER_MODEL` | Env var | Vertex AI model used for prompt categorisation (default: `gemini-3.1-flash-lite-preview`) |
 | `BRAINTREE_MERCHANT_ID` | Secret | Your Braintree Merchant ID |
 | `BRAINTREE_PUBLIC_KEY` | Secret | Your Braintree Public Key |
@@ -889,7 +889,7 @@ These are all the configuration values used by the backend services. Most are st
 |---|---|---|
 | `DATABASE_URL` | Secret | Connection string for the PostgreSQL database |
 | `VERTEX_AI_PROJECT` | Env var | Your Google Cloud project ID |
-| `VERTEX_AI_LOCATION` | Env var | Google Cloud region for AI (default: `us-central1`) |
+| `VERTEX_AI_LOCATION` | Env var | Google Cloud region for AI models (default: `global`) |
 | `R2_ACCOUNT_ID` | Secret | Your Cloudflare account ID |
 | `R2_ACCESS_KEY_ID` | Secret | R2 API access key |
 | `R2_SECRET_ACCESS_KEY` | Secret | R2 API secret key |

@@ -11,7 +11,7 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_LEVEL_INT = getattr(logging, LOG_LEVEL, logging.WARNING)
 
 VERTEX_AI_PROJECT = os.getenv("VERTEX_AI_PROJECT", "")
-VERTEX_AI_LOCATION = os.getenv("VERTEX_AI_LOCATION", "us-central1")
+VERTEX_AI_LOCATION = os.getenv("VERTEX_AI_LOCATION", "global")
 
 # Generative model names — override per environment without code changes
 GENERATION_MODEL_PRO = os.getenv("GENERATION_MODEL_PRO", "gemini-3.1-pro-preview")
