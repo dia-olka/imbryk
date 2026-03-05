@@ -17,6 +17,8 @@ from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
     RATE_LIMIT_QUOTE,
     SENTRY_DSN,
+    VERTEX_LOCATION,
+    VERTEX_PROJECT,
     _log_level_int,
 )
 
@@ -71,6 +73,15 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Log API startup for visibility in Cloud Logging & Sentry."""
+    if VERTEX_PROJECT:
+        from ingestion_api.categoriser import GeminiFlashCategoriser
+
+        set_categoriser(GeminiFlashCategoriser(project=VERTEX_PROJECT, location=VERTEX_LOCATION))
+        logger.info("Using GeminiFlashCategoriser (project=%s)", VERTEX_PROJECT)
+    else:
+        logger.warning(
+            "VERTEX_PROJECT not set — using StubCategoriser; all prompts will be classified as 'geopolitics'"
+        )
     logger.info(
         "Imbryk Ingestion API started",
         extra={"allowed_origins": CORS_ALLOWED_ORIGINS},

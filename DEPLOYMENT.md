@@ -607,7 +607,8 @@ gcloud run deploy ingestion-api \
   --set-secrets=BRAINTREE_MERCHANT_ID=braintree-merchant-id:latest \
   --set-secrets=BRAINTREE_PUBLIC_KEY=braintree-public-key:latest \
   --set-secrets=BRAINTREE_PRIVATE_KEY=braintree-private-key:latest \
-  --set-env-vars=VERTEX_AI_PROJECT="${PROJECT_ID}" \
+  --set-env-vars=VERTEX_PROJECT="${PROJECT_ID}" \
+  --set-env-vars=VERTEX_LOCATION=us-central1 \
   --set-env-vars=CORS_ALLOWED_ORIGINS=https://imbryk.pages.dev \
   --set-env-vars=SENTRY_DSN="" \
   --memory=512Mi \
@@ -873,7 +874,8 @@ These are all the configuration values used by the backend services. Most are st
 | Variable | Storage | What it is |
 |---|---|---|
 | `DATABASE_URL` | Secret | Connection string for the PostgreSQL database |
-| `VERTEX_AI_PROJECT` | Env var | Your Google Cloud project ID |
+| `VERTEX_PROJECT` | Env var | Your Google Cloud project ID |
+| `VERTEX_LOCATION` | Env var | Google Cloud region for AI (default: `us-central1`) |
 | `BRAINTREE_MERCHANT_ID` | Secret | Your Braintree Merchant ID |
 | `BRAINTREE_PUBLIC_KEY` | Secret | Your Braintree Public Key |
 | `BRAINTREE_PRIVATE_KEY` | Secret | Your Braintree Private Key |

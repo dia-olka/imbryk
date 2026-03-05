@@ -91,6 +91,8 @@ jobs:
           region: ${{ env.GCP_REGION }}
           env_vars: |
             SENTRY_DSN=${{ vars.SENTRY_DSN }}
+            VERTEX_PROJECT=${{ vars.GCP_PROJECT_ID }}
+            VERTEX_LOCATION=${{ env.GCP_REGION }}
 
       - name: Run database migrations
         run: |
