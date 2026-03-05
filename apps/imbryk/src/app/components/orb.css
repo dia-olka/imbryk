@@ -202,6 +202,104 @@
   animation: release-flipped 0.8s ease-out forwards;
 }
 
+/* ── Front Face Lens Window (circular viewing portal) ── */
+.orb-lens-window {
+  width: 72%;
+  height: 72%;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Inset depth — curved glass feel */
+  box-shadow:
+    inset 0 5px 18px rgba(0, 0, 0, 0.75),
+    inset 0 0 40px rgba(0, 0, 0, 0.45);
+}
+
+/* Specular highlight — top-left glass sheen */
+.orb-lens-window::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 32% 24%,
+    rgba(255, 200, 110, 0.14) 0%,
+    transparent 52%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Edge vignette — darkens periphery, sells the fisheye lens curvature */
+.orb-lens-window::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 38%,
+    rgba(8, 3, 0, 0.82) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Textarea inside the lens ── */
+.orb-lens-input {
+  position: relative;
+  z-index: 1;
+  /* Fill the circular window, padding carves an elliptical text zone */
+  width: 100%;
+  height: 100%;
+  padding: 26% 20%;
+  resize: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  /* Amber-warm glow text, matching the orb's fire */
+  color: rgba(255, 225, 170, 0.95);
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  text-shadow:
+    0 0 10px rgba(255, 175, 70, 0.65),
+    0 0 22px rgba(220, 110, 20, 0.35);
+  /* Fisheye feel: perspective pushes the text surface slightly toward viewer,
+     enlarging the centre relative to the clipped circular edge */
+  transform: perspective(480px) translateZ(12px);
+  transform-origin: 50% 50%;
+  /* Hide scrollbar — no ugly chrome */
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.orb-lens-input::-webkit-scrollbar {
+  display: none;
+}
+
+.orb-lens-input::placeholder {
+  color: rgba(255, 200, 140, 0.28);
+  text-shadow: none;
+}
+
+.orb-lens-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Larger screens: slightly bigger text inside lens */
+@media (min-width: 768px) {
+  .orb-lens-input {
+    font-size: 1.05rem;
+    transform: perspective(560px) translateZ(14px);
+  }
+}
+
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
   .orb-body {
