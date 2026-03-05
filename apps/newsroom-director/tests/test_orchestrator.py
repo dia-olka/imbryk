@@ -74,7 +74,7 @@ def test_db_url(tmp_path):
     session.add(p1)
     session.add(
         CategorisedPromptRow(
-            id="cp-1", prompt_id="p-1", category_id="geopolitics"
+            id="cp-1", prompt_id="p-1", category_id="geopolitics-and-diplomacy"
         )
     )
 
@@ -87,7 +87,7 @@ def test_db_url(tmp_path):
     session.add(p2)
     session.add(
         CategorisedPromptRow(
-            id="cp-2", prompt_id="p-2", category_id="entertainment"
+            id="cp-2", prompt_id="p-2", category_id="entertainment-and-hollywood"
         )
     )
 
@@ -100,7 +100,7 @@ def test_db_url(tmp_path):
     session.add(p3)
     session.add(
         CategorisedPromptRow(
-            id="cp-3", prompt_id="p-3", category_id="finance-and-markets"
+            id="cp-3", prompt_id="p-3", category_id="markets-and-macroeconomics"
         )
     )
 
@@ -144,9 +144,9 @@ class TestOrchestrator:
         assert len(editions) == 1
 
         articles = editions[0]["articles"]
-        # geopolitics -> sovereign, aspirant, radical
-        # entertainment -> hedonist, moralist
-        # finance-and-markets -> owner
+        # geopolitics-and-diplomacy -> sovereign, aspirant
+        # entertainment-and-hollywood -> moralist, hedonist
+        # markets-and-macroeconomics -> owner
         # + curator
         assert "curator" in articles
 

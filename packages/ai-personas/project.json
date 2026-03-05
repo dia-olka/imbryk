@@ -1,0 +1,19 @@
+{
+  "name": "ai-personas",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "targets": {
+    "generate-data": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{workspaceRoot}/data/taxonomy.json",
+        "{workspaceRoot}/data/personas.json",
+        "{workspaceRoot}/scripts/generate-data.mjs"
+      ],
+      "outputs": ["{projectRoot}/src/lib/_generated_data.ts"],
+      "options": {
+        "command": "node scripts/generate-data.mjs --target ai-personas"
+      },
+      "cache": true
+    }
+  }
+}

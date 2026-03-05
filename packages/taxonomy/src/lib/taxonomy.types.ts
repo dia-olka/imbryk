@@ -1,23 +1,26 @@
-import type { CATEGORY_IDS } from './categories.js';
-
-export interface CategoryGroup {
-  name: string;
-  categories: Category[];
-}
-
+/** Category within a group. */
 export interface Category {
   id: string;
   label: string;
   group: string;
 }
 
-export type CategoryId = (typeof CATEGORY_IDS)[number];
+/** Named group of categories. */
+export interface CategoryGroup {
+  name: string;
+  categories: Category[];
+}
 
+/** Valid category ID string (branded for intent-clarity, accepts any string at runtime). */
+export type CategoryId = string & { readonly __brand?: 'CategoryId' };
+
+/** Newspaper-to-category subscription mapping. */
 export interface NewspaperSubscription {
   newspaperId: string;
   categoryIds: CategoryId[];
 }
 
+/** Result of routing a prompt to newspapers. */
 export interface RoutingResult {
   newspaperId: string;
   matchedCategories: CategoryId[];

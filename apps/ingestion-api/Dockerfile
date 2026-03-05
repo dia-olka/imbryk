@@ -11,7 +11,7 @@ COPY pyproject.toml uv.lock README.md ./
 # Install dependencies
 RUN uv pip install --system .
 
-# Copy application code
+# Copy application code (includes pre-generated _generated_data.py)
 COPY ingestion_api/ ingestion_api/
 COPY alembic/ alembic/
 COPY alembic.ini .

@@ -5,7 +5,12 @@ export type {
   NewspaperSubscription,
   RoutingResult,
 } from './lib/taxonomy.types.ts';
-export { CATEGORIES, CATEGORY_GROUPS, CATEGORY_IDS } from './lib/categories.ts';
+export {
+  CATEGORIES,
+  CATEGORY_GROUPS,
+  CATEGORY_IDS,
+  CATEGORY_ID_SET,
+} from './lib/categories.ts';
 export {
   SOVEREIGN_SUBSCRIPTION,
   ASPIRANT_SUBSCRIPTION,
@@ -16,3 +21,5 @@ export {
   NEWSPAPER_SUBSCRIPTIONS,
 } from './lib/subscriptions.ts';
 export { routePrompt, countNewspapersReached } from './lib/router.ts';
+export { TaxonomySchema, PersonasFileSchema } from './lib/schemas.ts';
+export type { TaxonomyData, PersonasData, RawPersona } from './lib/schemas.ts';

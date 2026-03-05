@@ -26,7 +26,21 @@
       "executor": "@nxlv/python:remove",
       "options": {}
     },
+    "generate-data": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{workspaceRoot}/data/taxonomy.json",
+        "{workspaceRoot}/data/personas.json",
+        "{workspaceRoot}/scripts/generate-data.mjs"
+      ],
+      "outputs": ["{projectRoot}/ingestion_api/_generated_data.py"],
+      "options": {
+        "command": "node scripts/generate-data.mjs --target ingestion-api"
+      },
+      "cache": true
+    },
     "build": {
+      "dependsOn": ["generate-data"],
       "executor": "@nxlv/python:build",
       "outputs": ["{projectRoot}/dist"],
       "options": {
@@ -54,6 +68,7 @@
       "cache": true
     },
     "test": {
+      "dependsOn": ["generate-data"],
       "executor": "@nxlv/python:run-commands",
       "outputs": [
         "{workspaceRoot}/reports/{projectRoot}/unittests",

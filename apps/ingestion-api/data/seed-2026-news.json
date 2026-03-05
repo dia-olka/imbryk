@@ -7,163 +7,274 @@
   "events": [
     {
       "prompt": "US and Israel launch coordinated strikes on Iran, Supreme Leader Khamenei killed in targeted attack on Tehran",
-      "categories": ["geopolitics", "military-and-defence", "intelligence-and-surveillance"]
+      "categories": [
+        "geopolitics-and-diplomacy",
+        "military-and-defence",
+        "crime-and-security"
+      ]
     },
     {
       "prompt": "Iran retaliates against US military bases in Bahrain, Qatar and Iraq following Khamenei assassination",
-      "categories": ["geopolitics", "military-and-defence"]
+      "categories": ["geopolitics-and-diplomacy", "military-and-defence"]
     },
     {
       "prompt": "Hezbollah launches mass rocket barrages on northern Israel as Iran-Israel conflict escalates",
-      "categories": ["geopolitics", "military-and-defence"]
+      "categories": ["geopolitics-and-diplomacy", "military-and-defence"]
     },
     {
       "prompt": "Oil prices surge past multi-year highs as Strait of Hormuz shipping faces disruption threat",
-      "categories": ["energy", "finance-and-markets", "trade-and-commerce"]
+      "categories": [
+        "energy-and-transition",
+        "markets-and-macroeconomics",
+        "trade-and-supply-chains"
+      ]
     },
     {
       "prompt": "UN Security Council holds emergency session on Middle East escalation after Iran strikes",
-      "categories": ["geopolitics", "law-and-justice"]
+      "categories": ["geopolitics-and-diplomacy", "law-and-justice"]
     },
     {
       "prompt": "Iran's Interim Leadership Council takes power following Supreme Leader Khamenei's death, succession crisis begins",
-      "categories": ["geopolitics", "domestic-politics"]
+      "categories": [
+        "geopolitics-and-diplomacy",
+        "domestic-politics-and-policy"
+      ]
     },
     {
       "prompt": "Russia-Ukraine war enters fourth year with front line stalemate across Donbas, no peace talks in sight",
-      "categories": ["geopolitics", "military-and-defence"]
+      "categories": ["geopolitics-and-diplomacy", "military-and-defence"]
     },
     {
       "prompt": "Trump administration imposes 10% baseline global import tariff, reshaping world trade",
-      "categories": ["trade-and-commerce", "finance-and-markets", "domestic-politics"]
+      "categories": [
+        "trade-and-supply-chains",
+        "markets-and-macroeconomics",
+        "domestic-politics-and-policy"
+      ]
     },
     {
       "prompt": "US withdraws from World Health Organisation, WHO funding reduced by 18 percent",
-      "categories": ["health-and-medicine", "geopolitics", "domestic-politics"]
+      "categories": [
+        "global-health-and-pandemics",
+        "geopolitics-and-diplomacy",
+        "domestic-politics-and-policy"
+      ]
     },
     {
       "prompt": "DeepSeek R1 released, Chinese AI model achieves frontier reasoning at fraction of US training cost",
-      "categories": ["artificial-intelligence", "technology-and-innovation", "geopolitics"]
+      "categories": [
+        "artificial-intelligence",
+        "science-and-biohacking",
+        "geopolitics-and-diplomacy"
+      ]
     },
     {
       "prompt": "Solar and wind energy met 109 percent of new global electricity demand in 2025, record 600 GW solar added",
-      "categories": ["energy", "climate-and-environment", "technology-and-innovation"]
+      "categories": [
+        "energy-and-transition",
+        "climate-and-ecology",
+        "science-and-biohacking"
+      ]
     },
     {
       "prompt": "2025 confirmed as hottest year on record, global temperature anomaly reaches 1.47 degrees Celsius above pre-industrial levels",
-      "categories": ["climate-and-environment", "science-and-research"]
+      "categories": ["climate-and-ecology", "science-and-biohacking"]
     },
     {
       "prompt": "Bulgaria adopts euro on January 1 2026, becomes 21st member of eurozone",
-      "categories": ["finance-and-markets", "trade-and-commerce", "domestic-politics"]
+      "categories": [
+        "markets-and-macroeconomics",
+        "trade-and-supply-chains",
+        "domestic-politics-and-policy"
+      ]
     },
     {
       "prompt": "South Korea's President Yoon Suk-yeol convicted of insurrection and sentenced to life imprisonment",
-      "categories": ["domestic-politics", "law-and-justice"]
+      "categories": ["domestic-politics-and-policy", "law-and-justice"]
     },
     {
       "prompt": "Japan snap election: LDP wins majority, Sanae Takaichi becomes Japan's first female Prime Minister",
-      "categories": ["domestic-politics", "geopolitics"]
+      "categories": [
+        "domestic-politics-and-policy",
+        "geopolitics-and-diplomacy"
+      ]
     },
     {
       "prompt": "Davos 2026 attracts record 60 heads of state as world leaders scramble for global coordination",
-      "categories": ["geopolitics", "trade-and-commerce", "finance-and-markets"]
+      "categories": [
+        "geopolitics-and-diplomacy",
+        "trade-and-supply-chains",
+        "markets-and-macroeconomics"
+      ]
     },
     {
       "prompt": "Trump signs executive order limiting state AI regulation to preserve federal authority over artificial intelligence",
-      "categories": ["artificial-intelligence", "domestic-politics", "technology-and-innovation"]
+      "categories": [
+        "artificial-intelligence",
+        "domestic-politics-and-policy",
+        "science-and-biohacking"
+      ]
     },
     {
       "prompt": "First bespoke CRISPR gene-editing treatment administered to baby KJ Muldoon, personalised medicine milestone",
-      "categories": ["science-and-research", "health-and-medicine", "technology-and-innovation"]
+      "categories": ["science-and-biohacking", "global-health-and-pandemics"]
     },
     {
       "prompt": "Gaza humanitarian crisis deepens as ceasefire negotiations collapse again, October elections loom in Israel",
-      "categories": ["geopolitics", "health-and-medicine", "domestic-politics"]
+      "categories": [
+        "geopolitics-and-diplomacy",
+        "global-health-and-pandemics",
+        "domestic-politics-and-policy"
+      ]
     },
     {
       "prompt": "China increases military incursions into Taiwan's air defence zone to near-daily frequency",
-      "categories": ["geopolitics", "military-and-defence"]
+      "categories": ["geopolitics-and-diplomacy", "military-and-defence"]
     },
     {
       "prompt": "US-China trade truce: fragile 90-day agreement holds 30 percent US tariffs and 10 percent Chinese tariffs",
-      "categories": ["trade-and-commerce", "geopolitics", "finance-and-markets"]
+      "categories": [
+        "trade-and-supply-chains",
+        "geopolitics-and-diplomacy",
+        "markets-and-macroeconomics"
+      ]
     },
     {
       "prompt": "Sudan civil war: SAF-RSF conflict creates one of world's worst humanitarian disasters, millions displaced",
-      "categories": ["geopolitics", "health-and-medicine", "military-and-defence"]
+      "categories": [
+        "geopolitics-and-diplomacy",
+        "global-health-and-pandemics",
+        "military-and-defence"
+      ]
     },
     {
       "prompt": "GLP-1 drugs Ozempic and Wegovy adoption accelerates, reshaping healthcare economics and pharmaceutical markets",
-      "categories": ["health-and-medicine", "science-and-research", "finance-and-markets"]
+      "categories": [
+        "global-health-and-pandemics",
+        "science-and-biohacking",
+        "markets-and-macroeconomics"
+      ]
     },
     {
       "prompt": "Germany's CDU forms new coalition under Friedrich Merz following snap election, eurozone's largest economy grows at 0.9 percent",
-      "categories": ["domestic-politics", "finance-and-markets"]
+      "categories": [
+        "domestic-politics-and-policy",
+        "markets-and-macroeconomics"
+      ]
     },
     {
       "prompt": "US spot Bitcoin ETFs accumulate significant institutional assets, Trump administration signals crypto-friendly policy",
-      "categories": ["cryptocurrency", "finance-and-markets", "domestic-politics"]
+      "categories": [
+        "crypto-and-decentralization",
+        "markets-and-macroeconomics",
+        "domestic-politics-and-policy"
+      ]
     },
     {
       "prompt": "IBM announces quantum computing milestone, narrowing gap to commercial quantum advantage",
-      "categories": ["technology-and-innovation", "science-and-research", "artificial-intelligence"]
+      "categories": ["science-and-biohacking", "artificial-intelligence"]
     },
     {
       "prompt": "EU AI Act enters enforcement phase, setting global standard for artificial intelligence regulation",
-      "categories": ["artificial-intelligence", "law-and-justice", "technology-and-innovation"]
+      "categories": [
+        "artificial-intelligence",
+        "law-and-justice",
+        "science-and-biohacking"
+      ]
     },
     {
       "prompt": "BRICS+ nations explore dollar-alternative payment systems, Brazil and India push for Global South financial independence",
-      "categories": ["finance-and-markets", "trade-and-commerce", "geopolitics"]
+      "categories": [
+        "markets-and-macroeconomics",
+        "trade-and-supply-chains",
+        "geopolitics-and-diplomacy"
+      ]
     },
     {
       "prompt": "US semiconductor export controls on China intensify supply chain bifurcation, TSMC Arizona fabs ramp up production",
-      "categories": ["technology-and-innovation", "trade-and-commerce", "geopolitics"]
+      "categories": [
+        "science-and-biohacking",
+        "trade-and-supply-chains",
+        "geopolitics-and-diplomacy"
+      ]
     },
     {
       "prompt": "NATO announces increased eastern flank deployments as Russia-Ukraine war continues into fourth year",
-      "categories": ["military-and-defence", "geopolitics"]
+      "categories": ["military-and-defence", "geopolitics-and-diplomacy"]
     },
     {
       "prompt": "Anti-AI labour movement grows globally, creative and professional workers demand AI use transparency and royalty funds",
-      "categories": ["technology-and-innovation", "labour-and-employment", "law-and-justice"]
+      "categories": [
+        "science-and-biohacking",
+        "labor-and-automation",
+        "law-and-justice"
+      ]
     },
     {
       "prompt": "Macron navigates hung parliament as France's political fragmentation deepens following 2024 snap election",
-      "categories": ["domestic-politics", "geopolitics"]
+      "categories": [
+        "domestic-politics-and-policy",
+        "geopolitics-and-diplomacy"
+      ]
     },
     {
       "prompt": "EU Carbon Border Adjustment Mechanism becomes operational, taxing high-carbon imports at European borders",
-      "categories": ["trade-and-commerce", "climate-and-environment", "law-and-justice"]
+      "categories": [
+        "trade-and-supply-chains",
+        "climate-and-ecology",
+        "law-and-justice"
+      ]
     },
     {
       "prompt": "Elon Musk's X platform amplifies state-sponsored disinformation while becoming primary news source for millions",
-      "categories": ["technology-and-innovation", "domestic-politics", "corruption-and-scandal"]
+      "categories": [
+        "science-and-biohacking",
+        "domestic-politics-and-policy",
+        "corruption-and-scandal"
+      ]
     },
     {
       "prompt": "India emerges as global manufacturing hub as multinationals diversify supply chains away from China",
-      "categories": ["trade-and-commerce", "finance-and-markets", "geopolitics"]
+      "categories": [
+        "trade-and-supply-chains",
+        "markets-and-macroeconomics",
+        "geopolitics-and-diplomacy"
+      ]
     },
     {
       "prompt": "Houthi attacks on Red Sea shipping continue, global maritime insurance costs at record highs",
-      "categories": ["trade-and-commerce", "military-and-defence", "finance-and-markets"]
+      "categories": [
+        "trade-and-supply-chains",
+        "military-and-defence",
+        "markets-and-macroeconomics"
+      ]
     },
     {
       "prompt": "Over 150 active gene-editing clinical trials underway globally as CRISPR therapies enter mainstream medicine",
-      "categories": ["science-and-research", "health-and-medicine", "technology-and-innovation"]
+      "categories": ["science-and-biohacking", "global-health-and-pandemics"]
     },
     {
       "prompt": "US carrier strike groups deployed to Gulf region as Iran conflict escalates, Middle East most dangerous since 1973",
-      "categories": ["military-and-defence", "geopolitics", "energy"]
+      "categories": [
+        "military-and-defence",
+        "geopolitics-and-diplomacy",
+        "energy-and-transition"
+      ]
     },
     {
       "prompt": "Keir Starmer's Labour government pursues closer EU-UK relations without rejoining single market",
-      "categories": ["geopolitics", "trade-and-commerce", "domestic-politics"]
+      "categories": [
+        "geopolitics-and-diplomacy",
+        "trade-and-supply-chains",
+        "domestic-politics-and-policy"
+      ]
     },
     {
       "prompt": "Bank of Japan raises interest rates cautiously as it exits decades of ultra-loose monetary policy",
-      "categories": ["finance-and-markets", "domestic-politics"]
+      "categories": [
+        "markets-and-macroeconomics",
+        "domestic-politics-and-policy"
+      ]
     }
   ]
 }

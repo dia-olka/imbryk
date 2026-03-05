@@ -17,7 +17,7 @@ COPY pyproject.toml uv.lock README.md ./
 # Install dependencies (includes torch, sentence-transformers, hdbscan)
 RUN uv pip install --system .
 
-# Copy application code
+# Copy application code (includes pre-generated _generated_data.py)
 COPY newsroom_director/ newsroom_director/
 
 # Pre-download the embedding model into the image so

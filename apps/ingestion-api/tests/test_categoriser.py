@@ -5,26 +5,26 @@ from ingestion_api.taxonomy import CATEGORY_ID_SET
 
 
 def test_stub_categoriser_returns_configured_categories():
-    categoriser = StubCategoriser(categories=["geopolitics", "energy"])
+    categoriser = StubCategoriser(categories=["geopolitics-and-diplomacy", "energy-and-transition"])
     result = categoriser.categorise("test prompt")
-    assert result == ["geopolitics", "energy"]
+    assert result == ["geopolitics-and-diplomacy", "energy-and-transition"]
 
 
 def test_stub_categoriser_filters_invalid_categories():
-    categoriser = StubCategoriser(categories=["geopolitics", "invalid-cat"])
+    categoriser = StubCategoriser(categories=["geopolitics-and-diplomacy", "invalid-cat"])
     result = categoriser.categorise("test prompt")
-    assert result == ["geopolitics"]
+    assert result == ["geopolitics-and-diplomacy"]
 
 
 def test_stub_categoriser_default():
     categoriser = StubCategoriser()
     result = categoriser.categorise("test prompt")
-    assert result == ["geopolitics"]
+    assert result == ["geopolitics-and-diplomacy"]
 
 
 def test_stub_categoriser_results_are_valid():
     categoriser = StubCategoriser(
-        categories=["geopolitics", "entertainment", "energy"]
+        categories=["geopolitics-and-diplomacy", "entertainment-and-hollywood", "energy-and-transition"]
     )
     result = categoriser.categorise("anything")
     for cat in result:
@@ -35,8 +35,8 @@ def test_fallback_category_is_valid():
     assert FALLBACK_CATEGORY in CATEGORY_ID_SET
 
 
-def test_fallback_category_is_entertainment():
-    assert FALLBACK_CATEGORY == "entertainment"
+def test_fallback_category_is_entertainment_and_hollywood():
+    assert FALLBACK_CATEGORY == "entertainment-and-hollywood"
 
 
 def test_gemini_categoriser_falls_back_on_invalid_json(monkeypatch):

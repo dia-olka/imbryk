@@ -17,9 +17,9 @@ def test_all_category_ids_unique():
     assert len(CATEGORY_ID_SET) == 30
 
 
-def test_each_newspaper_subscribes_to_8_to_12_categories():
+def test_each_newspaper_subscribes_to_9_to_10_categories():
     for newspaper_id, cats in NEWSPAPER_SUBSCRIPTIONS.items():
-        assert 8 <= len(cats) <= 12, f"{newspaper_id} has {len(cats)} categories"
+        assert 9 <= len(cats) <= 10, f"{newspaper_id} has {len(cats)} categories"
 
 
 def test_all_categories_covered_by_at_least_one_newspaper():
@@ -41,27 +41,27 @@ def test_route_prompt_empty_returns_empty():
     assert route_prompt([]) == []
 
 
-def test_route_prompt_geopolitics_reaches_sovereign_aspirant_radical():
-    results = route_prompt(["geopolitics"])
+def test_route_prompt_geopolitics_reaches_sovereign_aspirant():
+    results = route_prompt(["geopolitics-and-diplomacy"])
     newspaper_ids = {r.newspaper_id for r in results}
-    assert newspaper_ids == {"sovereign", "aspirant", "radical"}
+    assert newspaper_ids == {"sovereign", "aspirant"}
 
 
 def test_route_prompt_entertainment_reaches_moralist_hedonist():
-    results = route_prompt(["entertainment"])
+    results = route_prompt(["entertainment-and-hollywood"])
     newspaper_ids = {r.newspaper_id for r in results}
     assert newspaper_ids == {"moralist", "hedonist"}
 
 
 def test_route_prompt_matched_categories_correct():
-    results = route_prompt(["geopolitics", "entertainment"])
+    results = route_prompt(["geopolitics-and-diplomacy", "entertainment-and-hollywood"])
     result_map = {r.newspaper_id: r.matched_categories for r in results}
-    assert "geopolitics" in result_map["sovereign"]
-    assert "entertainment" not in result_map["sovereign"]
-    assert "entertainment" in result_map["hedonist"]
+    assert "geopolitics-and-diplomacy" in result_map["sovereign"]
+    assert "entertainment-and-hollywood" not in result_map["sovereign"]
+    assert "entertainment-and-hollywood" in result_map["hedonist"]
 
 
 def test_count_newspapers_reached():
-    assert count_newspapers_reached(["geopolitics"]) == 3
+    assert count_newspapers_reached(["geopolitics-and-diplomacy"]) == 2
     assert count_newspapers_reached([]) == 0
-    assert count_newspapers_reached(["finance-and-markets"]) == 1
+    assert count_newspapers_reached(["markets-and-macroeconomics"]) == 1

@@ -51,3 +51,6 @@ vitest.config.*.timestamp*
 .env
 !.env.example
 apps/ingestion-api/imbryk.db
+
+# Generated Python data files (from scripts/generate-python-data.mjs)
+**/_generated_data.py

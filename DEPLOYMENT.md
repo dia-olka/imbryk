@@ -29,15 +29,15 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how the system works and [PLAN.md](PL
 
 Imbryk is made of several pieces that work together. Here is what each piece does:
 
-| Piece | What it does | Where it runs |
-|---|---|---|
-| **Prompt UI** | The website where users type their event and pay | Cloudflare Pages (free) |
-| **Ingestion API** | Receives prompts, categorises them, handles payments | Google Cloud Run |
-| **Newsroom Director** | The daily job that generates newspaper articles | Google Cloud Run |
-| **Database** | Stores prompts, payments, and the world state | Google Cloud SQL |
-| **Gazette** | The newspaper website readers see (rebuilt daily) | Cloudflare Pages (free) |
-| **File Storage** | Stores the generated article files | Cloudflare R2 (free tier) |
-| **Payments** | Processes credit card payments from users | Braintree |
+| Piece                 | What it does                                         | Where it runs             |
+| --------------------- | ---------------------------------------------------- | ------------------------- |
+| **Prompt UI**         | The website where users type their event and pay     | Cloudflare Pages (free)   |
+| **Ingestion API**     | Receives prompts, categorises them, handles payments | Google Cloud Run          |
+| **Newsroom Director** | The daily job that generates newspaper articles      | Google Cloud Run          |
+| **Database**          | Stores prompts, payments, and the world state        | Google Cloud SQL          |
+| **Gazette**           | The newspaper website readers see (rebuilt daily)    | Cloudflare Pages (free)   |
+| **File Storage**      | Stores the generated article files                   | Cloudflare R2 (free tier) |
+| **Payments**          | Processes credit card payments from users            | Braintree                 |
 
 You do not need to understand how these work internally. Just follow the steps to create accounts, click through the setup screens, and paste in the values where indicated.
 
@@ -47,11 +47,11 @@ You do not need to understand how these work internally. Just follow the steps t
 
 You will create accounts on three services. All three have free tiers or trial credits.
 
-| Service | What it's for | Cost to start |
-|---|---|---|
-| **Google Cloud** | Runs the backend (API, database, AI) | **Free — $300 credit for 90 days** (no charge until you use it up) |
-| **Cloudflare** | Hosts the two websites and stores files | **Free** (the free plan covers everything Imbryk needs) |
-| **Braintree** (by PayPal) | Processes payments from users | **Free sandbox** for testing; production requires PayPal business approval |
+| Service                   | What it's for                           | Cost to start                                                              |
+| ------------------------- | --------------------------------------- | -------------------------------------------------------------------------- |
+| **Google Cloud**          | Runs the backend (API, database, AI)    | **Free — $300 credit for 90 days** (no charge until you use it up)         |
+| **Cloudflare**            | Hosts the two websites and stores files | **Free** (the free plan covers everything Imbryk needs)                    |
+| **Braintree** (by PayPal) | Processes payments from users           | **Free sandbox** for testing; production requires PayPal business approval |
 
 You will need a credit or debit card for Google Cloud and Braintree, but you will not be charged right away.
 
@@ -190,6 +190,7 @@ gcloud sql users create YOUR_EMAIL@gmail.com \
 ```
 
 Or in the Console:
+
 1. Go to **SQL > imbryk-db > Users**
 2. Click **"Add User Account"**
 3. Select **"Cloud IAM"**
@@ -354,10 +355,10 @@ When you are ready to accept real money (not just test transactions):
 
 Go to **Secret Manager** in the Google Cloud Console and create three secrets:
 
-| Secret Name | Value |
-|---|---|
+| Secret Name             | Value                          |
+| ----------------------- | ------------------------------ |
 | `braintree-merchant-id` | Your Merchant ID from Step 2.2 |
-| `braintree-public-key` | Your Public Key from Step 2.2 |
+| `braintree-public-key`  | Your Public Key from Step 2.2  |
 | `braintree-private-key` | Your Private Key from Step 2.2 |
 
 For each one:
@@ -416,10 +417,10 @@ The backend (running on Google Cloud) needs credentials to write files to R2.
 
 Go to **Secret Manager** in Google Cloud Console and create three secrets:
 
-| Secret Name | Value |
-|---|---|
-| `r2-account-id` | Your Cloudflare Account ID |
-| `r2-access-key-id` | The Access Key ID from Step 3.3 |
+| Secret Name            | Value                               |
+| ---------------------- | ----------------------------------- |
+| `r2-account-id`        | Your Cloudflare Account ID          |
+| `r2-access-key-id`     | The Access Key ID from Step 3.3     |
 | `r2-secret-access-key` | The Secret Access Key from Step 3.3 |
 
 ### 3.5 Deploy the Prompt UI Website
@@ -477,6 +478,9 @@ For the **first deployment only**, you need to build and push the images manuall
 # Set your project and registry path
 PROJECT_ID=your-project-id
 REPO=us-central1-docker.pkg.dev/$PROJECT_ID/imbryk
+
+# Generate Python data files from JSON (required before Docker build)
+npx nx run-many --target=generate-data --projects=ingestion-api,newsroom-director
 
 # Build and upload the Ingestion API
 docker build -f apps/ingestion-api/Dockerfile -t $REPO/ingestion-api:latest apps/ingestion-api
@@ -548,14 +552,14 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 
 **Variables** (Settings > Variables > New repository variable):
 
-| Variable | Value | Example |
-|---|---|---|
-| `GCP_PROJECT_ID` | Your Google Cloud project ID | `imbryk-123456` |
-| `GCP_WIF_PROVIDER` | The full Workload Identity provider resource name | `projects/123456/locations/global/workloadIdentityPools/github/providers/github-actions` |
-| `GCP_SERVICE_ACCOUNT` | The service account email | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com` |
-| `GCP_REGION` | Google Cloud region (optional, defaults to `us-central1`) | `us-central1` |
-| `SENTRY_DSN` | Sentry error tracking URL (leave empty to disable) | `https://abc123@o0.ingest.sentry.io/0` |
-| `R2_PUBLIC_URL` | Custom domain URL for the R2 bucket | `https://editions.yourdomain.com` |
+| Variable              | Value                                                     | Example                                                                                  |
+| --------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `GCP_PROJECT_ID`      | Your Google Cloud project ID                              | `imbryk-123456`                                                                          |
+| `GCP_WIF_PROVIDER`    | The full Workload Identity provider resource name         | `projects/123456/locations/global/workloadIdentityPools/github/providers/github-actions` |
+| `GCP_SERVICE_ACCOUNT` | The service account email                                 | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com`                                  |
+| `GCP_REGION`          | Google Cloud region (optional, defaults to `us-central1`) | `us-central1`                                                                            |
+| `SENTRY_DSN`          | Sentry error tracking URL (leave empty to disable)        | `https://abc123@o0.ingest.sentry.io/0`                                                   |
+| `R2_PUBLIC_URL`       | Custom domain URL for the R2 bucket                       | `https://editions.yourdomain.com`                                                        |
 
 To find the full `GCP_WIF_PROVIDER` value:
 
@@ -568,8 +572,8 @@ gcloud iam workload-identity-pools providers describe github-actions \
 
 **Secrets** (Settings > Secrets > New repository secret):
 
-| Secret | Value |
-|---|---|
+| Secret        | Value                               |
+| ------------- | ----------------------------------- |
 | `DB_PASSWORD` | The database password from Step 1.5 |
 
 #### How It Works
@@ -718,7 +722,7 @@ gcloud scheduler jobs create http morning-press \
 
 This means: "every day at 6:00 AM UTC, start the newsroom director job."
 
-> **Tip:** `0 6 * * *` is a "cron expression." The five parts mean: minute (0), hour (6), any day of month (*), any month (*), any day of week (*). If you want a different time, change the hour number. For example, `0 14 * * *` would be 2:00 PM UTC.
+> **Tip:** `0 6 * * *` is a "cron expression." The five parts mean: minute (0), hour (6), any day of month (_), any month (_), any day of week (_). If you want a different time, change the hour number. For example, `0 14 _ \* \*` would be 2:00 PM UTC.
 
 Or in the Console: go to **Cloud Scheduler**, click **"Create Job"**, set frequency to `0 6 * * *`, timezone to `UTC`, target to HTTP, URL to the Cloud Run job endpoint, method POST, and select the service account for authentication.
 
@@ -772,21 +776,21 @@ When you are ready to accept real payments:
 
 With the Google Cloud free trial, you will not pay anything for the first 90 days (up to $300 usage). After that, here is the estimated monthly cost:
 
-| What | Monthly Cost | Why |
-|---|---|---|
-| Database (Cloud SQL) | ~$8 | The database runs continuously — this is the biggest fixed cost |
-| API server (Cloud Run) | ~$0-2 | Only runs when someone makes a request; free when idle |
-| Newsroom Director (Cloud Run Job) | ~$0.50 | Runs once per day for ~10 minutes |
-| AI article generation (Vertex AI / Gemini) | ~$18 | ~$3 per newspaper x 6 newspapers per day |
-| AI image generation (Vertex AI / Imagen) | ~$15-30 | ~20-24 images/day for article and front-page illustrations |
-| AI validation & world updates | ~$2-4 | Uses the more expensive AI model for accuracy |
-| File storage (Cloudflare R2) | $0 | Free tier covers years of editions |
-| Prompt UI website (Cloudflare Pages) | $0 | Free |
-| Gazette website (Cloudflare Pages) | $0 | Free |
-| Container image storage (Artifact Registry) | ~$0.50 | Storing the two application images |
-| Daily schedule (Cloud Scheduler) | $0 | Free for up to 3 jobs |
-| Secret storage (Secret Manager) | ~$0.06 | A few secrets, rarely accessed |
-| **Total** | **~$45-65/month** | |
+| What                                        | Monthly Cost      | Why                                                             |
+| ------------------------------------------- | ----------------- | --------------------------------------------------------------- |
+| Database (Cloud SQL)                        | ~$8               | The database runs continuously — this is the biggest fixed cost |
+| API server (Cloud Run)                      | ~$0-2             | Only runs when someone makes a request; free when idle          |
+| Newsroom Director (Cloud Run Job)           | ~$0.50            | Runs once per day for ~10 minutes                               |
+| AI article generation (Vertex AI / Gemini)  | ~$18              | ~$3 per newspaper x 6 newspapers per day                        |
+| AI image generation (Vertex AI / Imagen)    | ~$15-30           | ~20-24 images/day for article and front-page illustrations      |
+| AI validation & world updates               | ~$2-4             | Uses the more expensive AI model for accuracy                   |
+| File storage (Cloudflare R2)                | $0                | Free tier covers years of editions                              |
+| Prompt UI website (Cloudflare Pages)        | $0                | Free                                                            |
+| Gazette website (Cloudflare Pages)          | $0                | Free                                                            |
+| Container image storage (Artifact Registry) | ~$0.50            | Storing the two application images                              |
+| Daily schedule (Cloud Scheduler)            | $0                | Free for up to 3 jobs                                           |
+| Secret storage (Secret Manager)             | ~$0.06            | A few secrets, rarely accessed                                  |
+| **Total**                                   | **~$45-65/month** |                                                                 |
 
 The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, proportional to number of active newspapers and images), followed by the database (~$8/month, always on). Everything on Cloudflare is free.
 
@@ -798,13 +802,13 @@ The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, p
 
 ### What to Watch
 
-| Service | What to check | Where |
-|---|---|---|
-| **API server** | Is it responding? How fast? Any errors? | Cloud Run > ingestion-api > Metrics tab |
-| **Newsroom Director** | Did the daily job complete successfully? | Cloud Run > Jobs > newsroom-director > Executions tab |
-| **Database** | How much storage is used? Is it connecting? | SQL > imbryk-db > Overview |
-| **AI usage** | How many tokens are being used? | Vertex AI > Dashboard |
-| **File storage** | Are edition files being written? | Cloudflare R2 > imbryk-editions bucket |
+| Service               | What to check                               | Where                                                 |
+| --------------------- | ------------------------------------------- | ----------------------------------------------------- |
+| **API server**        | Is it responding? How fast? Any errors?     | Cloud Run > ingestion-api > Metrics tab               |
+| **Newsroom Director** | Did the daily job complete successfully?    | Cloud Run > Jobs > newsroom-director > Executions tab |
+| **Database**          | How much storage is used? Is it connecting? | SQL > imbryk-db > Overview                            |
+| **AI usage**          | How many tokens are being used?             | Vertex AI > Dashboard                                 |
+| **File storage**      | Are edition files being written?            | Cloudflare R2 > imbryk-editions bucket                |
 
 ### Setting Up Email Alerts
 
@@ -871,52 +875,52 @@ These are all the configuration values used by the backend services. Most are st
 
 ### Ingestion API
 
-| Variable | Storage | What it is |
-|---|---|---|
-| `DATABASE_URL` | Secret | Connection string for the PostgreSQL database |
-| `VERTEX_PROJECT` | Env var | Your Google Cloud project ID |
-| `VERTEX_LOCATION` | Env var | Google Cloud region for AI (default: `global`) |
-| `CATEGORISER_MODEL` | Env var | Vertex AI model used for prompt categorisation (default: `gemini-3.1-flash-lite-preview`) |
-| `BRAINTREE_MERCHANT_ID` | Secret | Your Braintree Merchant ID |
-| `BRAINTREE_PUBLIC_KEY` | Secret | Your Braintree Public Key |
-| `BRAINTREE_PRIVATE_KEY` | Secret | Your Braintree Private Key |
-| `CORS_ALLOWED_ORIGINS` | Env var | The URL of your prompt UI website (e.g., `https://imbryk.pages.dev`) |
-| `SENTRY_DSN` | Env var | Error tracking URL (optional — leave empty to disable) |
+| Variable                | Storage | What it is                                                                                |
+| ----------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Secret  | Connection string for the PostgreSQL database                                             |
+| `VERTEX_PROJECT`        | Env var | Your Google Cloud project ID                                                              |
+| `VERTEX_LOCATION`       | Env var | Google Cloud region for AI (default: `global`)                                            |
+| `CATEGORISER_MODEL`     | Env var | Vertex AI model used for prompt categorisation (default: `gemini-3.1-flash-lite-preview`) |
+| `BRAINTREE_MERCHANT_ID` | Secret  | Your Braintree Merchant ID                                                                |
+| `BRAINTREE_PUBLIC_KEY`  | Secret  | Your Braintree Public Key                                                                 |
+| `BRAINTREE_PRIVATE_KEY` | Secret  | Your Braintree Private Key                                                                |
+| `CORS_ALLOWED_ORIGINS`  | Env var | The URL of your prompt UI website (e.g., `https://imbryk.pages.dev`)                      |
+| `SENTRY_DSN`            | Env var | Error tracking URL (optional — leave empty to disable)                                    |
 
 ### Newsroom Director
 
-| Variable | Storage | What it is |
-|---|---|---|
-| `DATABASE_URL` | Secret | Connection string for the PostgreSQL database |
-| `VERTEX_AI_PROJECT` | Env var | Your Google Cloud project ID |
-| `VERTEX_AI_LOCATION` | Env var | Google Cloud region for AI models (default: `global`) |
-| `R2_ACCOUNT_ID` | Secret | Your Cloudflare account ID |
-| `R2_ACCESS_KEY_ID` | Secret | R2 API access key |
-| `R2_SECRET_ACCESS_KEY` | Secret | R2 API secret key |
-| `R2_BUCKET_NAME` | Env var | The R2 bucket name (default: `imbryk-editions`) |
-| `R2_PUBLIC_URL` | Env var | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to generate public image URLs |
-| `ENABLE_IMAGES` | Env var | Generate article and hero images via Imagen (default: `true`) |
-| `ENABLE_VALIDATION` | Env var | Check prompt coherence before generating (default: `true`) |
-| `ENABLE_CACHING` | Env var | Cache AI context to save money (default: `true`) |
-| `GENERATION_MODEL_PRO` | Env var | Gemini model for premium newspaper generation (default: `gemini-3.1-pro-preview`) |
-| `GENERATION_MODEL_FLASH` | Env var | Gemini model for standard newspaper generation (default: `gemini-2.0-flash`) |
-| `IMAGE_GENERATION_MODEL` | Env var | Vertex AI Imagen model for article images (default: `gemini-3-pro-image-preview`) |
-| `SENTRY_DSN` | Env var | Error tracking URL (optional — leave empty to disable) |
-| `TOTAL_BUDGET_TOKENS` | Env var | Max AI tokens per newspaper (default: `800000`) |
-| `MAX_CLUSTERS` | Env var | Max topic groups per newspaper (default: `30`) |
-| `CF_DEPLOY_HOOK_URL` | Secret | Cloudflare Pages deploy hook URL — triggers gazette rebuild after a new edition is published |
+| Variable                 | Storage | What it is                                                                                                        |
+| ------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`           | Secret  | Connection string for the PostgreSQL database                                                                     |
+| `VERTEX_AI_PROJECT`      | Env var | Your Google Cloud project ID                                                                                      |
+| `VERTEX_AI_LOCATION`     | Env var | Google Cloud region for AI models (default: `global`)                                                             |
+| `R2_ACCOUNT_ID`          | Secret  | Your Cloudflare account ID                                                                                        |
+| `R2_ACCESS_KEY_ID`       | Secret  | R2 API access key                                                                                                 |
+| `R2_SECRET_ACCESS_KEY`   | Secret  | R2 API secret key                                                                                                 |
+| `R2_BUCKET_NAME`         | Env var | The R2 bucket name (default: `imbryk-editions`)                                                                   |
+| `R2_PUBLIC_URL`          | Env var | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to generate public image URLs |
+| `ENABLE_IMAGES`          | Env var | Generate article and hero images via Imagen (default: `true`)                                                     |
+| `ENABLE_VALIDATION`      | Env var | Check prompt coherence before generating (default: `true`)                                                        |
+| `ENABLE_CACHING`         | Env var | Cache AI context to save money (default: `true`)                                                                  |
+| `GENERATION_MODEL_PRO`   | Env var | Gemini model for premium newspaper generation (default: `gemini-3.1-pro-preview`)                                 |
+| `GENERATION_MODEL_FLASH` | Env var | Gemini model for standard newspaper generation (default: `gemini-2.0-flash`)                                      |
+| `IMAGE_GENERATION_MODEL` | Env var | Vertex AI Imagen model for article images (default: `gemini-3-pro-image-preview`)                                 |
+| `SENTRY_DSN`             | Env var | Error tracking URL (optional — leave empty to disable)                                                            |
+| `TOTAL_BUDGET_TOKENS`    | Env var | Max AI tokens per newspaper (default: `800000`)                                                                   |
+| `MAX_CLUSTERS`           | Env var | Max topic groups per newspaper (default: `30`)                                                                    |
+| `CF_DEPLOY_HOOK_URL`     | Secret  | Cloudflare Pages deploy hook URL — triggers gazette rebuild after a new edition is published                      |
 
 ### Prompt UI (Cloudflare Pages)
 
-| Variable | Where to set | What it is |
-|---|---|---|
-| `NODE_VERSION` | Cloudflare Pages env vars | Node.js version (set to `20`) |
-| `VITE_API_URL` | Cloudflare Pages env vars | The URL of your deployed Ingestion API |
-| `VITE_SENTRY_DSN` | Cloudflare Pages env vars | Error tracking URL (optional) |
+| Variable          | Where to set              | What it is                             |
+| ----------------- | ------------------------- | -------------------------------------- |
+| `NODE_VERSION`    | Cloudflare Pages env vars | Node.js version (set to `20`)          |
+| `VITE_API_URL`    | Cloudflare Pages env vars | The URL of your deployed Ingestion API |
+| `VITE_SENTRY_DSN` | Cloudflare Pages env vars | Error tracking URL (optional)          |
 
 ### Gazette (Cloudflare Pages)
 
-| Variable | Where to set | What it is |
-|---|---|---|
-| `NODE_VERSION` | Cloudflare Pages env vars | Node.js version (set to `20`) |
+| Variable        | Where to set              | What it is                                                                                                                                                      |
+| --------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_VERSION`  | Cloudflare Pages env vars | Node.js version (set to `20`)                                                                                                                                   |
 | `R2_PUBLIC_URL` | Cloudflare Pages env vars | Custom domain URL of the R2 bucket (e.g. `https://editions.yourdomain.com`) — when set, the gazette fetches editions from R2 instead of using the local fixture |

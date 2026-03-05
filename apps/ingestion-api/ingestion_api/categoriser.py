@@ -10,7 +10,7 @@ from ingestion_api.taxonomy import CATEGORY_ID_SET, CATEGORY_IDS
 # When AI cannot classify a prompt (gibberish, empty, unparseable response),
 # fall back to the lowest-stakes category so the prompt still reaches at
 # least one newspaper (The Hedonist).
-FALLBACK_CATEGORY: str = "entertainment"
+FALLBACK_CATEGORY: str = "entertainment-and-hollywood"
 
 
 class CategoriserStrategy(ABC):
@@ -23,7 +23,7 @@ class StubCategoriser(CategoriserStrategy):
     """Returns preconfigured categories. For tests."""
 
     def __init__(self, categories: list[str] | None = None):
-        self._categories = categories or ["geopolitics"]
+        self._categories = categories or ["geopolitics-and-diplomacy"]
 
     def categorise(self, prompt_text: str) -> list[str]:
         return [c for c in self._categories if c in CATEGORY_ID_SET]

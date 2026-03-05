@@ -13,6 +13,7 @@ export interface NewsroomPersona {
   toneAdjustment: string;
   subscribedCategories: CategoryId[];
   modelTier: 'pro' | 'flash';
+  /** Full system prompt (preamble + persona-specific suffix). Null for non-newspaper personas. */
   systemPromptTemplate: string;
 }
 

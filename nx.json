@@ -68,8 +68,11 @@
   ],
   "neverConnectToCloud": true,
   "targetDefaults": {
+    "build": {
+      "dependsOn": ["generate-data"]
+    },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["generate-data", "^build"]
     }
   },
   "generators": {

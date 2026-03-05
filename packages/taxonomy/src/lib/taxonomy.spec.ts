@@ -30,10 +30,10 @@ describe('Subscriptions', () => {
     expect(NEWSPAPER_SUBSCRIPTIONS).toHaveLength(6);
   });
 
-  it('should have each newspaper subscribe to 8-12 categories', () => {
+  it('should have each newspaper subscribe to 9-10 categories', () => {
     for (const sub of NEWSPAPER_SUBSCRIPTIONS) {
-      expect(sub.categoryIds.length).toBeGreaterThanOrEqual(8);
-      expect(sub.categoryIds.length).toBeLessThanOrEqual(12);
+      expect(sub.categoryIds.length).toBeGreaterThanOrEqual(9);
+      expect(sub.categoryIds.length).toBeLessThanOrEqual(10);
     }
   });
 
@@ -63,38 +63,45 @@ describe('Router', () => {
   });
 
   it('should route a single category to the correct newspapers', () => {
-    const result = routePrompt(['finance-and-markets']);
+    const result = routePrompt(['markets-and-macroeconomics']);
     const newspaperIds = result.map((r) => r.newspaperId);
     expect(newspaperIds).toContain('owner');
     expect(newspaperIds).not.toContain('hedonist');
   });
 
   it('should include matched categories in the result', () => {
-    const result = routePrompt(['finance-and-markets']);
+    const result = routePrompt(['markets-and-macroeconomics']);
     const ownerResult = result.find((r) => r.newspaperId === 'owner');
-    expect(ownerResult?.matchedCategories).toContain('finance-and-markets');
+    expect(ownerResult?.matchedCategories).toContain(
+      'markets-and-macroeconomics',
+    );
   });
 
   it('should route multiple categories to the union of newspapers', () => {
-    const result = routePrompt(['finance-and-markets', 'entertainment']);
+    const result = routePrompt([
+      'markets-and-macroeconomics',
+      'entertainment-and-hollywood',
+    ]);
     const newspaperIds = result.map((r) => r.newspaperId);
     expect(newspaperIds).toContain('owner');
     expect(newspaperIds).toContain('hedonist');
     expect(newspaperIds).toContain('moralist');
   });
 
-  it('should route geopolitics to Sovereign, Aspirant, and Radical', () => {
-    const result = routePrompt(['geopolitics']);
+  it('should route geopolitics-and-diplomacy to Sovereign and Aspirant', () => {
+    const result = routePrompt(['geopolitics-and-diplomacy']);
     const newspaperIds = result.map((r) => r.newspaperId);
     expect(newspaperIds).toContain('sovereign');
     expect(newspaperIds).toContain('aspirant');
-    expect(newspaperIds).toContain('radical');
   });
 });
 
 describe('Pricing', () => {
   it('should count newspapers reached matching routing result length', () => {
-    const categories: CategoryId[] = ['finance-and-markets', 'entertainment'];
+    const categories: CategoryId[] = [
+      'markets-and-macroeconomics',
+      'entertainment-and-hollywood',
+    ];
     const routed = routePrompt(categories);
     const count = countNewspapersReached(categories);
     expect(count).toBe(routed.length);

@@ -36,8 +36,8 @@ def db_session(db_engine):
 
 @pytest.fixture()
 def stub_categoriser():
-    """StubCategoriser returning geopolitics + domestic-politics."""
-    return StubCategoriser(categories=["geopolitics", "domestic-politics"])
+    """StubCategoriser returning geopolitics-and-diplomacy + domestic-politics-and-policy."""
+    return StubCategoriser(categories=["geopolitics-and-diplomacy", "domestic-politics-and-policy"])
 
 
 @pytest.fixture()

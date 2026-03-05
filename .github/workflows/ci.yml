@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .node-version
           cache: 'npm'
 
       - run: npm ci
@@ -57,7 +57,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .node-version
           cache: 'npm'
 
       - run: npm ci
@@ -73,6 +73,16 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Generate data for Docker build
+        run: npx nx run ingestion-api:generate-data
 
       - name: Build ingestion-api image
         run: docker build -t imbryk/ingestion-api:ci -f apps/ingestion-api/Dockerfile apps/ingestion-api

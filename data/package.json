@@ -1,0 +1,11 @@
+{
+  "name": "@org/data",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./taxonomy.json": "./taxonomy.json",
+    "./personas.json": "./personas.json",
+    "./package.json": "./package.json"
+  }
+}

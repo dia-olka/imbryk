@@ -29,13 +29,12 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     outputs:
-      ingestion-api: ${{ steps.filter.outputs.ingestion-api }}
-      newsroom-director: ${{ steps.filter.outputs.newsroom-director }}
+      python-services: ${{ steps.filter.outputs.python-services }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 0   # retrieve full history so we can compare against main or before
+          fetch-depth: 0 # retrieve full history so we can compare against main or before
 
       - uses: dorny/paths-filter@v3
         id: filter
@@ -45,15 +44,16 @@ jobs:
           base: main
           # head defaults to HEAD, which is fine
           filters: |
-            ingestion-api:
+            python-services:
               - 'apps/ingestion-api/**'
-            newsroom-director:
               - 'apps/newsroom-director/**'
+              - 'data/**'
+              - 'scripts/generate-data.mjs'
 
   deploy-ingestion-api:
     name: Deploy ingestion-api
     needs: changes
-    if: ${{ needs.changes.outputs.ingestion-api == 'true' }}
+    if: ${{ needs.changes.outputs.python-services == 'true' }}
     runs-on: ubuntu-latest
     env:
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -73,6 +73,16 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Generate data from JSON
+        run: npx nx run ingestion-api:generate-data
 
       - name: Build and push image
         uses: docker/build-push-action@v5
@@ -128,7 +138,7 @@ jobs:
   deploy-newsroom-director:
     name: Deploy newsroom-director
     needs: changes
-    if: ${{ needs.changes.outputs.newsroom-director == 'true' }}
+    if: ${{ needs.changes.outputs.python-services == 'true' }}
     runs-on: ubuntu-latest
     env:
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -151,6 +161,16 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Generate data from JSON
+        run: npx nx run newsroom-director:generate-data
 
       - name: Build and push image
         uses: docker/build-push-action@v5
