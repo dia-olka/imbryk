@@ -213,12 +213,32 @@ gcloud sql users create $SA \
 Connect to the database once using the `postgres` password (Cloud Shell, see below) and run:
 
 ```sql
--- Grant your Google account access
+-- Grant your Google account access to the database
 GRANT ALL PRIVILEGES ON DATABASE imbryk TO "YOUR_EMAIL@gmail.com";
 
--- Grant the service account access
+-- Grant the service account access to the database
 GRANT ALL PRIVILEGES ON DATABASE imbryk TO "imbryk-pipeline@YOUR_PROJECT_ID.iam.gserviceaccount.com";
 ```
+
+> **Important:** The grants above only allow connecting to the database. After running migrations (Step 5.2), you must also grant access to **tables and the schema**. Connect as `postgres` again and run:
+
+```sql
+-- Grant schema and table access to your Google account
+GRANT USAGE ON SCHEMA public TO "YOUR_EMAIL@gmail.com";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "YOUR_EMAIL@gmail.com";
+
+-- Ensure future tables (from new migrations) are also accessible
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT ALL PRIVILEGES ON TABLES TO "YOUR_EMAIL@gmail.com";
+
+-- Same for the service account
+GRANT USAGE ON SCHEMA public TO "imbryk-pipeline@YOUR_PROJECT_ID.iam.gserviceaccount.com";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "imbryk-pipeline@YOUR_PROJECT_ID.iam.gserviceaccount.com";
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT ALL PRIVILEGES ON TABLES TO "imbryk-pipeline@YOUR_PROJECT_ID.iam.gserviceaccount.com";
+```
+
+> Without these table-level grants, IAM users can connect but will not see or query any tables (e.g. Cloud SQL Studio will show "Tables 0").
 
 #### Connecting via Cloud Shell (IAM)
 
@@ -366,6 +386,25 @@ For each one:
 1. Click **"Create Secret"**
 2. Enter the name and paste the value
 3. Click **"Create Secret"**
+
+### 2.6 Configure Braintree Webhooks
+
+Braintree sends server-to-server webhook notifications for disputes (chargebacks) and disbursements (funds reaching your bank). The Ingestion API has a `POST /payments/braintree-webhook` endpoint that listens for these. Transaction settlement itself does **not** trigger a webhook — `transaction.sale()` with `submit_for_settlement: true` is authoritative.
+
+1. In the Braintree **Sandbox** dashboard, go to **Settings > Webhooks** (gear icon → Webhooks)
+2. Click **"Create New Webhook"**
+3. **Destination URL:** `https://<YOUR-INGESTION-API-URL>/payments/braintree-webhook`
+   - Replace `<YOUR-INGESTION-API-URL>` with the Cloud Run URL from Step 5, e.g. `https://ingestion-api-abc123-uc.a.run.app/payments/braintree-webhook`
+4. Under **Notifications**, tick these events:
+   - **Dispute** — select all (Opened, Disputed, Won, Lost, Expired, Accepted, Auto Accepted, Under Review). If a customer disputes a charge, the webhook reverts the prompt so it is not consumed.
+   - **Disbursement** — select **Disbursement**. Records when funds arrive in your bank account (informational only).
+5. Leave all other categories (Subscription, Payment Method, Refund) **unchecked** — Imbryk does not use subscriptions
+6. Click **"Create Webhook"**
+7. Braintree will show a **"Check"** button — click it to send a test notification and verify the endpoint responds with `200 OK`
+
+> **Note:** The webhook endpoint uses your existing Braintree API keys (Merchant ID, Public Key, Private Key) to verify the signature on every incoming notification. No additional secrets are needed.
+
+> **Production:** When you switch to production keys (Step 2.4), repeat this setup in the **production** Braintree dashboard at [braintreegateway.com](https://www.braintreegateway.com) with the same destination URL and event selections.
 
 ---
 

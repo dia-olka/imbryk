@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../constants';
-import type { QuoteResponse } from './types';
+import type { PromptAcceptedResponse, QuoteResponse } from './types';
 
 export async function fetchQuote(
   prompt: string,
@@ -32,4 +32,24 @@ export async function fetchBraintreeClientToken(
 
   const data = await response.json();
   return data.client_token;
+}
+
+export async function createTransaction(
+  quoteId: string,
+  nonce: string,
+  signal?: AbortSignal
+): Promise<PromptAcceptedResponse> {
+  const response = await fetch(`${API_BASE_URL}/payments/create-transaction`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quote_id: quoteId, nonce }),
+    signal,
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.detail ?? `Payment failed: ${response.status}`);
+  }
+
+  return response.json();
 }

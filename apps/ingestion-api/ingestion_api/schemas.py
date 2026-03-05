@@ -21,6 +21,7 @@ class RoutingDetail(BaseModel):
 
 
 class QuoteResponse(BaseModel):
+    quote_id: str
     categories: list[str]
     newspapers_reached: int
     estimated_cost: float
@@ -30,6 +31,13 @@ class QuoteResponse(BaseModel):
 class WebhookPayload(BaseModel):
     bt_signature: str
     bt_payload: str
+
+
+class CreateTransactionRequest(BaseModel):
+    """Frontend sends the Braintree nonce + server-side quote ID."""
+
+    quote_id: str = Field(..., min_length=1)
+    nonce: str = Field(..., min_length=1)
 
 
 class PromptAcceptedResponse(BaseModel):

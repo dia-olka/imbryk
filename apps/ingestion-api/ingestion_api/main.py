@@ -34,6 +34,7 @@ if SENTRY_DSN:
             ),
         ],
     )
+from ingestion_api.braintree_client import get_gateway
 from ingestion_api.database import get_db
 from ingestion_api.models import (
     CategorisedPrompt,
@@ -45,6 +46,7 @@ from ingestion_api.models import (
 from ingestion_api.pricing import calculate_cost
 from ingestion_api.schemas import (
     ClientTokenResponse,
+    CreateTransactionRequest,
     EditionSummary,
     HealthResponse,
     PromptAcceptedResponse,
@@ -135,14 +137,30 @@ async def health():
 async def quote(
     request: Request,
     body: QuoteRequest,
+    db: Session = Depends(get_db),
     categoriser: CategoriserStrategy = Depends(get_categoriser),
 ):
-    """Preview categorisation, routing, and cost — no payment required."""
+    """Categorise, price, and persist a quote — locks in the amount server-side."""
     categories = categoriser.categorise(body.prompt)
     routing = route_prompt(categories)
     cost = calculate_cost(len(routing))
 
+    # Persist the quote so the amount is locked server-side.
+    prompt = Prompt(
+        text=body.prompt,
+        amount=cost,
+        status="quoted",
+    )
+    db.add(prompt)
+    db.flush()
+
+    for cat_id in categories:
+        db.add(CategorisedPrompt(prompt_id=prompt.id, category_id=cat_id))
+
+    db.commit()
+
     return QuoteResponse(
+        quote_id=prompt.id,
         categories=categories,
         newspapers_reached=len(routing),
         estimated_cost=cost,
@@ -156,72 +174,50 @@ async def quote(
     )
 
 
-@app.post("/payments/braintree-webhook", response_model=PromptAcceptedResponse)
-async def braintree_webhook(
-    payload: WebhookPayload,
+@app.post("/payments/create-transaction", response_model=PromptAcceptedResponse)
+@limiter.limit(RATE_LIMIT_QUOTE)
+async def create_transaction(
+    request: Request,
+    body: CreateTransactionRequest,
     db: Session = Depends(get_db),
-    categoriser: CategoriserStrategy = Depends(get_categoriser),
 ):
-    """Handle Braintree payment webhook — validate, store, categorise."""
-    import braintree
+    """Create a Braintree transaction from the server-side quote.
 
-    from ingestion_api.config import (
-        BRAINTREE_ENVIRONMENT,
-        BRAINTREE_MERCHANT_ID,
-        BRAINTREE_PRIVATE_KEY,
-        BRAINTREE_PUBLIC_KEY,
-    )
+    The amount is read from the stored quote — never from the client — so the
+    user cannot pay less than the classified price.  On success the prompt
+    status moves from ``quoted`` → ``accepted`` and a ``PaymentRef`` record
+    is created with status ``submitted_for_settlement``.
+    """
+    prompt = db.query(Prompt).filter_by(id=body.quote_id).first()
+    if prompt is None:
+        return JSONResponse(status_code=404, content={"detail": "Quote not found"})
 
-    _bt_env = (
-        braintree.Environment.Production
-        if BRAINTREE_ENVIRONMENT == "production"
-        else braintree.Environment.Sandbox
-    )
-    gateway = braintree.BraintreeGateway(
-        braintree.Configuration(
-            environment=_bt_env,
-            merchant_id=BRAINTREE_MERCHANT_ID,
-            public_key=BRAINTREE_PUBLIC_KEY,
-            private_key=BRAINTREE_PRIVATE_KEY,
+    if prompt.status != "quoted":
+        return JSONResponse(
+            status_code=409,
+            content={"detail": f"Quote already processed (status={prompt.status})"},
         )
-    )
 
-    notification = gateway.webhook_notification.parse(
-        payload.bt_signature, payload.bt_payload
-    )
+    # Amount comes from the DB — tamper-proof.
+    amount = prompt.amount
+    if amount is None or amount <= 0:
+        return JSONResponse(status_code=400, content={"detail": "Invalid quote amount"})
 
-    transaction = notification.subject.get("transaction", {})
-    transaction_id = transaction.get("id", payload.bt_signature[:20])
-    amount = float(transaction.get("amount", 0))
-    prompt_text = transaction.get("custom_fields", {}).get("prompt_text", "")
+    gateway = get_gateway()
+    result = gateway.transaction.sale({
+        "amount": f"{amount:.2f}",
+        "payment_method_nonce": body.nonce,
+        "options": {"submit_for_settlement": True},
+    })
 
-    # Idempotency: Braintree may redeliver the same webhook on timeout/retry.
-    # Return 200 without re-processing if we've already handled this transaction.
-    existing_payment = (
-        db.query(PaymentRef)
-        .filter_by(braintree_transaction_id=transaction_id)
-        .first()
-    )
-    if existing_payment is not None:
-        existing_prompt = (
-            db.query(Prompt).filter_by(payment_ref=transaction_id).first()
-        )
-        if existing_prompt is not None:
-            existing_cats = [
-                cp.category_id
-                for cp in db.query(CategorisedPrompt)
-                .filter_by(prompt_id=existing_prompt.id)
-                .all()
-            ]
-            routing = route_prompt(existing_cats)
-            return PromptAcceptedResponse(
-                prompt_id=existing_prompt.id,
-                status=existing_prompt.status,
-                categories=existing_cats,
-                newspapers_reached=len(routing),
-            )
+    if not result.is_success:
+        error_msg = result.message if result.message else "Payment failed"
+        logger.warning("Braintree transaction failed: %s", error_msg)
+        return JSONResponse(status_code=402, content={"detail": error_msg})
 
-    # Save payment ref
+    transaction_id = result.transaction.id
+
+    # Record payment reference
     payment = PaymentRef(
         braintree_transaction_id=transaction_id,
         amount=amount,
@@ -230,33 +226,17 @@ async def braintree_webhook(
     )
     db.add(payment)
 
-    # Save prompt
-    prompt = Prompt(
-        text=prompt_text,
-        payment_ref=transaction_id,
-        status="accepted",
-    )
-    db.add(prompt)
-    db.flush()
-
-    # Categorise and save. If the categoriser fails (e.g. Gemini API error),
-    # we still commit the payment and prompt so the record is not lost.
-    # The prompt is marked 'categorisation_failed' and excluded from the next
-    # batch run; manual recovery can re-run categorisation against the saved text.
-    categories: list[str] = []
-    try:
-        categories = categoriser.categorise(prompt_text)
-        for cat_id in categories:
-            db.add(CategorisedPrompt(prompt_id=prompt.id, category_id=cat_id))
-    except Exception:
-        logger.exception(
-            "Categorisation failed for prompt %s; saving with 'categorisation_failed' status",
-            prompt.id,
-        )
-        prompt.status = "categorisation_failed"
+    # Mark prompt as accepted
+    prompt.payment_ref = transaction_id
+    prompt.status = "accepted"
 
     db.commit()
 
+    # Re-derive routing for response
+    categories = [
+        cp.category_id
+        for cp in db.query(CategorisedPrompt).filter_by(prompt_id=prompt.id).all()
+    ]
     routing = route_prompt(categories)
 
     return PromptAcceptedResponse(
@@ -267,31 +247,97 @@ async def braintree_webhook(
     )
 
 
-@app.get("/payments/client-token", response_model=ClientTokenResponse)
-async def get_client_token():
-    """Generate a  Braintree client token for Drop-in UI initialisation. No auth required as this is used on the client side before payment."""
-    import braintree
+@app.post("/payments/braintree-webhook")
+async def braintree_webhook(
+    payload: WebhookPayload,
+    db: Session = Depends(get_db),
+):
+    """Handle Braintree webhook notifications — disputes and disbursements.
 
-    from ingestion_api.config import (
-        BRAINTREE_ENVIRONMENT,
-        BRAINTREE_MERCHANT_ID,
-        BRAINTREE_PRIVATE_KEY,
-        BRAINTREE_PUBLIC_KEY,
+    Transaction settlement does not trigger a Braintree webhook;
+    ``transaction.sale(submit_for_settlement=True)`` is authoritative.
+    This endpoint handles:
+
+    * **Dispute** events — if a customer disputes a charge, the prompt is
+      reverted to ``quoted`` so it won't be consumed.  If we win the dispute
+      it is re-accepted.
+    * **Disbursement** events — informational logging only (funds reached
+      the merchant bank account).
+    """
+    gateway = get_gateway()
+    notification = gateway.webhook_notification.parse(
+        payload.bt_signature, payload.bt_payload
     )
 
-    _bt_env = (
-        braintree.Environment.Production
-        if BRAINTREE_ENVIRONMENT == "production"
-        else braintree.Environment.Sandbox
-    )
-    gateway = braintree.BraintreeGateway(
-        braintree.Configuration(
-            environment=_bt_env,
-            merchant_id=BRAINTREE_MERCHANT_ID,
-            public_key=BRAINTREE_PUBLIC_KEY,
-            private_key=BRAINTREE_PRIVATE_KEY,
+    kind = getattr(notification, "kind", None) or ""
+    logger.info("Braintree webhook received: kind=%s", kind)
+
+    # --- Dispute events ---
+    if kind.startswith("dispute_"):
+        dispute = getattr(notification, "dispute", None)
+        if dispute is None:
+            logger.warning("Dispute webhook missing dispute object")
+            return JSONResponse(status_code=200, content={"detail": "ignored"})
+
+        transaction_id = ""
+        if hasattr(dispute, "transaction") and dispute.transaction:
+            transaction_id = getattr(dispute.transaction, "id", "")
+        if not transaction_id:
+            logger.warning("Dispute webhook missing transaction id")
+            return JSONResponse(status_code=200, content={"detail": "ignored"})
+
+        payment = (
+            db.query(PaymentRef)
+            .filter_by(braintree_transaction_id=transaction_id)
+            .first()
         )
-    )
+        if payment is None:
+            logger.warning("Dispute webhook for unknown transaction %s", transaction_id)
+            return JSONResponse(status_code=200, content={"detail": "unknown transaction"})
+
+        # Lost / Accepted / Auto-Accepted / Expired → revert prompt
+        if kind in ("dispute_lost", "dispute_accepted", "dispute_auto_accepted", "dispute_expired"):
+            payment.status = "disputed_lost"
+            prompt = db.query(Prompt).filter_by(payment_ref=transaction_id).first()
+            if prompt is not None:
+                prompt.status = "quoted"
+                prompt.payment_ref = None
+            logger.info("Dispute lost for transaction %s — prompt reverted", transaction_id)
+
+        # Won → restore payment status
+        elif kind == "dispute_won":
+            payment.status = "settled"
+            logger.info("Dispute won for transaction %s", transaction_id)
+
+        # Opened / Disputed / Under Review → flag but don't revert yet
+        else:
+            payment.status = "disputed"
+            logger.info("Dispute %s for transaction %s", kind, transaction_id)
+
+        db.commit()
+        return JSONResponse(status_code=200, content={"detail": "ok"})
+
+    # --- Disbursement events ---
+    if kind in ("disbursement", "disbursement_exception"):
+        disbursement = getattr(notification, "disbursement", None)
+        if disbursement:
+            logger.info(
+                "Disbursement webhook: id=%s, success=%s",
+                getattr(disbursement, "id", "?"),
+                getattr(disbursement, "success", "?"),
+            )
+        return JSONResponse(status_code=200, content={"detail": "ok"})
+
+    # --- Unknown / unhandled event ---
+    logger.info("Braintree webhook ignored: kind=%s", kind)
+    return JSONResponse(status_code=200, content={"detail": "ignored"})
+
+
+@app.get("/payments/client-token", response_model=ClientTokenResponse)
+@limiter.limit(RATE_LIMIT_QUOTE)
+async def get_client_token(request: Request):
+    """Generate a Braintree client token for Drop-in UI initialisation."""
+    gateway = get_gateway()
     client_token = gateway.client_token.generate({})
     return ClientTokenResponse(client_token=client_token)
 

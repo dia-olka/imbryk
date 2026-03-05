@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useBraintree } from '../hooks/useBraintree';
+import { createTransaction } from '../api/client';
 import { QuotePreview } from './QuotePreview';
 import type { QuoteResponse } from '../api/types';
 
@@ -16,6 +17,8 @@ interface PaymentFormProps {
 
 export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
   const { isReady, isProcessing, error, requestPayment } = useBraintree(DROPIN_CONTAINER_ID);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   // Move focus to the heading when the payment form mounts (state transition: input → payment)
@@ -24,11 +27,24 @@ export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
   }, []);
 
   const handlePay = async () => {
+    setCheckoutError(null);
     const result = await requestPayment();
-    if (result) {
+    if (!result) return;
+
+    setIsSubmitting(true);
+    try {
+      await createTransaction(quote.quote_id, result.nonce);
       onSuccess();
+    } catch (err) {
+      setCheckoutError(
+        err instanceof Error ? err.message : 'Payment processing failed'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const isBusy = isProcessing || isSubmitting;
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4">
@@ -58,22 +74,22 @@ export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
             </div>
           </details>
           <div id={DROPIN_CONTAINER_ID} />
-          {error && (
+          {(error || checkoutError) && (
             <Alert variant="destructive" className="mt-4">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{checkoutError ?? error}</AlertDescription>
             </Alert>
           )}
         </CardContent>
         <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <Button variant="outline" onClick={onBack} disabled={isProcessing}>
+          <Button variant="outline" onClick={onBack} disabled={isBusy}>
             Back
           </Button>
           <Button
             onClick={handlePay}
-            disabled={!isReady || isProcessing}
+            disabled={!isReady || isBusy}
             size="lg"
           >
-            {isProcessing
+            {isBusy
               ? 'Processing...'
               : `Pay $${quote.estimated_cost.toFixed(2)}`}
           </Button>

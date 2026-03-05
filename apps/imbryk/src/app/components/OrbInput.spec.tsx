@@ -3,6 +3,7 @@ import { OrbInput } from './OrbInput';
 import type { QuoteResponse } from '../api/types';
 
 const mockQuote: QuoteResponse = {
+  quote_id: 'quote123',
   categories: ['politics'],
   newspapers_reached: 2,
   estimated_cost: 2.0,
@@ -17,7 +18,9 @@ describe('OrbInput', () => {
     value: '',
     onChange: vi.fn(),
     onProceed: vi.fn(),
+    onSubmit: vi.fn(),
     isSubmitDisabled: true,
+    isProceedDisabled: true,
     quote: null as QuoteResponse | null,
     isQuoteLoading: false,
   };

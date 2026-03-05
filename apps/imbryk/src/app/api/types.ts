@@ -4,6 +4,7 @@ export interface RoutingDetail {
 }
 
 export interface QuoteResponse {
+  quote_id: string;
   categories: string[];
   newspapers_reached: number;
   estimated_cost: number;

@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from ingestion_api.categoriser import StubCategoriser
 from ingestion_api.database import Base, get_db
-from ingestion_api.main import app, set_categoriser
+from ingestion_api.main import app, limiter, set_categoriser
 
 
 @pytest.fixture()
@@ -49,6 +49,9 @@ def client(db_session, stub_categoriser):
         yield db_session
 
     app.dependency_overrides[get_db] = _override_db
+    # Disable rate limiting for tests
+    limiter.enabled = False
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+    limiter.enabled = True

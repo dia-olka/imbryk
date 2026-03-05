@@ -60,8 +60,8 @@ export function useBraintree(containerId: string): UseBraintreeResult {
     setError(null);
 
     try {
-      const result = await instanceRef.current.requestPaymentMethod();
-      return { nonce: result.nonce };
+      const { nonce } = await instanceRef.current.requestPaymentMethod();
+      return { nonce };
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Payment failed'

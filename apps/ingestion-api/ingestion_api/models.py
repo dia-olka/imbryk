@@ -25,11 +25,12 @@ class Prompt(Base):
         String(36), primary_key=True, default=_new_uuid
     )
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     payment_ref: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
     )
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="accepted"
+        String(32), nullable=False, default="quoted"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
