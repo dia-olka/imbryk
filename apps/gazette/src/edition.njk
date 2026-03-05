@@ -5,8 +5,11 @@ pagination:
   alias: edition
 permalink: "edition/{{ edition.date }}/index.html"
 layout: layouts/base.njk
+ogType: website
 eleventyComputed:
   title: "Edition {{ edition.date | dateDisplay }} — Imbryk Gazette"
+  description: "Edition {{ edition.date | dateDisplay }} — how advanced AI systems predict this day's events will unfold, seen through six ideological lenses."
+  ogImage: "{% if edition.newspapers[0].heroImageUrl %}{{ edition.newspapers[0].heroImageUrl }}{% endif %}"
 ---
 
 {% set breadcrumbs = [

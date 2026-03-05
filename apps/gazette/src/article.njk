@@ -5,8 +5,14 @@ pagination:
   alias: ap
 permalink: "edition/{{ ap.editionDate }}/{{ ap.newspaperId }}/{{ ap.slug }}/index.html"
 layout: layouts/base.njk
+ogType: article
 eleventyComputed:
   title: "{{ ap.article.headline }} — {{ ap.newspaperName }} — Imbryk Gazette"
+  ogTitle: "{{ ap.article.headline }} — {{ ap.newspaperName }}"
+  description: "{{ ap.article.body | truncateChars(155) }}"
+  ogDescription: "{{ ap.article.body | truncateChars(200) }}"
+  ogImage: "{% if ap.article.image_url %}{{ ap.article.image_url }}{% elif ap.heroImageUrl %}{{ ap.heroImageUrl }}{% endif %}"
+  ogImageAlt: "{{ ap.article.imagePrompt | default(ap.article.headline) }}"
 ---
 
 {% set persona = personas.newspapers | findPersona(ap.newspaperId) %}
@@ -23,6 +29,28 @@ eleventyComputed:
 {% set currentNewspaperId = ap.newspaperId %}
 {% set siblingEditionDate = ap.editionDate %}
 {% include "sibling-nav.njk" %}
+
+{# Article JSON-LD structured data #}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": {{ ap.article.headline | dump | safe }},
+  "datePublished": "{{ ap.editionDate }}",
+  "author": {
+    "@type": "Organization",
+    "name": {{ ap.newspaperName | dump | safe }}
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Imbryk Gazette",
+    "url": "{{ site.url }}/"
+  }{% if ap.article.image_url %},
+  "image": "{{ ap.article.image_url }}"{% endif %},
+  "description": {{ ap.article.body | truncateChars(200) | dump | safe }},
+  "mainEntityOfPage": "{{ site.url }}/edition/{{ ap.editionDate }}/{{ ap.newspaperId }}/{{ ap.slug }}/"
+}
+</script>
 
 <div class="newspaper" style="{{ ap.cssVars }}">
 

@@ -7,6 +7,8 @@ export default function (eleventyConfig) {
   // make logo and favicon icons available at site root
   eleventyConfig.addPassthroughCopy('src/favicon.svg');
   eleventyConfig.addPassthroughCopy('src/logo.svg');
+  // TODO: create a 1200x630 og-gazette.png and place it in src/
+  eleventyConfig.addPassthroughCopy('src/og-gazette.png');
 
   eleventyConfig.addFilter('dateDisplay', (value) => {
     if (!value) return '';
@@ -35,7 +37,22 @@ export default function (eleventyConfig) {
     if (words.length <= count) return value;
     return words.slice(0, count).join(' ') + '…';
   });
-
+  eleventyConfig.addFilter('truncateChars', (value, count) => {
+    if (!value) return '';
+    // Strip markdown formatting for clean meta descriptions
+    const plain = value
+      .replace(/[#*_~`>]/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/\n+/g, ' ')
+      .trim();
+    if (plain.length <= count) return plain;
+    // Cut at last space before limit
+    const truncated = plain.slice(0, count);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return (
+      (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + '\u2026'
+    );
+  });
   eleventyConfig.addFilter('head', (array, n) => {
     if (!Array.isArray(array)) return [];
     return array.slice(0, n);

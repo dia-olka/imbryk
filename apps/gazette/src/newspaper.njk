@@ -5,8 +5,12 @@ pagination:
   alias: np
 permalink: "edition/{{ np.editionDate }}/{{ np.newspaperId }}/index.html"
 layout: layouts/base.njk
+ogType: website
 eleventyComputed:
   title: "{{ np.newspaperName }} — {{ np.editionDate | dateDisplay }} — Imbryk Gazette"
+  description: "{{ np.newspaperName }} — AI-powered perspective on how today's world-shaping events will unfold. {{ np.editionDate | dateDisplay }} edition."
+  ogImage: "{% if np.heroImageUrl %}{{ np.heroImageUrl }}{% endif %}"
+  ogImageAlt: "{{ np.newspaperName }} front page — {{ np.editionDate | dateDisplay }}"
 ---
 
 {% set persona = personas.newspapers | findPersona(np.newspaperId) %}

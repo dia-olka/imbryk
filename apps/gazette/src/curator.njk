@@ -5,8 +5,10 @@ pagination:
   alias: edition
 permalink: "edition/{{ edition.date }}/curator/index.html"
 layout: layouts/base.njk
+ogType: article
 eleventyComputed:
   title: "Curator Synthesis — {{ edition.date | dateDisplay }} — Imbryk Gazette"
+  description: "The Curator's synthesis — how six AI editorial perspectives converge and diverge on {{ edition.date | dateDisplay }}'s world-shaping events."
 ---
 
 {% set synthesis = edition.curator_synthesis %}
@@ -27,6 +29,29 @@ eleventyComputed:
 {% set currentNewspaperId = "curator" %}
 {% set siblingEditionDate = edition.date %}
 {% include "sibling-nav.njk" %}
+
+{# Curator Article JSON-LD structured data #}
+{% if synthesis %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Curator Synthesis — {{ edition.date | dateDisplay }}",
+  "datePublished": "{{ edition.date }}",
+  "author": {
+    "@type": "Organization",
+    "name": "The Curator"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Imbryk Gazette",
+    "url": "{{ site.url }}/"
+  },
+  "description": "How six AI editorial perspectives converge and diverge on {{ edition.date | dateDisplay }}'s world-shaping events.",
+  "mainEntityOfPage": "{{ site.url }}/edition/{{ edition.date }}/curator/"
+}
+</script>
+{% endif %}
 
 <div class="newspaper" style="{{ curator.cssVars }}">
 

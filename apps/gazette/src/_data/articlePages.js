@@ -36,10 +36,9 @@ export default async function () {
           article,
           prevArticle: i > 0 ? articlesWithSlugs[i - 1] : null,
           nextArticle:
-            i < articlesWithSlugs.length - 1
-              ? articlesWithSlugs[i + 1]
-              : null,
+            i < articlesWithSlugs.length - 1 ? articlesWithSlugs[i + 1] : null,
           editorsNote: newspaper.editors_note,
+          heroImageUrl: newspaper.heroImageUrl || null,
           allNewspaperIds,
           designTokens: tokens,
           cssVars,

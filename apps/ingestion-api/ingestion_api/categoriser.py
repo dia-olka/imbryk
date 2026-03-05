@@ -6,6 +6,11 @@ from abc import ABC, abstractmethod
 
 from ingestion_api.taxonomy import CATEGORY_ID_SET, CATEGORY_IDS
 
+# When AI cannot classify a prompt (gibberish, empty, unparseable response),
+# fall back to the lowest-stakes category so the prompt still reaches at
+# least one newspaper (The Hedonist).
+FALLBACK_CATEGORY: str = "entertainment"
+
 
 class CategoriserStrategy(ABC):
     @abstractmethod
@@ -58,8 +63,11 @@ class GeminiFlashCategoriser(CategoriserStrategy):
                 raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
             parsed = json.loads(raw)
             if isinstance(parsed, list):
-                return [c for c in parsed if c in CATEGORY_ID_SET]
+                valid = [c for c in parsed if c in CATEGORY_ID_SET]
+                if valid:
+                    return valid
         except (json.JSONDecodeError, AttributeError, IndexError):
             pass
 
-        return []
+        # Guarantee at least one category so the prompt is never orphaned
+        return [FALLBACK_CATEGORY]
