@@ -14,6 +14,15 @@ interface ConfirmationProps {
 export function Confirmation({ quote, onReset }: ConfirmationProps) {
   const alertRef = useRef<HTMLDivElement>(null);
 
+  const tomorrow = new Date(Date.now() + 86_400_000);
+  const isoDate = tomorrow.toISOString().split('T')[0];
+  const displayDate = tomorrow.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   // Move focus to the success alert when confirmation mounts (state transition: payment → confirmed)
   useEffect(() => {
     alertRef.current?.focus();
@@ -45,7 +54,12 @@ export function Confirmation({ quote, onReset }: ConfirmationProps) {
           </a>
         </AlertDescription>
       </Alert>
-
+      <p className="text-center font-sans text-sm text-text-muted italic">
+        <span aria-hidden="true">📅 </span>Publishing in tomorrow's morning edition —{' '}
+        <time dateTime={isoDate} className="font-semibold not-italic text-text">
+          {displayDate}
+        </time>
+      </p>
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-sans">

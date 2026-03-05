@@ -36,7 +36,7 @@ export function PromptFlow() {
   const [prompt, setPrompt] = useState('');
   const [isReleasing, setIsReleasing] = useState(false);
   const { isValid } = usePromptValidation(prompt);
-  const { quote, isLoading, error: quoteError } = useQuote(prompt);
+  const { quote, isLoading, error: quoteError, submit, reset: resetQuote } = useQuote();
 
   const handleProceedToPayment = () => {
     if (!quote) return;
@@ -52,10 +52,12 @@ export function PromptFlow() {
   };
 
   const handleBack = () => {
+    resetQuote();
     dispatch({ type: 'BACK_TO_INPUT' });
   };
 
   const handleReset = () => {
+    resetQuote();
     dispatch({ type: 'RESET' });
     setPrompt('');
   };
@@ -80,7 +82,9 @@ export function PromptFlow() {
         value={prompt}
         onChange={setPrompt}
         onProceed={handleProceedToPayment}
-        isSubmitDisabled={!isValid || !quote || isLoading}
+        onSubmit={() => submit(prompt)}
+        isSubmitDisabled={!isValid || isLoading}
+        isProceedDisabled={!quote || isLoading}
         isReleasing={isReleasing}
         quote={quote}
         isQuoteLoading={isLoading}

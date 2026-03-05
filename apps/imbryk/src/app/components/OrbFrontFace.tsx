@@ -12,6 +12,8 @@ interface OrbFrontFaceProps {
   onChange: (value: string) => void;
   onFocus: () => void;
   onBlur: () => void;
+  onSubmit: () => void;
+  isSubmitDisabled: boolean;
 }
 
 export function OrbFrontFace({
@@ -25,6 +27,8 @@ export function OrbFrontFace({
   onChange,
   onFocus,
   onBlur,
+  onSubmit,
+  isSubmitDisabled,
 }: OrbFrontFaceProps) {
   const faceClasses = [
     'orb-face orb-face--front',
@@ -42,6 +46,12 @@ export function OrbFrontFace({
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
         onBlur={onBlur}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!isSubmitDisabled) onSubmit();
+          }
+        }}
         placeholder="What happens next in the world?"
         maxLength={PROMPT_MAX}
         aria-describedby={`${validationId} ${charCountId}`}

@@ -8,16 +8,6 @@ export function Footer() {
         <p>
           &copy; {new Date().getFullYear()} Imbryk. All events are fictional.
         </p>
-        <p className="mt-1">
-          <a
-            href="https://imbryk-gazette.pages.dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-text"
-          >
-            Read the Gazette →
-          </a>
-        </p>
       </div>
     </footer>
   );

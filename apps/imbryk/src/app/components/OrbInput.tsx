@@ -13,7 +13,9 @@ interface OrbInputProps {
   value: string;
   onChange: (value: string) => void;
   onProceed: () => void;
+  onSubmit: () => void;
   isSubmitDisabled: boolean;
+  isProceedDisabled: boolean;
   isReleasing?: boolean;
   quote: QuoteResponse | null;
   isQuoteLoading: boolean;
@@ -23,7 +25,9 @@ export function OrbInput({
   value,
   onChange,
   onProceed,
+  onSubmit,
   isSubmitDisabled,
+  isProceedDisabled,
   isReleasing = false,
   quote,
   isQuoteLoading,
@@ -81,6 +85,8 @@ export function OrbInput({
           onChange={onChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          onSubmit={onSubmit}
+          isSubmitDisabled={isSubmitDisabled}
         />
         <OrbBackFace quote={quote} isVisible={isFlipped} />
       </Orb3D>
@@ -116,7 +122,7 @@ export function OrbInput({
       {isFlipped && quote ? (
         <Button
           onClick={onProceed}
-          disabled={isSubmitDisabled}
+          disabled={isProceedDisabled}
           size="lg"
           className="min-w-[200px]"
         >
@@ -124,14 +130,13 @@ export function OrbInput({
         </Button>
       ) : (
         <Button
-          onClick={onProceed}
+          onClick={onSubmit}
           disabled={isSubmitDisabled}
           size="lg"
-          className="min-w-[200px] invisible"
-          aria-hidden="true"
-          tabIndex={-1}
+          className="min-w-[200px]"
+          aria-busy={isQuoteLoading}
         >
-          Placeholder
+          {isQuoteLoading ? 'Consulting the orb…' : 'Whisper →'}
         </Button>
       )}
     </div>
