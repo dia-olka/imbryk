@@ -84,9 +84,8 @@ class TestWithRetry:
         def bad():
             raise _NonRetryable("nope")
 
-        with pytest.raises(_NonRetryable):
-            with patch("newsroom_director.retry.throttle"):
-                with_retry(bad, max_retries=5)
+        with pytest.raises(_NonRetryable), patch("newsroom_director.retry.throttle"):
+            with_retry(bad, max_retries=5)
 
     @patch("newsroom_director.retry.throttle")
     @patch("newsroom_director.retry.time.sleep")
