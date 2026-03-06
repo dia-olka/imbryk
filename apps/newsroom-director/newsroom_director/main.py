@@ -25,6 +25,9 @@ from datetime import datetime, timezone
 
 import sentry_sdk
 
+from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.crons import monitor
+
 from .config import (
     CF_DEPLOY_HOOK_URL,
     DATABASE_URL,
@@ -38,10 +41,10 @@ from .config import (
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        traces_sample_rate=0.1,
+        traces_sample_rate=1.0,  # Capture 100% of transactions for performance monitoring
         send_default_pii=False,
         integrations=[
-            sentry_sdk.integrations.logging.LoggingIntegration(
+            LoggingIntegration(
                 level=LOG_LEVEL_INT,  # Capture logs at configured level or higher
                 event_level=logging.ERROR,  # Send only ERROR logs as Sentry events
             ),
@@ -85,6 +88,14 @@ from .world_ledger.serialise_dict import (
 
 logger = logging.getLogger(__name__)
 
+_MONITOR_CONFIG = {
+    "schedule": {"type": "crontab", "value": "0 6 * * *"},  # Every day at 6am UTC
+    "timezone": "UTC",
+    "checkin_margin": 15,  # 15 seconds
+    "max_runtime": 60*60*60,  # 1 hour
+    "failure_issue_threshold": 1,
+    "recovery_threshold": 1,
+}
 
 def run_morning_press(
     database_url: str | None = None,
@@ -706,7 +717,7 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
 
     return mutation
 
-
+@monitor(monitor_slug="morning-press", monitor_config=_MONITOR_CONFIG)
 def cli_main() -> None:
     """CLI entry point for Cloud Run Job execution."""
     configure_logging()
