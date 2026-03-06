@@ -4,6 +4,7 @@ import { useQuote } from '../hooks/useQuote';
 import { usePromptValidation } from '../hooks/usePromptValidation';
 import { OrbInput } from './OrbInput';
 import { PaymentForm } from './PaymentForm';
+import { QuotePreview } from './QuotePreview';
 import { Confirmation } from './Confirmation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -16,7 +17,9 @@ function flowReducer(state: FlowData, action: FlowAction): FlowData {
     case 'BACK_TO_INPUT':
       return { ...state, state: 'input', errorMessage: null };
     case 'RESET':
-      return { state: 'input', prompt: '', quote: null, errorMessage: null };
+      return { state: 'input', prompt: '', quote: null, weightMultiplier: 1, errorMessage: null };
+    case 'SET_WEIGHT_MULTIPLIER':
+      return { ...state, weightMultiplier: action.multiplier };
     case 'ERROR':
       return { ...state, state: 'error', errorMessage: action.message };
     default:
@@ -28,6 +31,7 @@ const initialState: FlowData = {
   state: 'input',
   prompt: '',
   quote: null,
+  weightMultiplier: 1,
   errorMessage: null,
 };
 
@@ -70,6 +74,7 @@ export function PromptFlow() {
     return (
       <PaymentForm
         quote={flow.quote}
+        weightMultiplier={flow.weightMultiplier}
         onSuccess={handlePaymentSuccess}
         onBack={handleBack}
       />
@@ -89,6 +94,16 @@ export function PromptFlow() {
         quote={quote}
         isQuoteLoading={isLoading}
       />
+
+      {quote && (
+        <QuotePreview
+          quote={quote}
+          weightMultiplier={flow.weightMultiplier}
+          onWeightMultiplierChange={(m) =>
+            dispatch({ type: 'SET_WEIGHT_MULTIPLIER', multiplier: m })
+          }
+        />
+      )}
 
       {quoteError && (
         <Alert variant="destructive" className="max-w-md">

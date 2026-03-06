@@ -183,10 +183,12 @@ async def create_transaction(
 ):
     """Create a Braintree transaction from the server-side quote.
 
-    The amount is read from the stored quote — never from the client — so the
-    user cannot pay less than the classified price.  On success the prompt
-    status moves from ``quoted`` → ``accepted`` and a ``PaymentRef`` record
-    is created with status ``submitted_for_settlement``.
+    The base amount is read from the stored quote — never from the client — so
+    the user cannot pay less than the classified price.  The
+    ``weight_multiplier`` (validated by Pydantic to be an integer in [1, 100])
+    is applied server-side to produce the final charged amount.
+    On success the prompt status moves from ``quoted`` → ``accepted`` and a
+    ``PaymentRef`` record is created with status ``submitted_for_settlement``.
     """
     prompt = db.query(Prompt).filter_by(id=body.quote_id).first()
     if prompt is None:
@@ -198,10 +200,14 @@ async def create_transaction(
             content={"detail": f"Quote already processed (status={prompt.status})"},
         )
 
-    # Amount comes from the DB — tamper-proof.
-    amount = prompt.amount
-    if amount is None or amount <= 0:
+    # Base amount comes from the DB — tamper-proof.
+    base_amount = prompt.amount
+    if base_amount is None or base_amount <= 0:
         return JSONResponse(status_code=400, content={"detail": "Invalid quote amount"})
+
+    # Apply weight multiplier (already validated by Pydantic: int, 1–100).
+    multiplier = body.weight_multiplier
+    amount = base_amount * multiplier
 
     gateway = get_gateway()
     result = gateway.transaction.sale({
@@ -226,9 +232,11 @@ async def create_transaction(
     )
     db.add(payment)
 
-    # Mark prompt as accepted
+    # Mark prompt as accepted and persist final (multiplied) amount + multiplier
     prompt.payment_ref = transaction_id
     prompt.status = "accepted"
+    prompt.amount = amount
+    prompt.weight_multiplier = multiplier
 
     db.commit()
 

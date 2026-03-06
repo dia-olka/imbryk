@@ -11,15 +11,17 @@ const DROPIN_CONTAINER_ID = 'braintree-dropin';
 
 interface PaymentFormProps {
   quote: QuoteResponse;
+  weightMultiplier: number;
   onSuccess: () => void;
   onBack: () => void;
 }
 
-export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
+export function PaymentForm({ quote, weightMultiplier, onSuccess, onBack }: PaymentFormProps) {
   const { isReady, isProcessing, error, requestPayment } = useBraintree(DROPIN_CONTAINER_ID);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const totalCost = quote.estimated_cost * weightMultiplier;
 
   // Move focus to the heading when the payment form mounts (state transition: input → payment)
   useEffect(() => {
@@ -33,7 +35,7 @@ export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
 
     setIsSubmitting(true);
     try {
-      await createTransaction(quote.quote_id, result.nonce);
+      await createTransaction(quote.quote_id, result.nonce, weightMultiplier);
       onSuccess();
     } catch (err) {
       setCheckoutError(
@@ -58,10 +60,15 @@ export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
             Complete Payment
           </CardTitle>
           <p className="text-center text-2xl font-bold font-sans">
-            ${quote.estimated_cost.toFixed(2)}
+            ${totalCost.toFixed(2)}
           </p>
           <p className="text-center text-sm text-text-muted font-sans">
             {quote.newspapers_reached} newspaper{quote.newspapers_reached !== 1 ? 's' : ''} will cover your event
+            {weightMultiplier > 1 && (
+              <span className="block text-xs mt-0.5">
+                {weightMultiplier}&times; weight boost applied
+              </span>
+            )}
           </p>
         </CardHeader>
         <CardContent>
@@ -70,7 +77,7 @@ export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
               View newspaper details
             </summary>
             <div className="mt-3">
-              <QuotePreview quote={quote} />
+              <QuotePreview quote={quote} weightMultiplier={weightMultiplier} />
             </div>
           </details>
           <div id={DROPIN_CONTAINER_ID} />
@@ -91,7 +98,7 @@ export function PaymentForm({ quote, onSuccess, onBack }: PaymentFormProps) {
           >
             {isBusy
               ? 'Processing...'
-              : `Pay $${quote.estimated_cost.toFixed(2)}`}
+              : `Pay $${totalCost.toFixed(2)}`}
           </Button>
         </CardFooter>
       </Card>

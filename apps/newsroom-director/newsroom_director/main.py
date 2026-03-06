@@ -24,9 +24,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 import sentry_sdk
-
-from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.crons import monitor
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 from .config import (
     CF_DEPLOY_HOOK_URL,
@@ -91,7 +90,7 @@ logger = logging.getLogger(__name__)
 _MONITOR_CONFIG = {
     "schedule": {"type": "crontab", "value": "0 6 * * *"},  # Every day at 6am UTC
     "timezone": "UTC",
-    "checkin_margin": 15,  # 15 seconds
+    "checkin_margin": 120,  # 2 minutes
     "max_runtime": 60*60*60,  # 1 hour
     "failure_issue_threshold": 1,
     "recovery_threshold": 1,

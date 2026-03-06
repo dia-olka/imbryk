@@ -144,6 +144,7 @@ def test_create_transaction_success(client, db_session):
     prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
     assert prompt.status == "accepted"
     assert prompt.payment_ref == "test_txn_123"
+    assert prompt.weight_multiplier == 1
 
     payment = db_session.query(PaymentRef).filter_by(braintree_transaction_id="test_txn_123").first()
     assert payment is not None
@@ -386,3 +387,128 @@ def test_webhook_unknown_event_ignored(client):
 
     assert response.status_code == 200
     assert response.json()["detail"] == "ignored"
+
+
+# --- Weight multiplier tests ---
+
+
+def test_create_transaction_with_multiplier(client, db_session):
+    """Multiplier should scale the charged amount and be persisted."""
+    from ingestion_api.models import PaymentRef, Prompt
+
+    quote = _create_quote(client)
+    mock_gw = _mock_gateway_success()
+    multiplier = 10
+
+    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+        response = client.post(
+            "/payments/create-transaction",
+            json={
+                "quote_id": quote["quote_id"],
+                "nonce": "fake-nonce",
+                "weight_multiplier": multiplier,
+            },
+        )
+
+    assert response.status_code == 200
+
+    # Braintree should be charged base × multiplier
+    expected_amount = quote["estimated_cost"] * multiplier
+    sale_args = mock_gw.transaction.sale.call_args[0][0]
+    assert sale_args["amount"] == f"{expected_amount:.2f}"
+
+    # DB should store the multiplied amount and the multiplier
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+    assert prompt.amount == expected_amount
+    assert prompt.weight_multiplier == multiplier
+    assert prompt.status == "accepted"
+
+    payment = db_session.query(PaymentRef).filter_by(
+        braintree_transaction_id="test_txn_123"
+    ).first()
+    assert payment.amount == expected_amount
+
+
+def test_create_transaction_multiplier_defaults_to_one(client, db_session):
+    """Omitting weight_multiplier should default to 1."""
+    from ingestion_api.models import Prompt
+
+    quote = _create_quote(client)
+    mock_gw = _mock_gateway_success()
+
+    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+        response = client.post(
+            "/payments/create-transaction",
+            json={"quote_id": quote["quote_id"], "nonce": "fake-nonce"},
+        )
+
+    assert response.status_code == 200
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+    assert prompt.weight_multiplier == 1
+
+
+def test_create_transaction_multiplier_zero_rejected(client):
+    """weight_multiplier=0 should be rejected by Pydantic (ge=1)."""
+    quote = _create_quote(client)
+
+    response = client.post(
+        "/payments/create-transaction",
+        json={"quote_id": quote["quote_id"], "nonce": "fake-nonce", "weight_multiplier": 0},
+    )
+    assert response.status_code == 422
+
+
+def test_create_transaction_multiplier_negative_rejected(client):
+    """Negative weight_multiplier should be rejected."""
+    quote = _create_quote(client)
+
+    response = client.post(
+        "/payments/create-transaction",
+        json={"quote_id": quote["quote_id"], "nonce": "fake-nonce", "weight_multiplier": -5},
+    )
+    assert response.status_code == 422
+
+
+def test_create_transaction_multiplier_too_high_rejected(client):
+    """weight_multiplier > 100 should be rejected."""
+    quote = _create_quote(client)
+
+    response = client.post(
+        "/payments/create-transaction",
+        json={"quote_id": quote["quote_id"], "nonce": "fake-nonce", "weight_multiplier": 101},
+    )
+    assert response.status_code == 422
+
+
+def test_create_transaction_multiplier_float_rejected(client):
+    """Non-integer weight_multiplier (e.g. 1.5) should be rejected."""
+    quote = _create_quote(client)
+
+    response = client.post(
+        "/payments/create-transaction",
+        json={"quote_id": quote["quote_id"], "nonce": "fake-nonce", "weight_multiplier": 1.5},
+    )
+    assert response.status_code == 422
+
+
+def test_create_transaction_multiplier_max_accepted(client, db_session):
+    """weight_multiplier=100 (the cap) should be accepted."""
+    from ingestion_api.models import Prompt
+
+    quote = _create_quote(client)
+    mock_gw = _mock_gateway_success()
+
+    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+        response = client.post(
+            "/payments/create-transaction",
+            json={
+                "quote_id": quote["quote_id"],
+                "nonce": "fake-nonce",
+                "weight_multiplier": 100,
+            },
+        )
+
+    assert response.status_code == 200
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+    assert prompt.weight_multiplier == 100
+    assert prompt.amount == quote["estimated_cost"] * 100

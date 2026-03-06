@@ -37,12 +37,17 @@ export async function fetchBraintreeClientToken(
 export async function createTransaction(
   quoteId: string,
   nonce: string,
+  weightMultiplier = 1,
   signal?: AbortSignal
 ): Promise<PromptAcceptedResponse> {
   const response = await fetch(`${API_BASE_URL}/payments/create-transaction`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quote_id: quoteId, nonce }),
+    body: JSON.stringify({
+      quote_id: quoteId,
+      nonce,
+      weight_multiplier: weightMultiplier,
+    }),
     signal,
   });
 

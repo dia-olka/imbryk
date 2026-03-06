@@ -4,10 +4,12 @@ import { NEWSPAPER_DISPLAY } from './newspaper-display';
 interface OrbQuoteSummaryProps {
   quote: QuoteResponse;
   animate: boolean;
+  weightMultiplier?: number;
 }
 
-export function OrbQuoteSummary({ quote, animate }: OrbQuoteSummaryProps) {
+export function OrbQuoteSummary({ quote, animate, weightMultiplier = 1 }: OrbQuoteSummaryProps) {
   const baseClass = animate ? 'orb-triangle-text' : '';
+  const totalCost = quote.estimated_cost * weightMultiplier;
 
   return (
     <div className="flex flex-col items-center gap-0.5 text-white text-center">
@@ -18,8 +20,19 @@ export function OrbQuoteSummary({ quote, animate }: OrbQuoteSummaryProps) {
           animationDelay: animate ? '0.3s' : undefined,
         }}
       >
-        ${quote.estimated_cost.toFixed(2)}
+        ${totalCost.toFixed(2)}
       </span>
+      {weightMultiplier > 1 && (
+        <span
+          className={`text-white/60 ${baseClass}`}
+          style={{
+            fontSize: 'clamp(0.45rem, 1.6vw, 0.6rem)',
+            animationDelay: animate ? '0.4s' : undefined,
+          }}
+        >
+          {weightMultiplier}&times; boost
+        </span>
+      )}
       <span
         className={`text-white/70 ${baseClass}`}
         style={{

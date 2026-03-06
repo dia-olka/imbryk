@@ -7,11 +7,13 @@ export type FlowAction =
   | { type: 'PAYMENT_SUCCESS' }
   | { type: 'BACK_TO_INPUT' }
   | { type: 'RESET' }
+  | { type: 'SET_WEIGHT_MULTIPLIER'; multiplier: number }
   | { type: 'ERROR'; message: string };
 
 export interface FlowData {
   state: FlowState;
   prompt: string;
   quote: QuoteResponse | null;
+  weightMultiplier: number;
   errorMessage: string | null;
 }

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ingestion_api.database import Base
@@ -26,6 +26,9 @@ class Prompt(Base):
     )
     text: Mapped[str] = mapped_column(Text, nullable=False)
     amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    weight_multiplier: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
     payment_ref: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
     )

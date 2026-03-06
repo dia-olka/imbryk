@@ -57,4 +57,27 @@ describe('OrbQuoteSummary', () => {
     const animatedElements = container.querySelectorAll('.orb-triangle-text');
     expect(animatedElements.length).toBe(0);
   });
+
+  // --- Weight multiplier tests ---
+
+  it('should display multiplied price when weightMultiplier provided', () => {
+    render(<OrbQuoteSummary quote={mockQuote} animate={false} weightMultiplier={10} />);
+    expect(screen.getByText('$30.00')).toBeTruthy();
+  });
+
+  it('should show boost label when weightMultiplier > 1', () => {
+    render(<OrbQuoteSummary quote={mockQuote} animate={false} weightMultiplier={5} />);
+    expect(screen.getByText(/5× boost/)).toBeTruthy();
+  });
+
+  it('should not show boost label when weightMultiplier is 1', () => {
+    render(<OrbQuoteSummary quote={mockQuote} animate={false} weightMultiplier={1} />);
+    expect(screen.queryByText(/boost/)).toBeNull();
+  });
+
+  it('should default to multiplier 1 when prop is omitted', () => {
+    render(<OrbQuoteSummary quote={mockQuote} animate={false} />);
+    expect(screen.getByText('$3.00')).toBeTruthy();
+    expect(screen.queryByText(/boost/)).toBeNull();
+  });
 });

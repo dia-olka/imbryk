@@ -2,7 +2,12 @@
 
 from pydantic import BaseModel, Field
 
-from ingestion_api.config import PROMPT_MAX_LENGTH, PROMPT_MIN_LENGTH
+from ingestion_api.config import (
+    PROMPT_MAX_LENGTH,
+    PROMPT_MIN_LENGTH,
+    WEIGHT_MULTIPLIER_MAX,
+    WEIGHT_MULTIPLIER_MIN,
+)
 
 
 class HealthResponse(BaseModel):
@@ -34,10 +39,21 @@ class WebhookPayload(BaseModel):
 
 
 class CreateTransactionRequest(BaseModel):
-    """Frontend sends the Braintree nonce + server-side quote ID."""
+    """Frontend sends the Braintree nonce + server-side quote ID.
+
+    ``weight_multiplier`` lets the user boost their prompt's editorial
+    priority by paying a multiple of the base price.  Pydantic enforces
+    the range [1, 100] and integer type.
+    """
 
     quote_id: str = Field(..., min_length=1)
     nonce: str = Field(..., min_length=1)
+    weight_multiplier: int = Field(
+        default=1,
+        ge=WEIGHT_MULTIPLIER_MIN,
+        le=WEIGHT_MULTIPLIER_MAX,
+        description="Integer multiplier (1–100) applied to the base price to boost editorial weight.",
+    )
 
 
 class PromptAcceptedResponse(BaseModel):
