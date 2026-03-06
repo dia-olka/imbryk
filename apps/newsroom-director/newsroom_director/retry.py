@@ -17,10 +17,18 @@ RETRYABLE_EXCEPTIONS = frozenset(
     {
         "ServiceUnavailable",
         "ResourceExhausted",
+        "TooManyRequests",
         "DeadlineExceeded",
         "InternalServerError",
     }
 )
+
+# Subset that should use a longer backoff because the API is rate-limiting.
+_RATE_LIMIT_EXCEPTIONS = frozenset({"ResourceExhausted", "TooManyRequests"})
+
+# Minimum seconds between successive API calls (prevents bursting).
+_MIN_CALL_INTERVAL = 1.5
+_last_call_ts: float = 0.0
 
 
 def _is_retryable(exc: BaseException) -> bool:
@@ -28,27 +36,50 @@ def _is_retryable(exc: BaseException) -> bool:
     return type(exc).__name__ in RETRYABLE_EXCEPTIONS
 
 
+def _is_rate_limit(exc: BaseException) -> bool:
+    """Check if an exception is a rate-limit (429) error."""
+    return type(exc).__name__ in _RATE_LIMIT_EXCEPTIONS
+
+
+def throttle() -> None:
+    """Sleep if needed to maintain *_MIN_CALL_INTERVAL* between API calls."""
+    global _last_call_ts
+    now = time.monotonic()
+    elapsed = now - _last_call_ts
+    if _last_call_ts and elapsed < _MIN_CALL_INTERVAL:
+        time.sleep(_MIN_CALL_INTERVAL - elapsed)
+    _last_call_ts = time.monotonic()
+
+
 def with_retry(
     fn: Callable[..., T],
     *args: object,
-    max_retries: int = 3,
+    max_retries: int = 5,
     backoff_base: float = 2.0,
     **kwargs: object,
 ) -> T:
     """Call *fn* with exponential backoff on transient Gemini errors.
 
-    Retries on ServiceUnavailable, ResourceExhausted, DeadlineExceeded,
-    and InternalServerError.  Non-retryable exceptions propagate immediately.
+    Retries on ServiceUnavailable, ResourceExhausted, TooManyRequests,
+    DeadlineExceeded, and InternalServerError.  Non-retryable exceptions
+    propagate immediately.
+
+    Rate-limit errors (429) use a longer initial delay to let quotas reset.
     """
     last_exc: BaseException | None = None
     for attempt in range(max_retries + 1):
         try:
+            throttle()
             return fn(*args, **kwargs)
         except Exception as exc:
             if not _is_retryable(exc) or attempt == max_retries:
                 raise
             last_exc = exc
-            delay = backoff_base**attempt + random.uniform(0, 1)
+            if _is_rate_limit(exc):
+                # Longer backoff for 429: 15s, 30s, 60s, 120s, 240s …
+                delay = 15 * backoff_base**attempt + random.uniform(0, 3)
+            else:
+                delay = backoff_base**attempt + random.uniform(0, 1)
             logger.warning(
                 "Retrying Gemini call",
                 extra={

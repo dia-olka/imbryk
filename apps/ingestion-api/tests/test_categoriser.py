@@ -41,7 +41,7 @@ def test_fallback_category_is_entertainment_and_hollywood():
 
 def test_gemini_categoriser_falls_back_on_invalid_json(monkeypatch):
     """GeminiFlashCategoriser returns FALLBACK_CATEGORY when Gemini returns garbage."""
-    from unittest.mock import MagicMock
+    from unittest.mock import MagicMock, patch
 
     from ingestion_api.categoriser import GeminiFlashCategoriser
 
@@ -50,25 +50,17 @@ def test_gemini_categoriser_falls_back_on_invalid_json(monkeypatch):
     mock_response = MagicMock()
     mock_response.text = "not valid json at all!!!"
 
-    mock_model = MagicMock()
-    mock_model.generate_content.return_value = mock_response
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
 
-    mock_model_class = MagicMock(return_value=mock_model)
-
-    monkeypatch.setattr(
-        "vertexai.init", MagicMock()
-    )
-    monkeypatch.setattr(
-        "vertexai.generative_models.GenerativeModel", mock_model_class
-    )
-
-    result = categoriser.categorise("asdkjhasdkjh gibberish")
+    with patch("google.genai.Client", return_value=mock_client):
+        result = categoriser.categorise("asdkjhasdkjh gibberish")
     assert result == [FALLBACK_CATEGORY]
 
 
 def test_gemini_categoriser_falls_back_on_empty_valid_categories(monkeypatch):
     """GeminiFlashCategoriser returns FALLBACK_CATEGORY when all parsed IDs are invalid."""
-    from unittest.mock import MagicMock
+    from unittest.mock import MagicMock, patch
 
     from ingestion_api.categoriser import GeminiFlashCategoriser
 
@@ -77,16 +69,9 @@ def test_gemini_categoriser_falls_back_on_empty_valid_categories(monkeypatch):
     mock_response = MagicMock()
     mock_response.text = '["not-a-real-category", "also-fake"]'
 
-    mock_model = MagicMock()
-    mock_model.generate_content.return_value = mock_response
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
 
-    monkeypatch.setattr(
-        "vertexai.init", MagicMock()
-    )
-    monkeypatch.setattr(
-        "vertexai.generative_models.GenerativeModel",
-        MagicMock(return_value=mock_model),
-    )
-
-    result = categoriser.categorise("nonsense input")
+    with patch("google.genai.Client", return_value=mock_client):
+        result = categoriser.categorise("nonsense input")
     assert result == [FALLBACK_CATEGORY]

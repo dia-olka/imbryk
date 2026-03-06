@@ -43,13 +43,15 @@ class GeminiFlashCategoriser(CategoriserStrategy):
         self._model = model or config.CATEGORISER_MODEL
 
     def categorise(self, prompt_text: str) -> list[str]:
-        import vertexai
-        from vertexai.generative_models import GenerativeModel
+        from google import genai
+        from google.genai import types
 
-        if self._project:
-            vertexai.init(project=self._project, location=self._location)
+        client = genai.Client(
+            vertexai=True,
+            project=self._project or None,
+            location=self._location,
+        )
 
-        model = GenerativeModel(self._model)
         category_list = ", ".join(CATEGORY_IDS)
         system_prompt = (
             "You are a news categoriser. Given a user prompt, classify it into "
@@ -57,8 +59,12 @@ class GeminiFlashCategoriser(CategoriserStrategy):
             f"category ID strings. Valid categories: [{category_list}]"
         )
 
-        response = model.generate_content(
-            [system_prompt, f"User prompt: {prompt_text}"]
+        response = client.models.generate_content(
+            model=self._model,
+            contents=f"User prompt: {prompt_text}",
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+            ),
         )
 
         import json

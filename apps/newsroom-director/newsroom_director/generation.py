@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from google import genai
 
 from . import config
 from .retry import with_retry
@@ -26,33 +30,38 @@ class GenerationStrategy(ABC):
 
 
 class VertexAIStrategy(GenerationStrategy):
-    """Calls Gemini via the Vertex AI SDK."""
+    """Calls Gemini via the Google Gen AI SDK."""
 
     def __init__(self, project: str, location: str | None = None) -> None:
         self._project = project
         self._location = location or config.VERTEX_AI_LOCATION
-        self._initialized = False
+        self._client: genai.Client | None = None
 
-    def _init_vertex(self) -> None:
-        if self._initialized:
-            return
-        import vertexai
+    def _get_client(self) -> genai.Client:
+        if self._client is None:
+            from google import genai
 
-        vertexai.init(project=self._project, location=self._location)
-        self._initialized = True
+            self._client = genai.Client(
+                vertexai=True,
+                project=self._project,
+                location=self._location,
+            )
+        return self._client
 
     def generate(self, system_prompt: str, model_tier: str) -> str:
-        self._init_vertex()
-        from vertexai.generative_models import GenerativeModel
+        from google.genai import types
 
+        client = self._get_client()
         model_name = MODEL_MAP.get(model_tier, MODEL_MAP["flash"])
 
         def _call() -> str:
-            model = GenerativeModel(
-                model_name,
-                system_instruction=system_prompt,
+            response = client.models.generate_content(
+                model=model_name,
+                contents="Generate today's edition.",
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                ),
             )
-            response = model.generate_content("Generate today's edition.")
             return response.text
 
         return with_retry(_call)

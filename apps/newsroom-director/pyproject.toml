@@ -22,7 +22,7 @@ description = "Imbryk Morning Press - AI newspaper generation orchestrator"
 requires-python = ">=3.12,<4"
 readme = 'README.md'
 dependencies = [
-    "google-cloud-aiplatform>=1.139.0",
+    "google-genai>=1.0.0",
     "hdbscan>=0.8.41",
     "numpy>=1.24,<2",
     "scikit-learn>=1.6.1",

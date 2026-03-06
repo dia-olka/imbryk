@@ -225,6 +225,7 @@ def save_edition(
         status="published",
     )
     session.add(edition)
+    session.flush()  # ensure edition row exists before inserting articles
 
     for newspaper_id, content in articles.items():
         article = EditionArticleRow(

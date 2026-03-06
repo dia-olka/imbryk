@@ -34,9 +34,9 @@ class TestStubImageClient:
 
 class TestImagenClient:
     def test_lazy_init(self):
-        """Vertex AI is not initialised until generate() is called."""
+        """Gen AI client is not created until generate() is called."""
         client = ImagenClient(project="test-project", location="global")
-        assert client._initialized is False
+        assert client._client is None
 
     @patch("newsroom_director.image_gen.client.with_retry")
     def test_generate_success(self, mock_with_retry):
@@ -44,10 +44,10 @@ class TestImagenClient:
         mock_with_retry.return_value = fake_bytes
 
         with patch(
-            "newsroom_director.image_gen.client.ImagenClient._init_vertex"
+            "newsroom_director.image_gen.client.ImagenClient._get_client"
         ):
             client = ImagenClient(project="test-project")
-            client._initialized = True
+            client._client = MagicMock()
             result = client.generate("A newspaper front page")
 
         assert result == fake_bytes
@@ -57,7 +57,7 @@ class TestImagenClient:
         client = ImagenClient(project="test-project")
 
         with patch.object(
-            client, "_init_vertex", side_effect=Exception("Vertex AI error")
+            client, "_get_client", side_effect=Exception("Gen AI error")
         ):
             result = client.generate("A prompt")
 
@@ -68,22 +68,27 @@ class TestImagenClient:
         mock_with_retry.side_effect = Exception("max retries exceeded")
 
         with patch(
-            "newsroom_director.image_gen.client.ImagenClient._init_vertex"
+            "newsroom_director.image_gen.client.ImagenClient._get_client"
         ):
             client = ImagenClient(project="test-project")
-            client._initialized = True
+            client._client = MagicMock()
             result = client.generate("A prompt")
 
         assert result is None
 
-    def test_init_vertex_called_once(self):
-        """_init_vertex is idempotent — subsequent calls are no-ops."""
+    def test_init_client_called_once(self):
+        """_get_client is idempotent — subsequent calls return the same client."""
         client = ImagenClient(project="test-project")
 
-        mock_vai = MagicMock()
-        with patch.dict("sys.modules", {"vertexai": mock_vai}):
-            client._init_vertex()
-            client._init_vertex()
+        mock_genai = MagicMock()
+        mock_genai_client = MagicMock()
+        mock_genai.Client.return_value = mock_genai_client
 
-            mock_vai.init.assert_called_once()
-            assert client._initialized is True
+        with patch.dict("sys.modules", {"google": MagicMock(), "google.genai": mock_genai}):
+            # Patch the import inside _get_client
+            with patch("google.genai.Client", mock_genai.Client):
+                result1 = client._get_client()
+                result2 = client._get_client()
+
+            assert result1 is result2
+            assert client._client is not None

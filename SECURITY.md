@@ -32,7 +32,7 @@ Transitive dependencies audited: `tough-cookie`, `cross-spawn`, `braces`, `micro
 | `slowapi` | `>=0.1` | `>=0.1.9` | Versions <0.1.5 allow rate-limit bypass via X-Forwarded-For header manipulation; 0.1.9 is the latest release |
 | `braintree` | `>=4.0` | `>=4.30.0` | Early 4.0.x versions carry older `requests` transitive constraints; `requests` had CVE-2023-32681 (auth header leak on redirect, fixed in requests 2.31.0). Recent braintree 4.x pins a patched requests version. |
 
-No known CVEs in `fastapi`, `pydantic`, `uvicorn`, `google-cloud-aiplatform`, or `sentry-sdk` within the versions specified (current lower bounds are already well above all known vulnerability thresholds for these packages).
+No known CVEs in `fastapi`, `pydantic`, `uvicorn`, `google-genai`, or `sentry-sdk` within the versions specified (current lower bounds are already well above all known vulnerability thresholds for these packages).
 
 ---
 

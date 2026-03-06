@@ -34,6 +34,7 @@ if SENTRY_DSN:
             ),
         ],
     )
+    logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
 from ingestion_api.braintree_client import get_gateway
 from ingestion_api.database import get_db
 from ingestion_api.models import (

@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from google import genai
 
 from .. import config
 from ..retry import with_retry
@@ -35,37 +39,40 @@ class ImagenClient(ImageGenerationStrategy):
         self._project = project
         self._location = location or config.VERTEX_AI_LOCATION
         self._model = model or config.IMAGE_GENERATION_MODEL
-        self._initialized = False
+        self._client: genai.Client | None = None
 
-    def _init_vertex(self) -> None:
-        if self._initialized:
-            return
-        import vertexai
+    def _get_client(self) -> genai.Client:
+        if self._client is None:
+            from google import genai
 
-        vertexai.init(project=self._project, location=self._location)
-        self._initialized = True
+            self._client = genai.Client(
+                vertexai=True,
+                project=self._project,
+                location=self._location,
+            )
+        return self._client
 
     def generate(self, prompt: str) -> bytes | None:
-        """Generate an image using Vertex AI Imagen.
+        """Generate an image using the Google Gen AI SDK.
 
         Returns WebP image bytes on success, None on any failure.
         """
         try:
-            self._init_vertex()
-            from vertexai.preview.vision_models import ImageGenerationModel
+            from google.genai import types
+
+            client = self._get_client()
 
             def _call() -> bytes:
-                model = ImageGenerationModel.from_pretrained(
-                    self._model
-                )
-                response = model.generate_images(
+                response = client.models.generate_images(
+                    model=self._model,
                     prompt=prompt,
-                    number_of_images=1,
-                    aspect_ratio="16:9",
-                    output_mime_type="image/webp",
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio="16:9",
+                        output_mime_type="image/webp",
+                    ),
                 )
-                # response.images is a list of GeneratedImage
-                return response.images[0]._image_bytes
+                return response.generated_images[0].image.image_bytes
 
             return with_retry(_call)
         except Exception:

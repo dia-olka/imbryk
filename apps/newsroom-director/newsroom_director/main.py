@@ -55,6 +55,7 @@ if SENTRY_DSN:
             ),
         ],
     )
+    logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
 from .db import (
     fetch_unprocessed_prompts,
     get_engine,
@@ -249,23 +250,33 @@ def run_morning_press(
 
         # Step 8: Run Curator synthesis
         if articles:
-            all_articles_text = _format_all_articles(articles)
-            curator_prompt = CURATOR_PERSONA.system_prompt_template.replace(
-                "{{ALL_ARTICLES}}", all_articles_text
-            )
-            curator_article = gen.generate(
-                curator_prompt, CURATOR_PERSONA.model_tier
-            )
-            articles["curator"] = curator_article
+            try:
+                all_articles_text = _format_all_articles(articles)
+                curator_prompt = CURATOR_PERSONA.system_prompt_template.replace(
+                    "{{ALL_ARTICLES}}", all_articles_text
+                )
+                curator_article = gen.generate(
+                    curator_prompt, CURATOR_PERSONA.model_tier
+                )
+                articles["curator"] = curator_article
+            except Exception:
+                logger.exception(
+                    "Curator synthesis failed, skipping curator article"
+                )
 
         # Step 9: WorldLedger mutation via LLM
         if articles:
-            mutation_prompt = _build_mutation_prompt(synopsis, articles)
-            mutation_response = gen.generate(mutation_prompt, "pro")
-            mutation = _parse_mutation(mutation_response)
-            if mutation:
-                ledger = apply_mutation(ledger, mutation)
-                save_world_ledger(session, ledger_to_dict(ledger))
+            try:
+                mutation_prompt = _build_mutation_prompt(synopsis, articles)
+                mutation_response = gen.generate(mutation_prompt, "pro")
+                mutation = _parse_mutation(mutation_response)
+                if mutation:
+                    ledger = apply_mutation(ledger, mutation)
+                    save_world_ledger(session, ledger_to_dict(ledger))
+            except Exception:
+                logger.exception(
+                    "WorldLedger mutation failed, skipping world state update"
+                )
 
         # Step 9b: Image generation — parse article JSON, generate images,
         # embed image URLs back into the content.
@@ -479,7 +490,9 @@ The mutation JSON should follow this schema (all fields optional):
 - add_alliances, add_conflicts, update_conflicts
 - add_currencies, add_trading_blocs, add_scarcities
 - update_global_gdp_trend: string
-- update_ai, update_energy, update_biotech: partial tech domain updates
+- update_ai, update_energy, update_biotech: partial tech domain update objects \
+with optional keys: {{"name": str, "maturity_level": "emerging"|"growth"|\
+"mature"|"declining", "key_players": [str], "description": str}}
 - add_dominant_narratives: list of strings
 - add_movements: list of {{name, reach, description}}
 - update_media_landscape: string
@@ -617,7 +630,15 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
 
     for tech_key in ("update_ai", "update_energy", "update_biotech"):
         if tech_key in data:
-            setattr(mutation, tech_key, data[tech_key])
+            val = data[tech_key]
+            if isinstance(val, str):
+                # LLM returned a prose string; wrap it as a description update
+                logger.warning(
+                    "LLM returned string for %s, coercing to dict", tech_key
+                )
+                val = {"description": val}
+            if isinstance(val, dict):
+                setattr(mutation, tech_key, val)
 
     if "add_tech_domains" in data:
         mutation.add_tech_domains = [
