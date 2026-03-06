@@ -19,6 +19,7 @@ if (SENTRY_DSN) {
   });
 }
 
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
