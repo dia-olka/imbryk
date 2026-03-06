@@ -56,7 +56,6 @@ User Prompt
 |     - Top articles with imagePrompt -> Imagen  |
 |     - Front-page hero image per newspaper      |
 |  9. Write edition articles + images to R2      |
-| 10. Force-delete context cache                 |
 +------------------------------------------------+
            |
            v
@@ -306,7 +305,7 @@ The core intelligence layer. Runs as a daily batch job:
 1. **Pull categorised prompts** — reads all unprocessed categorised prompts from PostgreSQL
 2. **Route to newspapers** — for each newspaper, collect prompts whose categories intersect the newspaper's subscription set
 3. **Load WorldLedger** — reads the canonical ledger from PostgreSQL
-4. **Create Vertex AI context cache** — uploads the ledger once, shares across all persona calls
+4. **Serialize WorldLedger to synopsis** — the synopsis is placed at the start of every prompt so that Vertex AI implicit caching can deduplicate it across calls (90% discount on cached input tokens)
 5. **Validate prompts (Pro model)** — for each prompt, the director decides whether the event is coherent and meaningful in the current world context. Rejected prompts are marked as such; accepted prompts proceed.
 6. **Per-newspaper distillation pipeline** — for each newspaper with accepted prompts:
    - Embed the newspaper's prompt pool (local sentence-transformers)
@@ -318,7 +317,6 @@ The core intelligence layer. Runs as a daily batch job:
 8. **Generate article images (Imagen)** — for articles with non-null `imagePrompt`, call Vertex AI Imagen. Generate front-page hero images from `frontPageImagePrompt`. Store as WebP. Failures are non-blocking.
 9. **Update WorldLedger (Pro model)** — applies the event consequences to the ledger and writes back to PostgreSQL transactionally
 10. **Write to R2** — stores edition articles as JSON and images as WebP for the Gazette to consume
-11. **Force-delete context cache** — drops the Vertex AI cache immediately to avoid idle costs
 
 ### Per-Newspaper Model Tier Map
 
@@ -441,7 +439,7 @@ The per-newspaper verbatim breakpoint (all prompts included raw without summaris
 | Database          | PostgreSQL (Cloud SQL)      | Canonical WorldLedger, prompts, categorised prompts, taxonomy, payment refs. Single source of truth.                        |
 | Event Queue       | Google Cloud Pub/Sub        | Triggers morning batch job, absorbs traffic spikes.                                                                         |
 | Object Storage    | Cloudflare R2               | Edition article JSON (consumed by Gazette for static build).                                                                |
-| AI Inference      | Google Vertex AI / Gemini   | Article generation (Flash + Pro tiers), validation, ledger mutation, context caching.                                       |
+| AI Inference      | Google Vertex AI / Gemini   | Article generation (Flash + Pro tiers), validation, ledger mutation. Implicit caching provides automatic cost savings.      |
 | Categorisation    | Gemini Flash (swappable)    | Prompt categorisation into taxonomy categories. Runs behind `CategoriserStrategy` interface for future swap to local model. |
 | Embedding         | Local sentence-transformers | Prompt embedding for clustering. Runs on the same compute as the Newsroom Director. No API calls.                           |
 | Clustering        | HDBSCAN                     | Groups prompts into topically coherent clusters per newspaper. Local compute.                                               |
@@ -464,7 +462,7 @@ The per-newspaper verbatim breakpoint (all prompts included raw without summaris
 
 6. **Pub/Sub for scale** — Decouples prompt ingestion from batch processing. Absorbs viral traffic spikes without database pressure.
 
-7. **Vertex AI context caching with explicit destruction** — Cache the WorldLedger once per batch run, share across all persona calls, then force-delete immediately. Zero idle cost.
+7. **Vertex AI implicit caching** — All Google Cloud projects have implicit caching enabled by default. The pipeline places the WorldLedger synopsis at the start of every prompt so that repeated calls within the same batch run benefit from automatic cache hits (90% discount on cached input tokens). No explicit cache lifecycle management is needed.
 
 8. **Static site generation** — Generated newspapers are pre-rendered HTML via 11ty. No server needed to read news, no JavaScript required, instant global delivery via Cloudflare CDN.
 
@@ -505,12 +503,11 @@ This section documents the defined failure behaviour at each stage of the pipeli
 | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Single newspaper Gemini call fails (after retries)        | That newspaper is skipped. Other newspapers continue to generate. The edition is published with whichever newspapers succeeded.                                                                                                                           |
 | All newspaper Gemini calls fail                           | `articles` dict is empty. No edition is created. Prompts remain `accepted` and are retried on the next morning run.                                                                                                                                       |
-| Vertex AI context cache creation fails                    | Falls back to uncached generation for all newspapers. The pipeline continues without interruption.                                                                                                                                                        |
+| Vertex AI context cache creation fails                    | N/A — the pipeline relies on implicit caching (automatic, no explicit creation step). Vertex AI applies implicit cache discounts transparently.                                                                                                           |
 | Coherence validation Gemini call fails (parse error)      | Falls back to accepting all prompts in the failing batch — we prefer false positives over silently dropping paid prompts.                                                                                                                                 |
 | WorldLedger mutation fails (LLM parse error or exception) | The ledger mutation is skipped for that day. The edition is still published. The WorldLedger is not updated; the next day's run starts from the previous ledger state.                                                                                    |
 | R2 write fails                                            | The DB session is rolled back. No edition is recorded and prompts remain `accepted`. The pipeline exits with an error (Cloud Run Job reports failure and triggers alerting). Prompts are retried on the next morning run. Gemini generation cost is lost. |
 | Database unreachable during batch                         | The pipeline exits with an error. Cloud Run Job reports failure. No prompts are marked processed; they are retried on the next morning run.                                                                                                               |
-| Vertex AI context cache deletion fails                    | Already safe — `VertexAIStrategy.delete_cache()` swallows the exception and logs a warning. Stale cache incurs idle billing until Vertex AI expires it.                                                                                                   |
 
 ### Morning Batch — Pipeline-Level Decisions
 

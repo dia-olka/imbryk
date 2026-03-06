@@ -3,14 +3,20 @@
 Orchestrates the daily newspaper generation pipeline:
 1. Fetch unprocessed paid prompts from DB
 2. Load/initialise WorldLedger
-3. Route prompts to n ewspapers via taxonomy
-4. Serialize WorldLedger synopsis & create context cache
+3. Route prompts to newspapers via taxonomy
+4. Serialize WorldLedger synopsis
 5. Run coherence validation on prompts
 6. Run distillation pipeline per newspaper
 7. Generate articles via Gemini (per persona)
 8. Run Curator synthesis
 9. Apply WorldLedger mutation
 10. Save edition and mark prompts processed
+
+Note: Vertex AI implicit caching is enabled by default for all projects.
+The pipeline places the WorldLedger synopsis at the start of every prompt
+so that repeated calls within the same run benefit from automatic cache
+hits (90% discount on cached input tokens) without any explicit cache
+management.
 """
 
 from __future__ import annotations
@@ -103,7 +109,6 @@ def run_morning_press(
     distillation_pipeline: DistillationPipeline | None = None,
     imagen_client: ImageGenerationStrategy | None = None,
     enable_validation: bool = True,
-    enable_caching: bool = True,
 ) -> dict:
     """Execute the full Morning Press generation pipeline.
 
@@ -114,7 +119,6 @@ def run_morning_press(
         distillation_pipeline: Override for the distillation pipeline.
         imagen_client: Image generation backend (defaults to stub).
         enable_validation: Run coherence validation on prompts.
-        enable_caching: Use Vertex AI context caching when available.
 
     Returns:
         Summary dict with edition_id, newspaper_count, article_count.
@@ -132,8 +136,6 @@ def run_morning_press(
     engine = get_engine(db_url)
     session_factory = get_session_factory(engine)
     session = session_factory()
-
-    cached_content = None
 
     try:
         # Step 2: Fetch unprocessed prompts
@@ -160,17 +162,6 @@ def run_morning_press(
 
         # Step 4: Serialize WorldLedger to synopsis
         synopsis = serialize_ledger_to_synopsis(ledger)
-
-        # Step 4b: Create context cache for synopsis (shared across newspapers).
-        # Falls back to uncached generation if cache creation fails.
-        if enable_caching:
-            try:
-                cached_content = gen.create_cache(synopsis)
-            except Exception:
-                logger.warning(
-                    "Context cache creation failed, falling back to uncached generation",
-                    exc_info=True,
-                )
 
         # Step 5: Coherence validation — filter prompts against world state
         if enable_validation:
@@ -233,14 +224,9 @@ def run_morning_press(
                     "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
                 ).replace("{{CLUSTER_DIGESTS}}", digests_text)
 
-                # Call LLM — use cached generation when cache is available
+                # Call LLM
                 gen_start = time.monotonic()
-                if cached_content is not None:
-                    article = gen.generate_with_cache(
-                        cached_content, user_prompt, persona.model_tier
-                    )
-                else:
-                    article = gen.generate(user_prompt, persona.model_tier)
+                article = gen.generate(user_prompt, persona.model_tier)
                 gen_ms = int((time.monotonic() - gen_start) * 1000)
 
                 logger.info(
@@ -368,9 +354,6 @@ def run_morning_press(
         logger.exception("Morning Press pipeline failed: %s", exc)
         raise
     finally:
-        # Force-delete context cache to avoid stale billing
-        if cached_content is not None:
-            gen.delete_cache(cached_content)
         session.close()
 
 
@@ -761,7 +744,6 @@ def cli_main() -> None:
         img_client = StubImageClient(should_fail=not enable_images)
 
     enable_validation = os.getenv("ENABLE_VALIDATION", "true").lower() == "true"
-    enable_caching = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 
     summary = run_morning_press(
         database_url=db_url,
@@ -769,7 +751,6 @@ def cli_main() -> None:
         storage=store,
         imagen_client=img_client,
         enable_validation=enable_validation,
-        enable_caching=enable_caching,
     )
 
     logger.info("Pipeline finished", extra={"summary": summary})

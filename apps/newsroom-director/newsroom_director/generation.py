@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
 
 from . import config
 from .retry import with_retry
@@ -24,26 +23,6 @@ class GenerationStrategy(ABC):
     @abstractmethod
     def generate(self, system_prompt: str, model_tier: str) -> str:
         """Generate text from a system prompt using the specified model tier."""
-
-    def create_cache(self, system_instruction: str) -> Any:
-        """Create a context cache with the given system instruction.
-
-        Returns an opaque cached-content handle.  The default
-        implementation returns ``None`` (no caching).
-        """
-        return None
-
-    def generate_with_cache(
-        self, cached_content: Any, user_prompt: str, model_tier: str
-    ) -> str:
-        """Generate using a previously created context cache.
-
-        The default falls back to :meth:`generate`.
-        """
-        return self.generate(user_prompt, model_tier)
-
-    def delete_cache(self, cached_content: Any) -> None:  # noqa: B027
-        """Force-delete a context cache.  Default is a no-op."""
 
 
 class VertexAIStrategy(GenerationStrategy):
@@ -78,44 +57,6 @@ class VertexAIStrategy(GenerationStrategy):
 
         return with_retry(_call)
 
-    def create_cache(self, system_instruction: str) -> Any:
-        self._init_vertex()
-        from vertexai.preview.caching import CachedContent
-
-        model_name = MODEL_MAP["pro"]
-        cached = CachedContent.create(
-            model_name=model_name,
-            system_instruction=system_instruction,
-        )
-        logger.info(
-            "Context cache created",
-            extra={"cache_name": cached.name},
-        )
-        return cached
-
-    def generate_with_cache(
-        self, cached_content: Any, user_prompt: str, model_tier: str
-    ) -> str:
-        self._init_vertex()
-        from vertexai.generative_models import GenerativeModel
-
-        def _call() -> str:
-            model = GenerativeModel.from_cached_content(cached_content)
-            response = model.generate_content(user_prompt)
-            return response.text
-
-        return with_retry(_call)
-
-    def delete_cache(self, cached_content: Any) -> None:
-        try:
-            cached_content.delete()
-            logger.info(
-                "Context cache deleted",
-                extra={"cache_name": cached_content.name},
-            )
-        except Exception:
-            logger.warning("Failed to delete context cache", exc_info=True)
-
 
 class StubGenerationStrategy(GenerationStrategy):
     """Returns canned responses for testing."""
@@ -123,9 +64,6 @@ class StubGenerationStrategy(GenerationStrategy):
     def __init__(self, responses: dict[str, str] | None = None) -> None:
         self._responses = responses or {}
         self._calls: list[dict[str, str]] = []
-        self._cache_calls: list[str] = []
-        self._cache_generate_calls: list[dict[str, str]] = []
-        self._cache_delete_calls: list[object] = []
 
     def generate(self, system_prompt: str, model_tier: str) -> str:
         self._calls.append(
@@ -134,23 +72,6 @@ class StubGenerationStrategy(GenerationStrategy):
         if model_tier in self._responses:
             return self._responses[model_tier]
         return f"[Stub article generated with {model_tier} model]"
-
-    def create_cache(self, system_instruction: str) -> Any:
-        self._cache_calls.append(system_instruction)
-        return "stub-cache-handle"
-
-    def generate_with_cache(
-        self, cached_content: Any, user_prompt: str, model_tier: str
-    ) -> str:
-        self._cache_generate_calls.append(
-            {"user_prompt": user_prompt, "model_tier": model_tier}
-        )
-        if model_tier in self._responses:
-            return self._responses[model_tier]
-        return f"[Stub cached article generated with {model_tier} model]"
-
-    def delete_cache(self, cached_content: Any) -> None:
-        self._cache_delete_calls.append(cached_content)
 
     @property
     def calls(self) -> list[dict[str, str]]:

@@ -4,7 +4,6 @@ import { useQuote } from '../hooks/useQuote';
 import { usePromptValidation } from '../hooks/usePromptValidation';
 import { OrbInput } from './OrbInput';
 import { PaymentForm } from './PaymentForm';
-import { QuotePreview } from './QuotePreview';
 import { Confirmation } from './Confirmation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -92,18 +91,12 @@ export function PromptFlow() {
         isProceedDisabled={!quote || isLoading}
         isReleasing={isReleasing}
         quote={quote}
+        weightMultiplier={flow.weightMultiplier}
+        onWeightMultiplierChange={(m) =>
+          dispatch({ type: 'SET_WEIGHT_MULTIPLIER', multiplier: m })
+        }
         isQuoteLoading={isLoading}
       />
-
-      {quote && (
-        <QuotePreview
-          quote={quote}
-          weightMultiplier={flow.weightMultiplier}
-          onWeightMultiplierChange={(m) =>
-            dispatch({ type: 'SET_WEIGHT_MULTIPLIER', multiplier: m })
-          }
-        />
-      )}
 
       {quoteError && (
         <Alert variant="destructive" className="max-w-md">

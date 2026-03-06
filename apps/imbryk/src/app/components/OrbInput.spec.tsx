@@ -23,6 +23,7 @@ describe('OrbInput', () => {
     isProceedDisabled: true,
     quote: null as QuoteResponse | null,
     isQuoteLoading: false,
+    weightMultiplier: 1,
   };
 
   beforeEach(() => {
@@ -123,5 +124,112 @@ describe('OrbInput', () => {
     );
     const front = container.querySelector('.orb-face--front');
     expect(front?.classList.contains('orb--divining')).toBe(true);
+  });
+
+  // --- Editorial boost stepper ---
+
+  it('should show stepper when flipped and onWeightMultiplierChange provided', () => {
+    render(
+      <OrbInput
+        {...defaultProps}
+        quote={mockQuote}
+        weightMultiplier={1}
+        onWeightMultiplierChange={vi.fn()}
+      />
+    );
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(screen.getByRole('group', { name: /editorial boost/i })).toBeTruthy();
+  });
+
+  it('should not show stepper when onWeightMultiplierChange is not provided', () => {
+    render(<OrbInput {...defaultProps} quote={mockQuote} weightMultiplier={1} />);
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(screen.queryByRole('group', { name: /editorial boost/i })).toBeNull();
+  });
+
+  it('should call onWeightMultiplierChange with incremented value on + click', () => {
+    const onChange = vi.fn();
+    render(
+      <OrbInput
+        {...defaultProps}
+        quote={mockQuote}
+        weightMultiplier={1}
+        onWeightMultiplierChange={onChange}
+      />
+    );
+    act(() => { vi.advanceTimersByTime(300); });
+    fireEvent.click(screen.getByRole('button', { name: /increase boost multiplier/i }));
+    expect(onChange).toHaveBeenCalledWith(2);
+  });
+
+  it('should call onWeightMultiplierChange with decremented value on − click', () => {
+    const onChange = vi.fn();
+    render(
+      <OrbInput
+        {...defaultProps}
+        quote={mockQuote}
+        weightMultiplier={5}
+        onWeightMultiplierChange={onChange}
+      />
+    );
+    act(() => { vi.advanceTimersByTime(300); });
+    fireEvent.click(screen.getByRole('button', { name: /decrease boost multiplier/i }));
+    expect(onChange).toHaveBeenCalledWith(4);
+  });
+
+  it('should disable − button at minimum multiplier', () => {
+    render(
+      <OrbInput
+        {...defaultProps}
+        quote={mockQuote}
+        weightMultiplier={1}
+        onWeightMultiplierChange={vi.fn()}
+      />
+    );
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(
+      screen.getByRole('button', { name: /decrease boost multiplier/i })
+    ).toBeDisabled();
+  });
+
+  it('should disable + button at maximum multiplier', () => {
+    render(
+      <OrbInput
+        {...defaultProps}
+        quote={mockQuote}
+        weightMultiplier={100}
+        onWeightMultiplierChange={vi.fn()}
+      />
+    );
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(
+      screen.getByRole('button', { name: /increase boost multiplier/i })
+    ).toBeDisabled();
+  });
+
+  it('should show cost breakdown when multiplier > 1', () => {
+    render(
+      <OrbInput
+        {...defaultProps}
+        quote={mockQuote}
+        weightMultiplier={5}
+        onWeightMultiplierChange={vi.fn()}
+      />
+    );
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(screen.getByText(/5× — \$2\.00 × 5 = \$10\.00/)).toBeTruthy();
+  });
+
+  it('should not show cost breakdown when multiplier is 1', () => {
+    render(
+      <OrbInput
+        {...defaultProps}
+        quote={mockQuote}
+        weightMultiplier={1}
+        onWeightMultiplierChange={vi.fn()}
+      />
+    );
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(screen.queryByText(/×.*=.*\$/)).toBeNull();
   });
 });

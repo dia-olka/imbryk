@@ -2,7 +2,7 @@ import { useState, useId, useEffect, useRef, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { usePromptValidation } from '../hooks/usePromptValidation';
-import { PROMPT_MAX } from '../constants';
+import { PROMPT_MAX, WEIGHT_MULTIPLIER_MIN, WEIGHT_MULTIPLIER_MAX } from '../constants';
 import type { QuoteResponse } from '../api/types';
 import { Orb3D } from './Orb3D';
 import { OrbFrontFace } from './OrbFrontFace';
@@ -19,6 +19,8 @@ interface OrbInputProps {
   isReleasing?: boolean;
   quote: QuoteResponse | null;
   isQuoteLoading: boolean;
+  weightMultiplier: number;
+  onWeightMultiplierChange?: (multiplier: number) => void;
 }
 
 export function OrbInput({
@@ -31,6 +33,8 @@ export function OrbInput({
   isReleasing = false,
   quote,
   isQuoteLoading,
+  weightMultiplier,
+  onWeightMultiplierChange,
 }: OrbInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -38,6 +42,8 @@ export function OrbInput({
   const textareaId = useId();
   const validationId = useId();
   const charCountId = useId();
+  const multiplierId = useId();
+  const multiplierLabelId = useId();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const prevQuoteRef = useRef<QuoteResponse | null>(null);
 
@@ -52,6 +58,8 @@ export function OrbInput({
       setIsFlipped(false);
       prevQuoteRef.current = null;
     }
+
+    return undefined;
   }, [quote, isQuoteLoading]);
 
   const handleFlipBack = useCallback(() => {
@@ -62,6 +70,25 @@ export function OrbInput({
       el?.focus();
     }, 850);
   }, [textareaId]);
+
+  const handleStepDown = () => {
+    onWeightMultiplierChange?.(Math.max(WEIGHT_MULTIPLIER_MIN, weightMultiplier - 1));
+  };
+
+  const handleStepUp = () => {
+    onWeightMultiplierChange?.(Math.min(WEIGHT_MULTIPLIER_MAX, weightMultiplier + 1));
+  };
+
+  const handleMultiplierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!onWeightMultiplierChange) return;
+    const parsed = parseInt(e.target.value, 10);
+    if (!isNaN(parsed) && parsed >= WEIGHT_MULTIPLIER_MIN && parsed <= WEIGHT_MULTIPLIER_MAX) {
+      onWeightMultiplierChange(parsed);
+    }
+  };
+
+  const showMultiplier = isFlipped && quote && onWeightMultiplierChange;
+  const totalCost = quote ? quote.estimated_cost * weightMultiplier : 0;
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -88,15 +115,12 @@ export function OrbInput({
           onSubmit={onSubmit}
           isSubmitDisabled={isSubmitDisabled}
         />
-        <OrbBackFace quote={quote} isVisible={isFlipped} />
+        <OrbBackFace quote={quote} isVisible={isFlipped} weightMultiplier={weightMultiplier} />
       </Orb3D>
 
-      <div
-        aria-live="polite"
-        className="sr-only"
-      >
+      <div aria-live="polite" className="sr-only">
         {isFlipped && quote
-          ? `Quote ready: $${quote.estimated_cost.toFixed(2)} for ${quote.newspapers_reached} newspaper${quote.newspapers_reached !== 1 ? 's' : ''}: ${quote.newspapers.map((n) => NEWSPAPER_DISPLAY[n.newspaper_id]?.paperName ?? n.newspaper_id).join(', ')}`
+          ? `Quote ready: $${totalCost.toFixed(2)} for ${quote.newspapers_reached} newspaper${quote.newspapers_reached !== 1 ? 's' : ''}: ${quote.newspapers.map((n) => NEWSPAPER_DISPLAY[n.newspaper_id]?.paperName ?? n.newspaper_id).join(', ')}`
           : ''}
       </div>
 
@@ -120,14 +144,78 @@ export function OrbInput({
       )}
 
       {isFlipped && quote ? (
-        <Button
-          onClick={onProceed}
-          disabled={isProceedDisabled}
-          size="lg"
-          className="min-w-[200px]"
-        >
-          Proceed to payment — ${quote.estimated_cost.toFixed(2)}
-        </Button>
+        <>
+          {onWeightMultiplierChange && (
+            <div
+              role="group"
+              aria-labelledby={multiplierLabelId}
+              className="flex flex-col items-center gap-1.5"
+            >
+              <p
+                id={multiplierLabelId}
+                className="text-xs text-text-muted font-sans uppercase tracking-wide"
+              >
+                Editorial boost
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleStepDown}
+                  disabled={weightMultiplier <= WEIGHT_MULTIPLIER_MIN}
+                  aria-label="Decrease boost multiplier"
+                  className="w-8 h-8 rounded-full border border-input flex items-center justify-center
+                             text-lg font-light font-sans leading-none
+                             hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                             disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  −
+                </button>
+                <label htmlFor={multiplierId} className="sr-only">
+                  Boost multiplier (1–100)
+                </label>
+                <input
+                  id={multiplierId}
+                  type="number"
+                  inputMode="numeric"
+                  min={WEIGHT_MULTIPLIER_MIN}
+                  max={WEIGHT_MULTIPLIER_MAX}
+                  step={1}
+                  value={weightMultiplier}
+                  onChange={handleMultiplierInputChange}
+                  onFocus={(e) => e.target.select()}
+                  className="w-14 h-8 rounded-md border border-input text-center text-sm font-sans
+                             focus:outline-none focus:ring-2 focus:ring-primary
+                             [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleStepUp}
+                  disabled={weightMultiplier >= WEIGHT_MULTIPLIER_MAX}
+                  aria-label="Increase boost multiplier"
+                  className="w-8 h-8 rounded-full border border-input flex items-center justify-center
+                             text-lg font-light font-sans leading-none
+                             hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                             disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  +
+                </button>
+              </div>
+              {weightMultiplier > 1 && (
+                <p className="text-xs text-text-muted font-sans" aria-live="polite">
+                  {weightMultiplier}× — ${quote.estimated_cost.toFixed(2)} × {weightMultiplier} = ${totalCost.toFixed(2)}
+                </p>
+              )}
+            </div>
+          )}
+          <Button
+            onClick={onProceed}
+            disabled={isProceedDisabled}
+            size="lg"
+            className="min-w-[200px]"
+          >
+            Proceed to payment — ${totalCost.toFixed(2)}
+          </Button>
+        </>
       ) : (
         <Button
           onClick={onSubmit}

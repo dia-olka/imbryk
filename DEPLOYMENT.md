@@ -718,7 +718,6 @@ gcloud run jobs create newsroom-director \
   --set-env-vars=R2_PUBLIC_URL=https://editions.yourdomain.com \
   --set-env-vars=ENABLE_IMAGES=true \
   --set-env-vars=ENABLE_VALIDATION=true \
-  --set-env-vars=ENABLE_CACHING=true \
   --set-env-vars=SENTRY_DSN="" \
   --memory=4Gi \
   --cpu=2 \
@@ -940,7 +939,6 @@ These are all the configuration values used by the backend services. Most are st
 | `R2_PUBLIC_URL`          | Env var | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to generate public image URLs |
 | `ENABLE_IMAGES`          | Env var | Generate article and hero images via Imagen (default: `true`)                                                     |
 | `ENABLE_VALIDATION`      | Env var | Check prompt coherence before generating (default: `true`)                                                        |
-| `ENABLE_CACHING`         | Env var | Cache AI context to save money (default: `true`)                                                                  |
 | `GENERATION_MODEL_PRO`   | Env var | Gemini model for premium newspaper generation (default: `gemini-3.1-pro-preview`)                                 |
 | `GENERATION_MODEL_FLASH` | Env var | Gemini model for standard newspaper generation (default: `gemini-2.0-flash`)                                      |
 | `IMAGE_GENERATION_MODEL` | Env var | Vertex AI Imagen model for article images (default: `gemini-3-pro-image-preview`)                                 |
