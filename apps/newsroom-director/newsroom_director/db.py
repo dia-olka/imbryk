@@ -63,7 +63,7 @@ class PaymentRefRow(Base):
     __tablename__ = "payment_refs"
 
     id = Column(String(36), primary_key=True, default=_new_uuid)
-    braintree_transaction_id = Column(
+    provider_transaction_id = Column(
         String(255), nullable=False, unique=True
     )
     amount = Column(Float, nullable=False)
@@ -157,7 +157,7 @@ def fetch_unprocessed_prompts(session: Session) -> list[PromptRecord]:
             pay_row = (
                 session.query(PaymentRefRow.amount)
                 .filter(
-                    PaymentRefRow.braintree_transaction_id == payment_ref
+                    PaymentRefRow.provider_transaction_id == payment_ref
                 )
                 .first()
             )

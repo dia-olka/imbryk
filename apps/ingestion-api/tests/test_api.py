@@ -1,5 +1,6 @@
 """Integration tests for API endpoints."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 
@@ -83,7 +84,7 @@ def test_quote_rate_limiting(client):
     # This is acceptable — SlowAPI may not enforce in test mode.
 
 
-# --- Payment create-transaction tests ---
+# --- Checkout session tests ---
 
 
 def _create_quote(client):
@@ -96,127 +97,97 @@ def _create_quote(client):
     return response.json()
 
 
-def _mock_gateway_success():
-    """Return a mock gateway whose transaction.sale() succeeds."""
-    mock_gw = MagicMock()
-    mock_result = MagicMock()
-    mock_result.is_success = True
-    mock_result.transaction.id = "test_txn_123"
-    mock_gw.transaction.sale.return_value = mock_result
-    return mock_gw
+def _mock_stripe_session(session_id="cs_test_123", url="https://checkout.stripe.com/test"):
+    """Return a mock Stripe checkout session."""
+    mock_session = MagicMock()
+    mock_session.id = session_id
+    mock_session.url = url
+    return mock_session
 
 
-def _mock_gateway_failure(message="Card declined"):
-    """Return a mock gateway whose transaction.sale() fails."""
-    mock_gw = MagicMock()
-    mock_result = MagicMock()
-    mock_result.is_success = False
-    mock_result.message = message
-    mock_gw.transaction.sale.return_value = mock_result
-    return mock_gw
-
-
-def test_create_transaction_success(client, db_session):
-    """Happy path: create-transaction with valid quote + nonce should return accepted."""
-    from ingestion_api.models import PaymentRef, Prompt
-
+def test_create_checkout_session_success(client, db_session):
+    """Happy path: create-checkout-session with valid quote should return checkout_url."""
     quote = _create_quote(client)
-    mock_gw = _mock_gateway_success()
+    mock_session = _mock_stripe_session()
 
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+    with patch("stripe.checkout.Session.create", return_value=mock_session):
         response = client.post(
-            "/payments/create-transaction",
-            json={"quote_id": quote["quote_id"], "nonce": "fake-nonce"},
+            "/payments/create-checkout-session",
+            json={"quote_id": quote["quote_id"]},
         )
 
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "accepted"
-    assert data["prompt_id"] == quote["quote_id"]
-    assert len(data["categories"]) > 0
-    assert data["newspapers_reached"] > 0
-
-    # Verify amount passed to Braintree was from DB, not client.
-    sale_args = mock_gw.transaction.sale.call_args[0][0]
-    assert sale_args["amount"] == f"{quote['estimated_cost']:.2f}"
-
-    # DB changes
-    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
-    assert prompt.status == "accepted"
-    assert prompt.payment_ref == "test_txn_123"
-    assert prompt.weight_multiplier == 1
-
-    payment = db_session.query(PaymentRef).filter_by(braintree_transaction_id="test_txn_123").first()
-    assert payment is not None
-    assert payment.status == "settled"
-    assert payment.amount == quote["estimated_cost"]
+    assert data["checkout_url"] == "https://checkout.stripe.com/test"
 
 
-def test_create_transaction_invalid_quote(client):
-    """create-transaction with non-existent quote_id should return 404."""
-    mock_gw = _mock_gateway_success()
-
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+def test_create_checkout_session_invalid_quote(client):
+    """create-checkout-session with non-existent quote_id should return 404."""
+    with patch("stripe.checkout.Session.create"):
         response = client.post(
-            "/payments/create-transaction",
-            json={"quote_id": "non-existent-id", "nonce": "fake-nonce"},
+            "/payments/create-checkout-session",
+            json={"quote_id": "non-existent-id"},
         )
 
     assert response.status_code == 404
     assert "Quote not found" in response.json()["detail"]
 
 
-def test_create_transaction_already_paid(client, db_session):
-    """create-transaction on an already-accepted quote should return 409."""
+def test_create_checkout_session_already_paid(client, db_session):
+    """create-checkout-session on an already-accepted quote should return 409."""
+    from ingestion_api.models import Prompt
 
     quote = _create_quote(client)
-    mock_gw = _mock_gateway_success()
 
-    # First payment succeeds
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        response = client.post(
-            "/payments/create-transaction",
-            json={"quote_id": quote["quote_id"], "nonce": "fake-nonce"},
-        )
-    assert response.status_code == 200
+    # Manually mark the prompt as accepted
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+    prompt.status = "accepted"
+    db_session.commit()
 
-    # Second attempt should be rejected
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+    with patch("stripe.checkout.Session.create"):
         response = client.post(
-            "/payments/create-transaction",
-            json={"quote_id": quote["quote_id"], "nonce": "fake-nonce-2"},
+            "/payments/create-checkout-session",
+            json={"quote_id": quote["quote_id"]},
         )
 
     assert response.status_code == 409
     assert "already processed" in response.json()["detail"]
 
 
-def test_create_transaction_braintree_failure(client):
-    """create-transaction with Braintree failure should return 402."""
-    quote = _create_quote(client)
-    mock_gw = _mock_gateway_failure("Do Not Honor")
+def test_create_checkout_session_stripe_error(client):
+    """create-checkout-session with Stripe error should return 502."""
+    import stripe
 
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+    quote = _create_quote(client)
+
+    with patch(
+        "stripe.checkout.Session.create",
+        side_effect=stripe.StripeError("Service unavailable"),
+    ):
         response = client.post(
-            "/payments/create-transaction",
-            json={"quote_id": quote["quote_id"], "nonce": "bad-nonce"},
+            "/payments/create-checkout-session",
+            json={"quote_id": quote["quote_id"]},
         )
 
-    assert response.status_code == 402
-    assert "Do Not Honor" in response.json()["detail"]
+    assert response.status_code == 502
+    assert "Payment service error" in response.json()["detail"]
 
 
-def test_create_transaction_prompt_stays_quoted_on_failure(client, db_session):
-    """On Braintree failure, prompt should remain in 'quoted' status."""
+def test_create_checkout_session_prompt_stays_quoted_on_failure(client, db_session):
+    """On Stripe error, prompt should remain in 'quoted' status."""
+    import stripe
+
     from ingestion_api.models import Prompt
 
     quote = _create_quote(client)
-    mock_gw = _mock_gateway_failure()
 
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+    with patch(
+        "stripe.checkout.Session.create",
+        side_effect=stripe.StripeError("Error"),
+    ):
         client.post(
-            "/payments/create-transaction",
-            json={"quote_id": quote["quote_id"], "nonce": "bad-nonce"},
+            "/payments/create-checkout-session",
+            json={"quote_id": quote["quote_id"]},
         )
 
     prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
@@ -224,109 +195,151 @@ def test_create_transaction_prompt_stays_quoted_on_failure(client, db_session):
     assert prompt.payment_ref is None
 
 
-# --- Webhook tests (dispute & disbursement) ---
+def test_create_checkout_session_passes_correct_amount(client, db_session):
+    """Stripe should receive the amount in cents from the server-side quote."""
+    quote = _create_quote(client)
+    mock_session = _mock_stripe_session()
+
+    with patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create:
+        client.post(
+            "/payments/create-checkout-session",
+            json={"quote_id": quote["quote_id"]},
+        )
+
+    call_kwargs = mock_create.call_args[1]
+    line_item = call_kwargs["line_items"][0]
+    expected_cents = int(quote["estimated_cost"] * 100)
+    assert line_item["price_data"]["unit_amount"] == expected_cents
+    assert line_item["price_data"]["currency"] == "usd"
+    assert call_kwargs["metadata"]["quote_id"] == quote["quote_id"]
+
+
+# --- Stripe Webhook tests ---
+
+
+def _build_webhook_event(event_type, data_object):
+    """Build a dict mimicking a Stripe Event."""
+    return {
+        "type": event_type,
+        "data": {"object": data_object},
+    }
+
+
+def _post_webhook(client, event, sig="test_sig"):
+    """Post a webhook with the given event, mocking signature verification."""
+    with patch(
+        "ingestion_api.main.verify_webhook",
+        return_value=event,
+    ):
+        return client.post(
+            "/payments/stripe-webhook",
+            content=json.dumps(event).encode(),
+            headers={"stripe-signature": sig},
+        )
 
 
 def _create_paid_quote(client, db_session):
-    """Helper: create a quote and pay for it, return (quote_data, mock_gw)."""
+    """Helper: create a quote and simulate successful checkout via webhook."""
     quote = _create_quote(client)
-    mock_gw = _mock_gateway_success()
 
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        response = client.post(
-            "/payments/create-transaction",
-            json={"quote_id": quote["quote_id"], "nonce": "fake-nonce"},
-        )
-    assert response.status_code == 200
-    return quote, mock_gw
-
-
-def _make_dispute_notification(kind, transaction_id):
-    """Build a mock Braintree dispute notification."""
-    mock_notification = MagicMock()
-    mock_notification.kind = kind
-    mock_dispute = MagicMock()
-    mock_dispute.transaction.id = transaction_id
-    mock_notification.dispute = mock_dispute
-    return mock_notification
+    event = _build_webhook_event(
+        "checkout.session.completed",
+        {
+            "payment_intent": "pi_test_123",
+            "amount_total": int(quote["estimated_cost"] * 100),
+            "metadata": {
+                "quote_id": quote["quote_id"],
+                "weight_multiplier": "1",
+            },
+        },
+    )
+    _post_webhook(client, event)
+    return quote
 
 
-def test_webhook_dispute_lost_reverts_prompt(client, db_session):
-    """dispute_lost should revert prompt to 'quoted' and payment to 'disputed_lost'."""
+def test_webhook_checkout_completed_accepts_prompt(client, db_session):
+    """checkout.session.completed should mark prompt as accepted and create PaymentRef."""
     from ingestion_api.models import PaymentRef, Prompt
 
-    quote, mock_gw = _create_paid_quote(client, db_session)
+    quote = _create_quote(client)
 
-    mock_gw.webhook_notification.parse.return_value = _make_dispute_notification(
-        "dispute_lost", "test_txn_123"
+    event = _build_webhook_event(
+        "checkout.session.completed",
+        {
+            "payment_intent": "pi_test_456",
+            "amount_total": int(quote["estimated_cost"] * 100),
+            "metadata": {
+                "quote_id": quote["quote_id"],
+                "weight_multiplier": "1",
+            },
+        },
     )
-
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        response = client.post(
-            "/payments/braintree-webhook",
-            json={"bt_signature": "sig", "bt_payload": "payload"},
-        )
-
+    response = _post_webhook(client, event)
     assert response.status_code == 200
-
-    payment = db_session.query(PaymentRef).filter_by(braintree_transaction_id="test_txn_123").first()
-    assert payment.status == "disputed_lost"
 
     prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
-    assert prompt.status == "quoted"
-    assert prompt.payment_ref is None
+    assert prompt.status == "accepted"
+    assert prompt.payment_ref == "pi_test_456"
+    assert prompt.weight_multiplier == 1
 
-
-def test_webhook_dispute_won_restores_settled(client, db_session):
-    """dispute_won should restore payment status to 'settled'."""
-    from ingestion_api.models import PaymentRef
-
-    quote, mock_gw = _create_paid_quote(client, db_session)
-
-    # First simulate dispute opened
-    mock_gw.webhook_notification.parse.return_value = _make_dispute_notification(
-        "dispute_opened", "test_txn_123"
-    )
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        client.post("/payments/braintree-webhook", json={"bt_signature": "s", "bt_payload": "p"})
-
-    payment = db_session.query(PaymentRef).filter_by(braintree_transaction_id="test_txn_123").first()
-    assert payment.status == "disputed"
-
-    # Now simulate dispute won
-    mock_gw.webhook_notification.parse.return_value = _make_dispute_notification(
-        "dispute_won", "test_txn_123"
-    )
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        response = client.post(
-            "/payments/braintree-webhook",
-            json={"bt_signature": "sig", "bt_payload": "payload"},
-        )
-
-    assert response.status_code == 200
-    db_session.refresh(payment)
+    payment = db_session.query(PaymentRef).filter_by(provider_transaction_id="pi_test_456").first()
+    assert payment is not None
     assert payment.status == "settled"
+    assert payment.amount == quote["estimated_cost"]
 
 
-def test_webhook_dispute_opened_flags_disputed(client, db_session):
-    """dispute_opened should set payment status to 'disputed' without reverting prompt."""
+def test_webhook_checkout_completed_idempotent(client, db_session):
+    """Sending checkout.session.completed twice should not fail."""
+    quote = _create_quote(client)
+
+    event = _build_webhook_event(
+        "checkout.session.completed",
+        {
+            "payment_intent": "pi_test_789",
+            "amount_total": int(quote["estimated_cost"] * 100),
+            "metadata": {
+                "quote_id": quote["quote_id"],
+                "weight_multiplier": "1",
+            },
+        },
+    )
+    response1 = _post_webhook(client, event)
+    assert response1.status_code == 200
+
+    response2 = _post_webhook(client, event)
+    assert response2.status_code == 200
+    assert response2.json()["detail"] == "already processed"
+
+
+def test_webhook_checkout_missing_quote_id(client):
+    """checkout.session.completed without quote_id in metadata should be ignored."""
+    event = _build_webhook_event(
+        "checkout.session.completed",
+        {
+            "payment_intent": "pi_test_000",
+            "amount_total": 500,
+            "metadata": {},
+        },
+    )
+    response = _post_webhook(client, event)
+    assert response.status_code == 200
+    assert response.json()["detail"] == "ignored"
+
+
+def test_webhook_dispute_created_flags_disputed(client, db_session):
+    """charge.dispute.created should set payment status to 'disputed'."""
     from ingestion_api.models import PaymentRef, Prompt
 
-    quote, mock_gw = _create_paid_quote(client, db_session)
+    quote = _create_paid_quote(client, db_session)
 
-    mock_gw.webhook_notification.parse.return_value = _make_dispute_notification(
-        "dispute_opened", "test_txn_123"
+    event = _build_webhook_event(
+        "charge.dispute.created",
+        {"payment_intent": "pi_test_123"},
     )
-
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        response = client.post(
-            "/payments/braintree-webhook",
-            json={"bt_signature": "sig", "bt_payload": "payload"},
-        )
-
+    response = _post_webhook(client, event)
     assert response.status_code == 200
 
-    payment = db_session.query(PaymentRef).filter_by(braintree_transaction_id="test_txn_123").first()
+    payment = db_session.query(PaymentRef).filter_by(provider_transaction_id="pi_test_123").first()
     assert payment.status == "disputed"
 
     # Prompt should still be accepted (not reverted yet)
@@ -334,112 +347,140 @@ def test_webhook_dispute_opened_flags_disputed(client, db_session):
     assert prompt.status == "accepted"
 
 
-def test_webhook_dispute_unknown_transaction(client):
-    """Dispute for unknown transaction should return 200 (don't retry)."""
-    mock_gw = MagicMock()
-    mock_gw.webhook_notification.parse.return_value = _make_dispute_notification(
-        "dispute_opened", "unknown_txn_999"
+def test_webhook_dispute_closed_lost_reverts_prompt(client, db_session):
+    """charge.dispute.closed with status=lost should revert prompt to 'quoted'."""
+    from ingestion_api.models import PaymentRef, Prompt
+
+    quote = _create_paid_quote(client, db_session)
+
+    event = _build_webhook_event(
+        "charge.dispute.closed",
+        {"payment_intent": "pi_test_123", "status": "lost"},
     )
+    response = _post_webhook(client, event)
+    assert response.status_code == 200
 
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        response = client.post(
-            "/payments/braintree-webhook",
-            json={"bt_signature": "sig", "bt_payload": "payload"},
-        )
+    payment = db_session.query(PaymentRef).filter_by(provider_transaction_id="pi_test_123").first()
+    assert payment.status == "disputed_lost"
 
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+    assert prompt.status == "quoted"
+    assert prompt.payment_ref is None
+
+
+def test_webhook_dispute_closed_won_restores_settled(client, db_session):
+    """charge.dispute.closed with status=won should restore payment to 'settled'."""
+    from ingestion_api.models import PaymentRef
+
+    _create_paid_quote(client, db_session)
+
+    # First flag as disputed
+    event_opened = _build_webhook_event(
+        "charge.dispute.created",
+        {"payment_intent": "pi_test_123"},
+    )
+    _post_webhook(client, event_opened)
+
+    payment = db_session.query(PaymentRef).filter_by(provider_transaction_id="pi_test_123").first()
+    assert payment.status == "disputed"
+
+    # Now close as won
+    event_won = _build_webhook_event(
+        "charge.dispute.closed",
+        {"payment_intent": "pi_test_123", "status": "won"},
+    )
+    response = _post_webhook(client, event_won)
+    assert response.status_code == 200
+
+    db_session.refresh(payment)
+    assert payment.status == "settled"
+
+
+def test_webhook_dispute_unknown_transaction(client):
+    """Dispute for unknown payment intent should return 200 (don't retry)."""
+    event = _build_webhook_event(
+        "charge.dispute.created",
+        {"payment_intent": "pi_unknown_999"},
+    )
+    response = _post_webhook(client, event)
     assert response.status_code == 200
     assert "unknown transaction" in response.json()["detail"]
 
 
-def test_webhook_disbursement_returns_ok(client):
-    """Disbursement webhook should return 200 (informational only)."""
-    mock_gw = MagicMock()
-    mock_notification = MagicMock()
-    mock_notification.kind = "disbursement"
-    mock_disbursement = MagicMock()
-    mock_disbursement.id = "disbursement_001"
-    mock_disbursement.success = True
-    mock_notification.disbursement = mock_disbursement
-    mock_gw.webhook_notification.parse.return_value = mock_notification
-
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        response = client.post(
-            "/payments/braintree-webhook",
-            json={"bt_signature": "sig", "bt_payload": "payload"},
-        )
-
-    assert response.status_code == 200
-    assert response.json()["detail"] == "ok"
-
-
 def test_webhook_unknown_event_ignored(client):
-    """Unknown webhook event kind should return 200 with 'ignored'."""
-    mock_gw = MagicMock()
-    mock_notification = MagicMock()
-    mock_notification.kind = "subscription_charged_successfully"
-    mock_gw.webhook_notification.parse.return_value = mock_notification
-
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
-        response = client.post(
-            "/payments/braintree-webhook",
-            json={"bt_signature": "sig", "bt_payload": "payload"},
-        )
-
+    """Unknown webhook event type should return 200 with 'ignored'."""
+    event = _build_webhook_event(
+        "invoice.payment_succeeded",
+        {"id": "inv_123"},
+    )
+    response = _post_webhook(client, event)
     assert response.status_code == 200
     assert response.json()["detail"] == "ignored"
+
+
+def test_webhook_invalid_signature(client):
+    """Invalid signature should return 400."""
+    with patch(
+        "ingestion_api.main.verify_webhook",
+        side_effect=Exception("Invalid signature"),
+    ):
+        response = client.post(
+            "/payments/stripe-webhook",
+            content=b"{}",
+            headers={"stripe-signature": "bad_sig"},
+        )
+
+    assert response.status_code == 400
+    assert "Invalid signature" in response.json()["detail"]
 
 
 # --- Weight multiplier tests ---
 
 
-def test_create_transaction_with_multiplier(client, db_session):
-    """Multiplier should scale the charged amount and be persisted."""
-    from ingestion_api.models import PaymentRef, Prompt
+def test_create_checkout_session_with_multiplier(client, db_session):
+    """Multiplier should scale the charged amount and be stored on the prompt."""
+    from ingestion_api.models import Prompt
 
     quote = _create_quote(client)
-    mock_gw = _mock_gateway_success()
+    mock_session = _mock_stripe_session()
     multiplier = 10
 
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+    with patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create:
         response = client.post(
-            "/payments/create-transaction",
+            "/payments/create-checkout-session",
             json={
                 "quote_id": quote["quote_id"],
-                "nonce": "fake-nonce",
                 "weight_multiplier": multiplier,
             },
         )
 
     assert response.status_code == 200
 
-    # Braintree should be charged base × multiplier
-    expected_amount = quote["estimated_cost"] * multiplier
-    sale_args = mock_gw.transaction.sale.call_args[0][0]
-    assert sale_args["amount"] == f"{expected_amount:.2f}"
+    # Stripe should be charged base × multiplier in cents
+    call_kwargs = mock_create.call_args[1]
+    line_item = call_kwargs["line_items"][0]
+    expected_cents = int(quote["estimated_cost"] * multiplier * 100)
+    assert line_item["price_data"]["unit_amount"] == expected_cents
 
-    # DB should store the multiplied amount and the multiplier
+    # Multiplier should be stored on the prompt
     prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
-    assert prompt.amount == expected_amount
     assert prompt.weight_multiplier == multiplier
-    assert prompt.status == "accepted"
 
-    payment = db_session.query(PaymentRef).filter_by(
-        braintree_transaction_id="test_txn_123"
-    ).first()
-    assert payment.amount == expected_amount
+    # Metadata should include the multiplier
+    assert call_kwargs["metadata"]["weight_multiplier"] == str(multiplier)
 
 
-def test_create_transaction_multiplier_defaults_to_one(client, db_session):
+def test_create_checkout_session_multiplier_defaults_to_one(client, db_session):
     """Omitting weight_multiplier should default to 1."""
     from ingestion_api.models import Prompt
 
     quote = _create_quote(client)
-    mock_gw = _mock_gateway_success()
+    mock_session = _mock_stripe_session()
 
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+    with patch("stripe.checkout.Session.create", return_value=mock_session):
         response = client.post(
-            "/payments/create-transaction",
-            json={"quote_id": quote["quote_id"], "nonce": "fake-nonce"},
+            "/payments/create-checkout-session",
+            json={"quote_id": quote["quote_id"]},
         )
 
     assert response.status_code == 200
@@ -447,63 +488,62 @@ def test_create_transaction_multiplier_defaults_to_one(client, db_session):
     assert prompt.weight_multiplier == 1
 
 
-def test_create_transaction_multiplier_zero_rejected(client):
+def test_create_checkout_session_multiplier_zero_rejected(client):
     """weight_multiplier=0 should be rejected by Pydantic (ge=1)."""
     quote = _create_quote(client)
 
     response = client.post(
-        "/payments/create-transaction",
-        json={"quote_id": quote["quote_id"], "nonce": "fake-nonce", "weight_multiplier": 0},
+        "/payments/create-checkout-session",
+        json={"quote_id": quote["quote_id"], "weight_multiplier": 0},
     )
     assert response.status_code == 422
 
 
-def test_create_transaction_multiplier_negative_rejected(client):
+def test_create_checkout_session_multiplier_negative_rejected(client):
     """Negative weight_multiplier should be rejected."""
     quote = _create_quote(client)
 
     response = client.post(
-        "/payments/create-transaction",
-        json={"quote_id": quote["quote_id"], "nonce": "fake-nonce", "weight_multiplier": -5},
+        "/payments/create-checkout-session",
+        json={"quote_id": quote["quote_id"], "weight_multiplier": -5},
     )
     assert response.status_code == 422
 
 
-def test_create_transaction_multiplier_too_high_rejected(client):
+def test_create_checkout_session_multiplier_too_high_rejected(client):
     """weight_multiplier > 100 should be rejected."""
     quote = _create_quote(client)
 
     response = client.post(
-        "/payments/create-transaction",
-        json={"quote_id": quote["quote_id"], "nonce": "fake-nonce", "weight_multiplier": 101},
+        "/payments/create-checkout-session",
+        json={"quote_id": quote["quote_id"], "weight_multiplier": 101},
     )
     assert response.status_code == 422
 
 
-def test_create_transaction_multiplier_float_rejected(client):
+def test_create_checkout_session_multiplier_float_rejected(client):
     """Non-integer weight_multiplier (e.g. 1.5) should be rejected."""
     quote = _create_quote(client)
 
     response = client.post(
-        "/payments/create-transaction",
-        json={"quote_id": quote["quote_id"], "nonce": "fake-nonce", "weight_multiplier": 1.5},
+        "/payments/create-checkout-session",
+        json={"quote_id": quote["quote_id"], "weight_multiplier": 1.5},
     )
     assert response.status_code == 422
 
 
-def test_create_transaction_multiplier_max_accepted(client, db_session):
+def test_create_checkout_session_multiplier_max_accepted(client, db_session):
     """weight_multiplier=100 (the cap) should be accepted."""
     from ingestion_api.models import Prompt
 
     quote = _create_quote(client)
-    mock_gw = _mock_gateway_success()
+    mock_session = _mock_stripe_session()
 
-    with patch("ingestion_api.main.get_gateway", return_value=mock_gw):
+    with patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create:
         response = client.post(
-            "/payments/create-transaction",
+            "/payments/create-checkout-session",
             json={
                 "quote_id": quote["quote_id"],
-                "nonce": "fake-nonce",
                 "weight_multiplier": 100,
             },
         )
@@ -511,4 +551,36 @@ def test_create_transaction_multiplier_max_accepted(client, db_session):
     assert response.status_code == 200
     prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
     assert prompt.weight_multiplier == 100
-    assert prompt.amount == quote["estimated_cost"] * 100
+
+    call_kwargs = mock_create.call_args[1]
+    line_item = call_kwargs["line_items"][0]
+    expected_cents = int(quote["estimated_cost"] * 100 * 100)
+    assert line_item["price_data"]["unit_amount"] == expected_cents
+
+
+def test_webhook_checkout_with_multiplier(client, db_session):
+    """checkout.session.completed should persist the weight multiplier from metadata."""
+    from ingestion_api.models import Prompt
+
+    quote = _create_quote(client)
+    multiplier = 50
+    amount_cents = int(quote["estimated_cost"] * multiplier * 100)
+
+    event = _build_webhook_event(
+        "checkout.session.completed",
+        {
+            "payment_intent": "pi_test_mult",
+            "amount_total": amount_cents,
+            "metadata": {
+                "quote_id": quote["quote_id"],
+                "weight_multiplier": str(multiplier),
+            },
+        },
+    )
+    response = _post_webhook(client, event)
+    assert response.status_code == 200
+
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+    assert prompt.weight_multiplier == multiplier
+    assert prompt.amount == amount_cents / 100
+    assert prompt.status == "accepted"

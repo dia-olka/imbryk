@@ -33,7 +33,7 @@ def seeded_session(db_session):
     # Payment ref
     pay = PaymentRefRow(
         id="pay-1",
-        braintree_transaction_id="tx-100",
+        provider_transaction_id="tx-100",
         amount=5.0,
         currency="USD",
         status="settled",

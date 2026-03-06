@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../constants';
-import type { PromptAcceptedResponse, QuoteResponse } from './types';
+import type { CheckoutSessionResponse, QuoteResponse } from './types';
 
 export async function fetchQuote(
   prompt: string,
@@ -19,41 +19,27 @@ export async function fetchQuote(
   return response.json();
 }
 
-export async function fetchBraintreeClientToken(
-  signal?: AbortSignal
-): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/payments/client-token`, {
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch client token: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.client_token;
-}
-
-export async function createTransaction(
+export async function createCheckoutSession(
   quoteId: string,
-  nonce: string,
   weightMultiplier = 1,
   signal?: AbortSignal
-): Promise<PromptAcceptedResponse> {
-  const response = await fetch(`${API_BASE_URL}/payments/create-transaction`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      quote_id: quoteId,
-      nonce,
-      weight_multiplier: weightMultiplier,
-    }),
-    signal,
-  });
+): Promise<CheckoutSessionResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/payments/create-checkout-session`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quote_id: quoteId,
+        weight_multiplier: weightMultiplier,
+      }),
+      signal,
+    }
+  );
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.detail ?? `Payment failed: ${response.status}`);
+    throw new Error(body.detail ?? `Checkout failed: ${response.status}`);
   }
 
   return response.json();

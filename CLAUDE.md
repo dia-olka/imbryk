@@ -3,6 +3,34 @@
 - **ARCHITECTURE.md** — full system design, data flow, project descriptions, infrastructure, and key design decisions. Read this first to understand how Imbryk works.
 - **PLAN.md** — phased production release plan with task checklists and open questions. Check this for current progress and next steps.
 
+# Local Development
+
+## Database
+
+The ingestion-api defaults to **SQLite** locally (`apps/ingestion-api/imbryk.db`) and uses **PostgreSQL** in production.
+
+- The `DATABASE_URL` env var selects the engine. When unset, `sqlite:///./imbryk.db` is used.
+- The local SQLite DB is **not committed** — it must be created on first checkout by running migrations.
+- To initialise or reset the local DB:
+  ```sh
+  # from apps/ingestion-api/
+  rm -f imbryk.db
+  uv run alembic upgrade head
+  ```
+- If you see `no such table` errors when running the API locally, the DB file is missing or stale — delete it and re-run the command above.
+
+## Alembic migrations — SQLite compatibility rules
+
+All migrations run against **both SQLite (local) and PostgreSQL (production)**. SQLite does not support most `ALTER TABLE` sub-commands, so follow these rules whenever writing a new migration:
+
+| Operation | WRONG (PostgreSQL-only) | CORRECT (both dialects) |
+|---|---|---|
+| Change column default | `op.execute("ALTER TABLE t ALTER COLUMN c SET DEFAULT 'v'")` | `with op.batch_alter_table("t") as b: b.alter_column("c", server_default="v")` |
+| Rename column | `op.alter_column("t", "old", new_column_name="new")` bare | wrap in `with op.batch_alter_table("t") as b: b.alter_column(...)` |
+| Add/drop constraint | bare `op.create_unique_constraint(...)` | wrap in `batch_alter_table` |
+
+**Rule of thumb:** any DDL that modifies an existing column (rename, change type, change default, add/drop constraint) must be wrapped in `with op.batch_alter_table("table_name") as batch_op: ...`. Adding a new column with `op.add_column` is fine bare.
+
 # UI Guidelines
 
 - **Mobile-first design** — all components and layouts must be designed for small screens first, then enhanced for larger viewports via progressive media queries.

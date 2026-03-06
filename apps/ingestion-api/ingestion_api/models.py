@@ -61,7 +61,7 @@ class PaymentRef(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=_new_uuid
     )
-    braintree_transaction_id: Mapped[str] = mapped_column(
+    provider_transaction_id: Mapped[str] = mapped_column(
         String(255), nullable=False, unique=True
     )
     amount: Mapped[float] = mapped_column(Float, nullable=False)

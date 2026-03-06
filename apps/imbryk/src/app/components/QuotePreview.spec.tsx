@@ -35,12 +35,6 @@ describe('QuotePreview', () => {
     expect(screen.getByText('The Owner')).toBeTruthy();
   });
 
-  it('should render matched categories as badges', () => {
-    render(<QuotePreview quote={mockQuote} />);
-    expect(screen.getAllByText('Trade & Commerce')).toHaveLength(2);
-    expect(screen.getByText('Finance & Markets')).toBeTruthy();
-  });
-
   // --- Weight multiplier tests ---
 
   it('should display multiplied total when weightMultiplier > 1', () => {

@@ -1,4 +1,4 @@
-import { useReducer, useState } from 'react';
+import { useReducer, useState, useEffect } from 'react';
 import type { FlowData, FlowAction } from './types';
 import { useQuote } from '../hooks/useQuote';
 import { usePromptValidation } from '../hooks/usePromptValidation';
@@ -41,6 +41,19 @@ export function PromptFlow() {
   const { isValid } = usePromptValidation(prompt);
   const { quote, isLoading, error: quoteError, submit, reset: resetQuote } = useQuote();
 
+  // Handle Stripe Checkout return — check URL for ?status=success
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('status') === 'success') {
+      dispatch({ type: 'PAYMENT_SUCCESS' });
+      // Clean up query params from URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('status') === 'cancelled') {
+      // User cancelled — just clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   const handleProceedToPayment = () => {
     if (!quote) return;
     setIsReleasing(true);
@@ -48,10 +61,6 @@ export function PromptFlow() {
       dispatch({ type: 'PROCEED_TO_PAYMENT', quote });
       setIsReleasing(false);
     }, 800);
-  };
-
-  const handlePaymentSuccess = () => {
-    dispatch({ type: 'PAYMENT_SUCCESS' });
   };
 
   const handleBack = () => {
@@ -69,12 +78,16 @@ export function PromptFlow() {
     return <Confirmation quote={flow.quote} onReset={handleReset} />;
   }
 
+  // Also show confirmation when returning from Stripe (quote may be null)
+  if (flow.state === 'confirmed') {
+    return <Confirmation quote={null} onReset={handleReset} />;
+  }
+
   if (flow.state === 'payment' && flow.quote) {
     return (
       <PaymentForm
         quote={flow.quote}
         weightMultiplier={flow.weightMultiplier}
-        onSuccess={handlePaymentSuccess}
         onBack={handleBack}
       />
     );

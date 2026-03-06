@@ -74,18 +74,6 @@ wheels = [
 ]
 
 [[package]]
-name = "braintree"
-version = "4.42.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/d9/36d2afa50d4cffd2922a750ec0fe8b79d2885108a7050d77def52b693b10/braintree-4.42.0.tar.gz", hash = "sha256:6cb85424c151ecf49523986b687188774bc5868519025a8d548ffb1cf6df6964", size = 108017, upload-time = "2026-02-02T20:18:52.488Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0d/ad/cde7438a95d96365d406fc7c453213389a1911b4b24364350900415ee530/braintree-4.42.0-py2.py3-none-any.whl", hash = "sha256:5f809216510f331fb2a7233e949080908d09931afc9572615da684c9cdb2d751", size = 168513, upload-time = "2026-02-02T20:18:50.968Z" },
-]
-
-[[package]]
 name = "certifi"
 version = "2026.2.25"
 source = { registry = "https://pypi.org/simple" }
@@ -563,7 +551,6 @@ version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
-    { name = "braintree" },
     { name = "fastapi" },
     { name = "google-genai" },
     { name = "pg8000" },
@@ -571,6 +558,7 @@ dependencies = [
     { name = "sentry-sdk", extra = ["fastapi"] },
     { name = "slowapi" },
     { name = "sqlalchemy" },
+    { name = "stripe" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -588,7 +576,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.13.3" },
-    { name = "braintree", specifier = ">=4.30.0" },
     { name = "fastapi", specifier = ">=0.128.8" },
     { name = "google-genai", specifier = ">=1.0.0" },
     { name = "pg8000", specifier = ">=1.31" },
@@ -596,6 +583,7 @@ requires-dist = [
     { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.53.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sqlalchemy", specifier = ">=2.0.36" },
+    { name = "stripe", specifier = ">=11.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.39.0" },
 ]
 
@@ -1190,6 +1178,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c4/68/79977123bb7be889ad680d79a40f339082c1978b5cfcf62c2d8d196873ac/starlette-0.52.1.tar.gz", hash = "sha256:834edd1b0a23167694292e94f597773bc3f89f362be6effee198165a35d62933", size = 2653702, upload-time = "2026-01-18T13:34:11.062Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/81/0d/13d1d239a25cbfb19e740db83143e95c772a1fe10202dda4b76792b114dd/starlette-0.52.1-py3-none-any.whl", hash = "sha256:0029d43eb3d273bc4f83a08720b4912ea4b071087a3b48db01b7c839f7954d74", size = 74272, upload-time = "2026-01-18T13:34:09.188Z" },
+]
+
+[[package]]
+name = "stripe"
+version = "14.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6a/ec/0f17cff3f7c91b0215266959c5a2a96b0bf9f45ac041c50b99ad8f9b5047/stripe-14.4.0.tar.gz", hash = "sha256:ddaa06f5e38a582bef7e93e06fc304ba8ae3b4c0c2aac43da02c84926f05fa0a", size = 1472370, upload-time = "2026-02-25T17:52:40.905Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/09/fcecad01d76dbe027015dd559ec1b6dccfc319c2540991dde4b1de81ba34/stripe-14.4.0-py3-none-any.whl", hash = "sha256:357151a816cd0bb012d6cb29f108fae50b9f6eece8530d7bc31dfa90c9ceb84c", size = 2115405, upload-time = "2026-02-25T17:52:39.128Z" },
 ]
 
 [[package]]

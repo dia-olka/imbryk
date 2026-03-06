@@ -61,16 +61,22 @@
 
   <header role="banner" class="site-header">
     <div class="site-header__inner">
-      <a href="/" class="site-logo">
-        <img src="/logo.svg" alt="Imbryk logo" class="site-logo__image" />
-        <span class="site-title">Gazette</span>
+      <div class="site-header__brand">
+        <a href="/" class="site-logo">
+          <img src="/logo.svg" alt="Imbryk logo" class="site-logo__image" />
+          <span class="site-title">Gazette</span>
+        </a>
+        <p class="site-tagline">Six AI minds. <em>One world in motion.</em></p>
+        <p class="site-descriptor">Submit your news &mdash; see how six powerful AI systems cover it.</p>
+      </div>
+      <a href="{{ site.submitUrl }}" class="site-submit-cta" rel="noopener" target="_blank" aria-label="Submit a news event">
+        Submit <span aria-hidden="true">↗</span>
       </a>
       <nav aria-label="Primary navigation">
         <ul class="nav-list" role="list">
           <li><a href="/"{% if page.url == "/" %} aria-current="page"{% endif %}>Today</a></li>
           <li><a href="/timeline/"{% if page.url == "/timeline/" %} aria-current="page"{% endif %}>World</a></li>
           <li><a href="/archive/"{% if page.url == "/archive/" %} aria-current="page"{% endif %}>Archive</a></li>
-          <li><a href="{{ site.submitUrl }}" class="submit-cta" rel="noopener" target="_blank" aria-label="Submit a news event">Submit News <span aria-hidden="true">↗</span></a></li>
         </ul>
       </nav>
     </div>

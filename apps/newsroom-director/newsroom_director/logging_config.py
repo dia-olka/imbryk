@@ -31,6 +31,10 @@ class JSONFormatter(logging.Formatter):
             if hasattr(record, key):
                 log_entry[key] = getattr(record, key)
 
+        # Include exception info when present (e.g. logger.exception(...) calls)
+        if record.exc_info:
+            log_entry["exception"] = self.formatException(record.exc_info)
+
         return json.dumps(log_entry, ensure_ascii=False)
 
 
@@ -50,4 +54,8 @@ def configure_logging(level: int | None = None) -> None:
     root = logging.getLogger("newsroom_director")
     root.setLevel(level)
     root.addHandler(handler)
-    root.propagate = False
+    # Keep propagate=True (the default) so Sentry's LoggingIntegration,
+    # which attaches to the Python root logger, receives all newsroom_director
+    # records. The JSONFormatter handler above still emits structured JSON to
+    # stdout; the root logger has no other handlers unless explicitly added
+    # (e.g., by Sentry), so there is no duplicate plain-text output.

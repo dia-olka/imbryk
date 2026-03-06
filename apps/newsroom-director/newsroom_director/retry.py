@@ -26,6 +26,12 @@ RETRYABLE_EXCEPTIONS = frozenset(
 # Subset that should use a longer backoff because the API is rate-limiting.
 _RATE_LIMIT_EXCEPTIONS = frozenset({"ResourceExhausted", "TooManyRequests"})
 
+# HTTP 429 status code — google.genai raises ClientError for all 4xx responses,
+# so we also inspect the status_code attribute to catch rate-limit errors that
+# don't match by class name alone (e.g. when google-genai's internal tenacity
+# exhausts its retries and re-raises as ClientError).
+_RATE_LIMIT_HTTP_STATUS = 429
+
 # Minimum seconds between successive API calls (prevents bursting).
 _MIN_CALL_INTERVAL = 1.5
 _last_call_ts: float = 0.0
@@ -33,12 +39,20 @@ _last_call_ts: float = 0.0
 
 def _is_retryable(exc: BaseException) -> bool:
     """Check if an exception is a retryable Google API error."""
-    return type(exc).__name__ in RETRYABLE_EXCEPTIONS
+    if type(exc).__name__ in RETRYABLE_EXCEPTIONS:
+        return True
+    # google.genai wraps all 4xx/5xx as ClientError/ServerError.  A 429
+    # response is a transient rate-limit and should be retried.
+    status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    return status == _RATE_LIMIT_HTTP_STATUS
 
 
 def _is_rate_limit(exc: BaseException) -> bool:
     """Check if an exception is a rate-limit (429) error."""
-    return type(exc).__name__ in _RATE_LIMIT_EXCEPTIONS
+    if type(exc).__name__ in _RATE_LIMIT_EXCEPTIONS:
+        return True
+    status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    return status == _RATE_LIMIT_HTTP_STATUS
 
 
 def throttle() -> None:

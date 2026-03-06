@@ -33,13 +33,8 @@ class QuoteResponse(BaseModel):
     newspapers: list[RoutingDetail]
 
 
-class WebhookPayload(BaseModel):
-    bt_signature: str
-    bt_payload: str
-
-
-class CreateTransactionRequest(BaseModel):
-    """Frontend sends the Braintree nonce + server-side quote ID.
+class CreateCheckoutSessionRequest(BaseModel):
+    """Frontend sends the server-side quote ID.
 
     ``weight_multiplier`` lets the user boost their prompt's editorial
     priority by paying a multiple of the base price.  Pydantic enforces
@@ -47,13 +42,16 @@ class CreateTransactionRequest(BaseModel):
     """
 
     quote_id: str = Field(..., min_length=1)
-    nonce: str = Field(..., min_length=1)
     weight_multiplier: int = Field(
         default=1,
         ge=WEIGHT_MULTIPLIER_MIN,
         le=WEIGHT_MULTIPLIER_MAX,
         description="Integer multiplier (1–100) applied to the base price to boost editorial weight.",
     )
+
+
+class CheckoutSessionResponse(BaseModel):
+    checkout_url: str
 
 
 class PromptAcceptedResponse(BaseModel):
@@ -67,7 +65,3 @@ class EditionSummary(BaseModel):
     edition_id: str
     date: str
     newspaper_count: int
-
-
-class ClientTokenResponse(BaseModel):
-    client_token: str

@@ -2,24 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useBraintree } from '../hooks/useBraintree';
-import { createTransaction } from '../api/client';
+import { createCheckoutSession } from '../api/client';
 import { QuotePreview } from './QuotePreview';
 import type { QuoteResponse } from '../api/types';
-
-const DROPIN_CONTAINER_ID = 'braintree-dropin';
 
 interface PaymentFormProps {
   quote: QuoteResponse;
   weightMultiplier: number;
-  onSuccess: () => void;
   onBack: () => void;
 }
 
-export function PaymentForm({ quote, weightMultiplier, onSuccess, onBack }: PaymentFormProps) {
-  const { isReady, isProcessing, error, requestPayment } = useBraintree(DROPIN_CONTAINER_ID);
+export function PaymentForm({ quote, weightMultiplier, onBack }: PaymentFormProps) {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const totalCost = quote.estimated_cost * weightMultiplier;
 
@@ -28,25 +23,23 @@ export function PaymentForm({ quote, weightMultiplier, onSuccess, onBack }: Paym
     headingRef.current?.focus();
   }, []);
 
-  const handlePay = async () => {
+  const handleCheckout = async () => {
     setCheckoutError(null);
-    const result = await requestPayment();
-    if (!result) return;
+    setIsRedirecting(true);
 
-    setIsSubmitting(true);
     try {
-      await createTransaction(quote.quote_id, result.nonce, weightMultiplier);
-      onSuccess();
+      const { checkout_url } = await createCheckoutSession(
+        quote.quote_id,
+        weightMultiplier
+      );
+      window.location.href = checkout_url;
     } catch (err) {
       setCheckoutError(
-        err instanceof Error ? err.message : 'Payment processing failed'
+        err instanceof Error ? err.message : 'Failed to start checkout'
       );
-    } finally {
-      setIsSubmitting(false);
+      setIsRedirecting(false);
     }
   };
-
-  const isBusy = isProcessing || isSubmitting;
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4">
@@ -80,24 +73,26 @@ export function PaymentForm({ quote, weightMultiplier, onSuccess, onBack }: Paym
               <QuotePreview quote={quote} weightMultiplier={weightMultiplier} />
             </div>
           </details>
-          <div id={DROPIN_CONTAINER_ID} />
-          {(error || checkoutError) && (
+          <p className="text-sm text-text-muted font-sans text-center">
+            You&rsquo;ll be redirected to Stripe to complete your payment securely.
+          </p>
+          {checkoutError && (
             <Alert variant="destructive" className="mt-4">
-              <AlertDescription>{checkoutError ?? error}</AlertDescription>
+              <AlertDescription>{checkoutError}</AlertDescription>
             </Alert>
           )}
         </CardContent>
         <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <Button variant="outline" onClick={onBack} disabled={isBusy}>
+          <Button variant="outline" onClick={onBack} disabled={isRedirecting}>
             Back
           </Button>
           <Button
-            onClick={handlePay}
-            disabled={!isReady || isBusy}
+            onClick={handleCheckout}
+            disabled={isRedirecting}
             size="lg"
           >
-            {isBusy
-              ? 'Processing...'
+            {isRedirecting
+              ? 'Redirecting to Stripe…'
               : `Pay $${totalCost.toFixed(2)}`}
           </Button>
         </CardFooter>

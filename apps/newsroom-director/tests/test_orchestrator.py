@@ -60,7 +60,7 @@ def test_db_url(tmp_path):
     # Seed data
     pay = PaymentRefRow(
         id="pay-1",
-        braintree_transaction_id="tx-100",
+        provider_transaction_id="tx-100",
         amount=5.0,
     )
     session.add(pay)

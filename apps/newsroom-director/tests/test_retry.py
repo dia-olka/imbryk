@@ -46,6 +46,24 @@ class TestIsRetryable:
     def test_too_many_requests(self):
         assert _is_retryable(_TooManyRequests()) is True
 
+    def test_client_error_429_is_retryable(self):
+        """google.genai raises ClientError for 429; retryable via status_code."""
+
+        class ClientError(Exception):
+            def __init__(self) -> None:
+                self.status_code = 429
+
+        assert _is_retryable(ClientError()) is True
+
+    def test_client_error_400_not_retryable(self):
+        """Safety rejections (400) must not be retried."""
+
+        class ClientError(Exception):
+            def __init__(self) -> None:
+                self.status_code = 400
+
+        assert _is_retryable(ClientError()) is False
+
 
 class TestIsRateLimit:
     def test_resource_exhausted(self):
@@ -56,6 +74,13 @@ class TestIsRateLimit:
 
     def test_service_unavailable_not_rate_limit(self):
         assert _is_rate_limit(_ServiceUnavailable()) is False
+
+    def test_client_error_429_is_rate_limit(self):
+        class ClientError(Exception):
+            def __init__(self) -> None:
+                self.status_code = 429
+
+        assert _is_rate_limit(ClientError()) is True
 
 
 class TestWithRetry:

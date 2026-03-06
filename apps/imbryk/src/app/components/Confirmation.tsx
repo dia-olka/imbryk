@@ -7,7 +7,7 @@ import { NEWSPAPER_DISPLAY } from './newspaper-display';
 import { GAZETTE_URL } from '../constants';
 
 interface ConfirmationProps {
-  quote: QuoteResponse;
+  quote: QuoteResponse | null;
   onReset: () => void;
 }
 
@@ -60,37 +60,39 @@ export function Confirmation({ quote, onReset }: ConfirmationProps) {
           {displayDate}
         </time>
       </p>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-sans">
-            Newspapers covering your event
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2">
-            {quote.newspapers.map((n) => {
-              const display = NEWSPAPER_DISPLAY[n.newspaper_id];
-              return (
-                <li key={n.newspaper_id} className="font-sans">
-                  <a
-                    href={`${GAZETTE_URL}/edition/${new Date(Date.now() + 86400000).toISOString().split('T')[0]}/${n.newspaper_id}/`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold underline-offset-2 hover:underline"
-                  >
-                    {display?.paperName ?? n.newspaper_id}
-                  </a>
-                  {display?.tagline && (
-                    <span className="text-text-muted text-sm ml-2 italic">
-                      — {display.tagline}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </CardContent>
-      </Card>
+      {quote && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-sans">
+              Newspapers covering your event
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {quote.newspapers.map((n) => {
+                const display = NEWSPAPER_DISPLAY[n.newspaper_id];
+                return (
+                  <li key={n.newspaper_id} className="font-sans">
+                    <a
+                      href={`${GAZETTE_URL}/edition/${new Date(Date.now() + 86400000).toISOString().split('T')[0]}/${n.newspaper_id}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold underline-offset-2 hover:underline"
+                    >
+                      {display?.paperName ?? n.newspaper_id}
+                    </a>
+                    {display?.tagline && (
+                      <span className="text-text-muted text-sm ml-2 italic">
+                        — {display.tagline}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="text-center">
         <Button onClick={onReset} variant="outline" size="lg">

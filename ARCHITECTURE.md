@@ -2,11 +2,11 @@
 
 ## Overview
 
-Imbryk ("the teapot") is an AI-powered newspaper generation platform. Users submit world-altering event prompts (paid via Braintree), and a daily batch job produces news articles written in English by 6 ideologically distinct AI newspaper personas, plus a Curator synthesis. Each newspaper publishes exactly one edition per day. Generated editions are published as static HTML sites — freely accessible to everyone, no registration required.
+Imbryk ("the teapot") is an AI-powered newspaper generation platform. Users submit world-altering event prompts (paid via Stripe Checkout), and a daily batch job produces news articles written in English by 6 ideologically distinct AI newspaper personas, plus a Curator synthesis. Each newspaper publishes exactly one edition per day. Generated editions are published as static HTML sites — freely accessible to everyone, no registration required.
 
 The 6 newspapers are audience archetypes — inspired by the classic observation about who reads which paper (cf. _Yes Minister_). Each represents a distinct worldview and readership, not a topic silo.
 
-**Zero PII principle:** Imbryk stores no personal user data. Braintree owns identity and payment. The database holds only transaction references, prompt text, weights, and categories.
+**Zero PII principle:** Imbryk stores no personal user data. Stripe owns identity and payment. The database holds only transaction references, prompt text, weights, and categories.
 
 ## High-Level Data Flow
 
@@ -18,10 +18,10 @@ User Prompt
 |  Imbryk Frontend        |
 |  (React 19 / Vite)      |
 |  - Prompt submission    |
-|  - Braintree Checkout   |
+|  - Stripe Checkout      |
 |  - Cost calculator      |
 +----------+--------------+
-           | Braintree Payment
+           | Stripe Payment
            v
 +-------------------------+     +---------------------------+
 |  Ingestion API          |---->|   PostgreSQL               |
@@ -245,7 +245,7 @@ After all Gemini calls complete, articles with non-null `imagePrompt` are sent t
 
 The prompt submission and payment interface, built around a central metaphor: **the Orb**. Inspired by the Interstate 60 magic ball — users hold a glowing sphere, type a world-altering event into it, and release it into the world. The orb pulses with a warm rust glow while idle, intensifies on focus, and plays a release animation on submission.
 
-The UX flow: users type an event prompt inside the orb, see a live cost estimate (based on how many newspapers the event would trigger), review which newspapers will cover it, pay via Braintree Drop-in, and receive confirmation. No account creation — Braintree handles identity.
+The UX flow: users type an event prompt inside the orb, see a live cost estimate (based on how many newspapers the event would trigger), review which newspapers will cover it, pay via Stripe Checkout (hosted redirect), and receive confirmation. No account creation — Stripe handles identity.
 
 Tailwind CSS v4 handles layout, spacing, and typography. shadcn/ui provides polished accessible components (Card, Button, Badge, Label, Textarea, Alert). The orb glow and animation effects use custom CSS keyframes layered on top.
 
@@ -276,12 +276,12 @@ Handles the payment-gated prompt flow and prompt categorisation.
 
 - `GET /health` — liveness check
 - `POST /prompts/quote` — accepts draft prompt, runs categoriser, returns cost estimate (newspapers_reached x base price)
-- `POST /payments/braintree-webhook` — Braintree callback; on success, commits prompt to DB and triggers categorisation
+- `POST /payments/stripe-webhook` — Stripe callback; on `checkout.session.completed`, commits prompt to DB and triggers categorisation
 - `GET /editions` — list generated editions (reads from R2 index)
 
 **Categorisation flow (post-payment):**
 
-1. Raw prompt saved to `prompts` table with Braintree transaction ref
+1. Raw prompt saved to `prompts` table with Stripe payment intent ref
 2. Categoriser (Gemini Flash, behind `CategoriserStrategy` interface) classifies prompt into 1-K categories from the 30-category taxonomy
 3. Categorised entries saved to `categorised_prompts` table (category tags, not newspaper assignments)
 4. Newspaper routing computed via set intersection (category tags vs newspaper subscriptions)
@@ -446,11 +446,11 @@ The per-newspaper verbatim breakpoint (all prompts included raw without summaris
 | Static Hosting    | Cloudflare Pages            | Generated newspaper HTML (public, no auth).                                                                                 |
 | Prompt UI Hosting | Cloudflare Pages            | React SPA for prompt submission.                                                                                            |
 | Image Generation  | Vertex AI Imagen            | Article and front-page images. Called post-Gemini for top articles with non-null `imagePrompt`. Stored as WebP in R2.       |
-| Payments          | Braintree                   | Payment processing. No user data stored on our side.                                                                        |
+| Payments          | Stripe                    | Payment processing via Stripe Checkout. No user data stored on our side.                                                    |
 
 ## Key Design Decisions
 
-1. **Zero PII** — Braintree owns all user identity and payment data. Our database stores only transaction reference IDs, prompt text, weights, and categories. No names, emails, or personal data touch our servers.
+1. **Zero PII** — Stripe owns all user identity and payment data. Our database stores only transaction reference IDs, prompt text, weights, and categories. No names, emails, or personal data touch our servers.
 
 2. **Two-level taxonomy** — Categories (30 curated topic labels) route prompts. Newspapers (6 audience-archetype editorial products) subscribe to categories and run independent pipelines. This separates classification granularity from editorial identity.
 
@@ -492,9 +492,9 @@ This section documents the defined failure behaviour at each stage of the pipeli
 
 | Failure point                                                         | Behaviour                                                                                                                                                                                                                                                                                   |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Braintree webhook duplicate delivery                                  | Idempotency check on `braintree_transaction_id`. Duplicate webhooks return 200 without re-processing.                                                                                                                                                                                       |
+| Stripe webhook duplicate delivery                                     | Idempotency check on `provider_transaction_id`. Duplicate webhooks return 200 without re-processing.                                                                                                                                                                                       |
 | Categoriser fails (e.g. Gemini API error)                             | Payment ref and raw prompt are committed to the DB with status `categorisation_failed`. No `categorised_prompts` rows are created. The prompt is excluded from the next morning batch (only `accepted` prompts are fetched). Recovery: re-run categorisation against the saved prompt text. |
-| Database unreachable during webhook                                   | FastAPI returns 500. The DB session is explicitly rolled back. Braintree will retry the webhook; the idempotency check prevents double-processing on successful retry.                                                                                                                      |
+| Database unreachable during webhook                                   | FastAPI returns 500. The DB session is explicitly rolled back. Stripe will retry the webhook; the idempotency check prevents double-processing on successful retry.                                                                                                                         |
 | Partial DB write (prompt flushed, categorisation fails before commit) | The session is rolled back — no partial state persists. SQLAlchemy's session close triggers implicit rollback; `get_db()` also calls explicit rollback on error.                                                                                                                            |
 
 ### Newsroom Director
@@ -522,8 +522,8 @@ This section documents the defined failure behaviour at each stage of the pipeli
 | Failure point                                                      | Behaviour                                                                                                    |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | Quote API unavailable                                              | Error message shown below the orb. Submit button stays disabled. User can retry by modifying the prompt.     |
-| Braintree Drop-in fails to initialise (client-token endpoint down) | Error message shown in the payment form. Pay button stays disabled. User can navigate back and retry.        |
-| Payment tokenisation fails                                         | Error message shown in the payment form. User can retry without leaving the page.                            |
+| Stripe Checkout session creation fails                             | Error message shown in the payment form. Pay button stays disabled. User can navigate back and retry.        |
+| Stripe Checkout redirect fails or user cancels                     | User returns to the app with `?status=cancelled`. They can retry from the quote state.                       |
 | Render crash in `PromptFlow`                                       | `ErrorBoundary` shows a "Something went wrong" message with a retry button. The crash is reported to Sentry. |
 
-> **Note:** `ErrorBoundary` catches errors in React component render and lifecycle methods. It does **not** catch errors in async event handlers. Async errors (quote fetch, Braintree init, payment request) are handled individually in `useQuote` and `useBraintree` hooks and surfaced via component state.
+> **Note:** `ErrorBoundary` catches errors in React component render and lifecycle methods. It does **not** catch errors in async event handlers. Async errors (quote fetch, checkout session creation) are handled individually in `useQuote` hook and the PaymentForm component and surfaced via component state.

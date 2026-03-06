@@ -1,6 +1,6 @@
 # Zero-PII Invariant
 
-Imbryk is designed to store **no personal user data**. Braintree owns all user
+Imbryk is designed to store **no personal user data**. Stripe owns all user
 identity and payment information. Our systems never receive, log, or persist
 names, email addresses, IP addresses, payment card details, or any other
 personally identifiable information.
@@ -9,16 +9,16 @@ personally identifiable information.
 
 | Table | Columns stored | PII? |
 |---|---|---|
-| `prompts` | UUID, prompt text, Braintree transaction ID (ref only), status, timestamp | No |
+| `prompts` | UUID, prompt text, provider transaction ID (ref only), status, timestamp | No |
 | `categorised_prompts` | UUID, prompt FK, category label, timestamp | No |
-| `payment_refs` | UUID, Braintree transaction ID (ref only), amount, currency, status, timestamp | No |
+| `payment_refs` | UUID, provider transaction ID (ref only), amount, currency, status, timestamp | No |
 | `editions` | UUID, date string, status, timestamp | No |
 | `edition_articles` | UUID, edition FK, newspaper ID, content JSON, timestamp | No |
 | `world_ledger` | UUID, ledger JSON (fictional world state), timestamp | No |
 
-The `payment_refs` table stores only the Braintree **transaction ID** (an opaque
-reference like `abc123xyz`) and the settled **amount**. No customer name, billing
-address, card number, or email is stored. Braintree retains all of that.
+The `payment_refs` table stores only the Stripe **payment intent ID** (an opaque
+reference like `pi_abc123xyz`) and the settled **amount**. No customer name, billing
+address, card number, or email is stored. Stripe retains all of that.
 
 ## What is NOT stored
 
@@ -43,13 +43,13 @@ HTTP headers to error events.
 `/prompts/quote` endpoint. The IP address is held in memory for the duration of
 the request window only and is **never written to the database**.
 
-## Braintree webhook
+## Stripe webhook
 
-The `/payments/braintree-webhook` handler extracts only:
+The `/payments/stripe-webhook` handler extracts only:
 
-- `transaction.id` — the Braintree transaction reference
-- `transaction.amount` — the settled payment amount
-- `transaction.custom_fields.prompt_text` — the prompt submitted by the user
+- `payment_intent` — the Stripe payment intent reference
+- `amount_total` — the settled payment amount
+- `metadata.quote_id` — the quote reference to link the payment
 
 No customer object, no billing details, and no payment method data from the
 webhook payload are read or stored.

@@ -18,13 +18,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.add_column("prompts", sa.Column("amount", sa.Float, nullable=True))
-    op.execute(
-        "ALTER TABLE prompts ALTER COLUMN status SET DEFAULT 'quoted'"
-    )
+    with op.batch_alter_table("prompts") as batch_op:
+        batch_op.alter_column("status", server_default="quoted")
 
 
 def downgrade() -> None:
     op.drop_column("prompts", "amount")
-    op.execute(
-        "ALTER TABLE prompts ALTER COLUMN status SET DEFAULT 'accepted'"
-    )
+    with op.batch_alter_table("prompts") as batch_op:
+        batch_op.alter_column("status", server_default="accepted")

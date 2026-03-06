@@ -4,6 +4,7 @@ import logging
 
 import sentry_sdk
 import sentry_sdk.integrations.logging
+import stripe
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
@@ -35,7 +36,7 @@ if SENTRY_DSN:
         ],
     )
     logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
-from ingestion_api.braintree_client import get_gateway
+
 from ingestion_api.database import get_db
 from ingestion_api.models import (
     CategorisedPrompt,
@@ -44,18 +45,17 @@ from ingestion_api.models import (
     PaymentRef,
     Prompt,
 )
-from ingestion_api.pricing import calculate_cost
+from ingestion_api.pricing import calculate_cost, calculate_cost_cents
 from ingestion_api.schemas import (
-    ClientTokenResponse,
-    CreateTransactionRequest,
+    CheckoutSessionResponse,
+    CreateCheckoutSessionRequest,
     EditionSummary,
     HealthResponse,
-    PromptAcceptedResponse,
     QuoteRequest,
     QuoteResponse,
     RoutingDetail,
-    WebhookPayload,
 )
+from ingestion_api.stripe_client import configure_stripe, verify_webhook
 from ingestion_api.taxonomy import route_prompt
 
 logger = logging.getLogger(__name__)
@@ -76,6 +76,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Log API startup for visibility in Cloud Logging & Sentry."""
+    configure_stripe()
     if VERTEX_PROJECT:
         from ingestion_api.categoriser import GeminiFlashCategoriser
 
@@ -175,21 +176,23 @@ async def quote(
     )
 
 
-@app.post("/payments/create-transaction", response_model=PromptAcceptedResponse)
+@app.post("/payments/create-checkout-session", response_model=CheckoutSessionResponse)
 @limiter.limit(RATE_LIMIT_QUOTE)
-async def create_transaction(
+async def create_checkout_session(
     request: Request,
-    body: CreateTransactionRequest,
+    body: CreateCheckoutSessionRequest,
     db: Session = Depends(get_db),
 ):
-    """Create a Braintree transaction from the server-side quote.
+    """Create a Stripe Checkout session from the server-side quote.
 
     The base amount is read from the stored quote — never from the client — so
     the user cannot pay less than the classified price.  The
     ``weight_multiplier`` (validated by Pydantic to be an integer in [1, 100])
     is applied server-side to produce the final charged amount.
-    On success the prompt status moves from ``quoted`` → ``accepted`` and a
-    ``PaymentRef`` record is created with status ``submitted_for_settlement``.
+
+    Returns a ``checkout_url`` that the frontend redirects to.  Payment
+    confirmation happens asynchronously via the ``stripe-webhook`` endpoint
+    when Stripe sends the ``checkout.session.completed`` event.
     """
     prompt = db.query(Prompt).filter_by(id=body.quote_id).first()
     if prompt is None:
@@ -208,147 +211,178 @@ async def create_transaction(
 
     # Apply weight multiplier (already validated by Pydantic: int, 1–100).
     multiplier = body.weight_multiplier
-    amount = base_amount * multiplier
+    amount_cents = calculate_cost_cents(
+        int(round(base_amount)),  # base_amount is newspapers_reached * BASE_PRICE ($1)
+        weight_multiplier=1,
+    ) * multiplier
 
-    gateway = get_gateway()
-    result = gateway.transaction.sale({
-        "amount": f"{amount:.2f}",
-        "payment_method_nonce": body.nonce,
-        "options": {"submit_for_settlement": True},
-    })
-
-    if not result.is_success:
-        error_msg = result.message if result.message else "Payment failed"
-        logger.warning("Braintree transaction failed: %s", error_msg)
-        return JSONResponse(status_code=402, content={"detail": error_msg})
-
-    transaction_id = result.transaction.id
-
-    # Record payment reference
-    payment = PaymentRef(
-        braintree_transaction_id=transaction_id,
-        amount=amount,
-        currency="USD",
-        status="settled",
-    )
-    db.add(payment)
-
-    # Mark prompt as accepted and persist final (multiplied) amount + multiplier
-    prompt.payment_ref = transaction_id
-    prompt.status = "accepted"
-    prompt.amount = amount
+    # Mark the multiplier on the prompt now so we don't lose it.
     prompt.weight_multiplier = multiplier
-
     db.commit()
 
-    # Re-derive routing for response
-    categories = [
-        cp.category_id
-        for cp in db.query(CategorisedPrompt).filter_by(prompt_id=prompt.id).all()
-    ]
-    routing = route_prompt(categories)
+    # Determine success/cancel URLs from the Referer or use the configured
+    # CORS origin as a fallback (first allowed origin is the app).
+    origin = CORS_ALLOWED_ORIGINS[0] if CORS_ALLOWED_ORIGINS else "http://localhost:4200"
 
-    return PromptAcceptedResponse(
-        prompt_id=prompt.id,
-        status=prompt.status,
-        categories=categories,
-        newspapers_reached=len(routing),
-    )
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": amount_cents,
+                        "product_data": {
+                            "name": "Imbryk Prompt",
+                        },
+                    },
+                    "quantity": 1,
+                },
+            ],
+            metadata={
+                "quote_id": body.quote_id,
+                "weight_multiplier": str(multiplier),
+            },
+            success_url=f"{origin}?session_id={{CHECKOUT_SESSION_ID}}&status=success",
+            cancel_url=f"{origin}?status=cancelled",
+        )
+    except stripe.StripeError as e:
+        logger.warning("Stripe checkout session creation failed: %s", e)
+        return JSONResponse(status_code=502, content={"detail": "Payment service error"})
+
+    return CheckoutSessionResponse(checkout_url=session.url)
 
 
-@app.post("/payments/braintree-webhook")
-async def braintree_webhook(
-    payload: WebhookPayload,
+@app.post("/payments/stripe-webhook")
+async def stripe_webhook(
+    request: Request,
     db: Session = Depends(get_db),
 ):
-    """Handle Braintree webhook notifications — disputes and disbursements.
+    """Handle Stripe webhook notifications.
 
-    Transaction settlement does not trigger a Braintree webhook;
-    ``transaction.sale(submit_for_settlement=True)`` is authoritative.
-    This endpoint handles:
-
-    * **Dispute** events — if a customer disputes a charge, the prompt is
-      reverted to ``quoted`` so it won't be consumed.  If we win the dispute
-      it is re-accepted.
-    * **Disbursement** events — informational logging only (funds reached
-      the merchant bank account).
+    Listens for:
+    * ``checkout.session.completed`` — marks prompt as accepted and creates
+      a ``PaymentRef``.
+    * ``charge.dispute.created`` — flags the payment as disputed.
+    * ``charge.dispute.closed`` — depending on ``status``, either restores
+      the payment or reverts the prompt.
     """
-    gateway = get_gateway()
-    notification = gateway.webhook_notification.parse(
-        payload.bt_signature, payload.bt_payload
-    )
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
 
-    kind = getattr(notification, "kind", None) or ""
-    logger.info("Braintree webhook received: kind=%s", kind)
+    try:
+        event = verify_webhook(payload, sig_header)
+    except Exception:
+        logger.warning("Stripe webhook signature verification failed")
+        return JSONResponse(status_code=400, content={"detail": "Invalid signature"})
 
-    # --- Dispute events ---
-    if kind.startswith("dispute_"):
-        dispute = getattr(notification, "dispute", None)
-        if dispute is None:
-            logger.warning("Dispute webhook missing dispute object")
+    event_type = event.get("type", "")
+    logger.info("Stripe webhook received: type=%s", event_type)
+
+    # --- Checkout completed ---
+    if event_type == "checkout.session.completed":
+        session_data = event["data"]["object"]
+        metadata = session_data.get("metadata", {})
+        quote_id = metadata.get("quote_id")
+        multiplier = int(metadata.get("weight_multiplier", "1"))
+        payment_intent_id = session_data.get("payment_intent", "")
+        amount_total = session_data.get("amount_total", 0)  # cents
+
+        if not quote_id:
+            logger.warning("checkout.session.completed missing quote_id in metadata")
             return JSONResponse(status_code=200, content={"detail": "ignored"})
 
-        transaction_id = ""
-        if hasattr(dispute, "transaction") and dispute.transaction:
-            transaction_id = getattr(dispute.transaction, "id", "")
-        if not transaction_id:
-            logger.warning("Dispute webhook missing transaction id")
+        prompt = db.query(Prompt).filter_by(id=quote_id).first()
+        if prompt is None:
+            logger.warning("checkout.session.completed for unknown quote %s", quote_id)
+            return JSONResponse(status_code=200, content={"detail": "unknown quote"})
+
+        # Idempotency: skip if already processed
+        if prompt.status != "quoted":
+            logger.info("Quote %s already processed (status=%s)", quote_id, prompt.status)
+            return JSONResponse(status_code=200, content={"detail": "already processed"})
+
+        amount_dollars = amount_total / 100
+
+        payment = PaymentRef(
+            provider_transaction_id=payment_intent_id,
+            amount=amount_dollars,
+            currency="USD",
+            status="settled",
+        )
+        db.add(payment)
+
+        prompt.payment_ref = payment_intent_id
+        prompt.status = "accepted"
+        prompt.amount = amount_dollars
+        prompt.weight_multiplier = multiplier
+        db.commit()
+
+        logger.info(
+            "Payment completed for quote %s: pi=%s amount=$%.2f",
+            quote_id,
+            payment_intent_id,
+            amount_dollars,
+        )
+        return JSONResponse(status_code=200, content={"detail": "ok"})
+
+    # --- Dispute events ---
+    if event_type == "charge.dispute.created":
+        dispute = event["data"]["object"]
+        payment_intent_id = dispute.get("payment_intent", "")
+
+        if not payment_intent_id:
             return JSONResponse(status_code=200, content={"detail": "ignored"})
 
         payment = (
             db.query(PaymentRef)
-            .filter_by(braintree_transaction_id=transaction_id)
+            .filter_by(provider_transaction_id=payment_intent_id)
             .first()
         )
         if payment is None:
-            logger.warning("Dispute webhook for unknown transaction %s", transaction_id)
+            logger.warning("Dispute for unknown payment intent %s", payment_intent_id)
             return JSONResponse(status_code=200, content={"detail": "unknown transaction"})
 
-        # Lost / Accepted / Auto-Accepted / Expired → revert prompt
-        if kind in ("dispute_lost", "dispute_accepted", "dispute_auto_accepted", "dispute_expired"):
+        payment.status = "disputed"
+        db.commit()
+        logger.info("Dispute opened for payment intent %s", payment_intent_id)
+        return JSONResponse(status_code=200, content={"detail": "ok"})
+
+    if event_type == "charge.dispute.closed":
+        dispute = event["data"]["object"]
+        payment_intent_id = dispute.get("payment_intent", "")
+        dispute_status = dispute.get("status", "")
+
+        if not payment_intent_id:
+            return JSONResponse(status_code=200, content={"detail": "ignored"})
+
+        payment = (
+            db.query(PaymentRef)
+            .filter_by(provider_transaction_id=payment_intent_id)
+            .first()
+        )
+        if payment is None:
+            logger.warning("Dispute close for unknown payment intent %s", payment_intent_id)
+            return JSONResponse(status_code=200, content={"detail": "unknown transaction"})
+
+        if dispute_status == "won":
+            payment.status = "settled"
+            logger.info("Dispute won for payment intent %s", payment_intent_id)
+        else:
+            # lost or warning_closed
             payment.status = "disputed_lost"
-            prompt = db.query(Prompt).filter_by(payment_ref=transaction_id).first()
+            prompt = db.query(Prompt).filter_by(payment_ref=payment_intent_id).first()
             if prompt is not None:
                 prompt.status = "quoted"
                 prompt.payment_ref = None
-            logger.info("Dispute lost for transaction %s — prompt reverted", transaction_id)
-
-        # Won → restore payment status
-        elif kind == "dispute_won":
-            payment.status = "settled"
-            logger.info("Dispute won for transaction %s", transaction_id)
-
-        # Opened / Disputed / Under Review → flag but don't revert yet
-        else:
-            payment.status = "disputed"
-            logger.info("Dispute %s for transaction %s", kind, transaction_id)
+            logger.info("Dispute lost for payment intent %s — prompt reverted", payment_intent_id)
 
         db.commit()
         return JSONResponse(status_code=200, content={"detail": "ok"})
 
-    # --- Disbursement events ---
-    if kind in ("disbursement", "disbursement_exception"):
-        disbursement = getattr(notification, "disbursement", None)
-        if disbursement:
-            logger.info(
-                "Disbursement webhook: id=%s, success=%s",
-                getattr(disbursement, "id", "?"),
-                getattr(disbursement, "success", "?"),
-            )
-        return JSONResponse(status_code=200, content={"detail": "ok"})
-
     # --- Unknown / unhandled event ---
-    logger.info("Braintree webhook ignored: kind=%s", kind)
+    logger.info("Stripe webhook ignored: type=%s", event_type)
     return JSONResponse(status_code=200, content={"detail": "ignored"})
-
-
-@app.get("/payments/client-token", response_model=ClientTokenResponse)
-@limiter.limit(RATE_LIMIT_QUOTE)
-async def get_client_token(request: Request):
-    """Generate a Braintree client token for Drop-in UI initialisation."""
-    gateway = get_gateway()
-    client_token = gateway.client_token.generate({})
-    return ClientTokenResponse(client_token=client_token)
 
 
 @app.get("/editions", response_model=list[EditionSummary])

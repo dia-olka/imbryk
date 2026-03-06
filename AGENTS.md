@@ -1,6 +1,30 @@
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 
+# Local Development
+
+## Database (ingestion-api)
+
+Local default is **SQLite** (`apps/ingestion-api/imbryk.db`). Production uses PostgreSQL.
+
+- Initialise or reset: `cd apps/ingestion-api && rm -f imbryk.db && uv run alembic upgrade head`
+- `no such table` error at runtime = DB file is missing or stale → delete and re-run migrations.
+
+## Alembic migration rules (SQLite + PostgreSQL compatibility)
+
+- **Never** use `op.execute("ALTER TABLE ... ALTER COLUMN ...")` — PostgreSQL-only syntax.
+- Any operation that **modifies an existing column** (rename, change default/type, add/drop constraint) **must** be wrapped in `with op.batch_alter_table("table_name") as batch_op:`.
+- `op.add_column` (adding a brand-new column) does **not** need batch mode.
+- Example:
+  ```python
+  # WRONG
+  op.execute("ALTER TABLE prompts ALTER COLUMN status SET DEFAULT 'quoted'")
+
+  # CORRECT
+  with op.batch_alter_table("prompts") as batch_op:
+      batch_op.alter_column("status", server_default="quoted")
+  ```
+
 # General Guidelines for working with Nx
 
 - For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies

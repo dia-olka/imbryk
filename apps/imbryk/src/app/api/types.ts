@@ -11,10 +11,13 @@ export interface QuoteResponse {
   newspapers: RoutingDetail[];
 }
 
-export interface CreateTransactionRequest {
+export interface CreateCheckoutSessionRequest {
   quote_id: string;
-  nonce: string;
   weight_multiplier: number;
+}
+
+export interface CheckoutSessionResponse {
+  checkout_url: string;
 }
 
 export interface PromptAcceptedResponse {

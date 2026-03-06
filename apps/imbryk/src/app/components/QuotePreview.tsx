@@ -121,9 +121,9 @@ export function QuotePreview({
           return (
             <NewspaperCard
               key={routing.newspaper_id}
-              routing={routing}
               paperName={display?.paperName ?? routing.newspaper_id}
               tagline={display?.tagline ?? ''}
+              display={display}
             />
           );
         })}

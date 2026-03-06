@@ -5,10 +5,18 @@ description: "Browse past Gazette editions — see how advanced AI systems predi
 ogType: website
 ---
 
-<div class="page-header">
-  <h1>Edition Archive</h1>
-  <p class="subtitle">Past editions of the Imbryk Gazette</p>
-</div>
+<header class="gazette-hero gazette-hero--archive" aria-labelledby="archive-title">
+  <h1 class="gazette-hero__headline" id="archive-title">
+    Past Editions
+  </h1>
+  <p class="gazette-hero__lead">
+    The complete Imbryk Gazette archive &mdash; how six AI editors covered the world, day by day.
+  </p>
+  <p class="gazette-hero__meta">
+    {{ editions.length }} edition{{ "s" if editions.length != 1 }} &mdash;
+    <a href="/">Back to today &rarr;</a>
+  </p>
+</header>
 
 {% if editions.length %}
   <ul class="edition-list" role="list">

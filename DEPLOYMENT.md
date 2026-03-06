@@ -11,7 +11,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how the system works and [PLAN.md](PL
 1. [What You Will Set Up](#1-what-you-will-set-up)
 2. [Accounts You Need](#2-accounts-you-need)
 3. [Step 1 — Google Cloud (Backend Infrastructure)](#step-1--google-cloud-backend-infrastructure)
-4. [Step 2 — Braintree (Payment Processing)](#step-2--braintree-payment-processing)
+4. [Step 2 — Stripe (Payment Processing)](#step-2--stripe-payment-processing)
 5. [Step 3 — Cloudflare (Websites & File Storage)](#step-3--cloudflare-websites--file-storage)
 6. [Step 4 — Connect Everything](#step-4--connect-everything)
    - [Step 4.5 — Set Up Automatic Deployment](#45-set-up-automatic-deployment-github-actions)
@@ -37,7 +37,7 @@ Imbryk is made of several pieces that work together. Here is what each piece doe
 | **Database**          | Stores prompts, payments, and the world state        | Google Cloud SQL          |
 | **Gazette**           | The newspaper website readers see (rebuilt daily)    | Cloudflare Pages (free)   |
 | **File Storage**      | Stores the generated article files                   | Cloudflare R2 (free tier) |
-| **Payments**          | Processes credit card payments from users            | Braintree                 |
+| **Payments**          | Processes credit card payments from users            | Stripe                    |
 
 You do not need to understand how these work internally. Just follow the steps to create accounts, click through the setup screens, and paste in the values where indicated.
 
@@ -47,13 +47,13 @@ You do not need to understand how these work internally. Just follow the steps t
 
 You will create accounts on three services. All three have free tiers or trial credits.
 
-| Service                   | What it's for                           | Cost to start                                                              |
-| ------------------------- | --------------------------------------- | -------------------------------------------------------------------------- |
-| **Google Cloud**          | Runs the backend (API, database, AI)    | **Free — $300 credit for 90 days** (no charge until you use it up)         |
-| **Cloudflare**            | Hosts the two websites and stores files | **Free** (the free plan covers everything Imbryk needs)                    |
-| **Braintree** (by PayPal) | Processes payments from users           | **Free sandbox** for testing; production requires PayPal business approval |
+| Service          | What it's for                           | Cost to start                                                      |
+| ---------------- | --------------------------------------- | ------------------------------------------------------------------ |
+| **Google Cloud** | Runs the backend (API, database, AI)    | **Free — $300 credit for 90 days** (no charge until you use it up) |
+| **Cloudflare**   | Hosts the two websites and stores files | **Free** (the free plan covers everything Imbryk needs)            |
+| **Stripe**       | Processes payments from users           | **Free to set up** — Stripe charges per transaction (2.9% + 30¢)  |
 
-You will need a credit or debit card for Google Cloud and Braintree, but you will not be charged right away.
+You will need a credit or debit card for Google Cloud, but you will not be charged right away.
 
 ---
 
@@ -333,53 +333,43 @@ Or in the Console:
 
 ---
 
-## Step 2 — Braintree (Payment Processing)
+## Step 2 — Stripe (Payment Processing)
 
-Braintree (owned by PayPal) handles credit card payments. Users pay through Braintree, and Imbryk never sees or stores their card details.
+Stripe handles credit card payments. Users are redirected to a Stripe-hosted checkout page, and Imbryk never sees or stores their card details.
 
-### 2.1 Create a Braintree Sandbox Account (For Testing)
+### 2.1 Create a Stripe Account
 
-The "sandbox" is a test environment where you can try everything with fake credit cards before going live.
-
-1. Go to [sandbox.braintreegateway.com/login](https://sandbox.braintreegateway.com/login)
-2. Click **"Sign Up"** (or "Don't have an account?")
-3. Fill in your details and create an account
-4. Once signed in, you will see the Braintree sandbox dashboard
+1. Go to [dashboard.stripe.com/register](https://dashboard.stripe.com/register)
+2. Fill in your details and create an account
+3. Once signed in, you will see the Stripe dashboard in **test mode** (toggle in the top right)
 
 ### 2.2 Find Your API Keys
 
-1. In the Braintree dashboard, go to **Settings > API** (click the gear icon in the top right, then "API")
-2. You will see three values:
-   - **Merchant ID** — identifies your Braintree account
-   - **Public Key** — used by the frontend website (safe to share)
-   - **Private Key** — used by the backend server (keep secret)
-3. Write down all three
+1. In the Stripe dashboard, go to **Developers > API keys**
+2. You will see two values:
+   - **Publishable key** (`pk_test_...`) — used by the frontend website (safe to share)
+   - **Secret key** (`sk_test_...`) — used by the backend server (keep secret — click "Reveal" to see it)
+3. Write down both
 
-### 2.3 Get a Client Token Endpoint (Already Built)
-
-The Imbryk backend already has an endpoint that generates Braintree client tokens. The frontend uses these to show the payment form. No additional setup is needed here — just make sure the API keys are stored correctly (see Step 4).
-
-### 2.4 Going Live (When Ready for Real Payments)
+### 2.3 Going Live (When Ready for Real Payments)
 
 When you are ready to accept real money (not just test transactions):
 
-1. You need a **PayPal Business account** — go to [paypal.com/business](https://www.paypal.com/business) and sign up
-2. In the PayPal business dashboard, go to the **Braintree** section
-3. Apply for a production Braintree account — PayPal will review your application
-4. Once approved, you will get production API keys (Merchant ID, Public Key, Private Key)
-5. Replace the sandbox keys with the production keys in Google Secret Manager (Step 4)
+1. In the Stripe dashboard, click **Settings > Account details** and complete the activation form
+2. Stripe will ask about your business — fill in the details and submit
+3. Once approved, toggle **test mode off** in the dashboard to see your live API keys (`pk_live_...` and `sk_live_...`)
+4. Replace the test keys with the live keys in Google Secret Manager (Step 2.4)
 
-> **Note:** Keep using the sandbox for testing. Only switch to production keys when you are confident everything works. In the sandbox, you can use the test card number `4111 1111 1111 1111` with any future expiration date and any 3-digit CVV.
+> **Note:** Keep using test mode for testing. Only switch to live keys when you are confident everything works. In test mode, you can use the test card number `4242 4242 4242 4242` with any future expiration date and any 3-digit CVC.
 
-### 2.5 Store Braintree Keys in Google Cloud
+### 2.4 Store Stripe Keys in Google Cloud
 
-Go to **Secret Manager** in the Google Cloud Console and create three secrets:
+Go to **Secret Manager** in the Google Cloud Console and create two secrets (three if you deploy the publishable key as a secret):
 
-| Secret Name             | Value                          |
-| ----------------------- | ------------------------------ |
-| `braintree-merchant-id` | Your Merchant ID from Step 2.2 |
-| `braintree-public-key`  | Your Public Key from Step 2.2  |
-| `braintree-private-key` | Your Private Key from Step 2.2 |
+| Secret Name              | Value                              |
+| ------------------------ | ---------------------------------- |
+| `stripe-secret-key`      | Your Secret Key from Step 2.2      |
+| `stripe-webhook-secret`  | Your Webhook Signing Secret (2.5)  |
 
 For each one:
 
@@ -387,24 +377,33 @@ For each one:
 2. Enter the name and paste the value
 3. Click **"Create Secret"**
 
-### 2.6 Configure Braintree Webhooks
+### 2.5 Configure Stripe Webhooks
 
-Braintree sends server-to-server webhook notifications for disputes (chargebacks) and disbursements (funds reaching your bank). The Ingestion API has a `POST /payments/braintree-webhook` endpoint that listens for these. Transaction settlement itself does **not** trigger a webhook — `transaction.sale()` with `submit_for_settlement: true` is authoritative.
+Stripe sends server-to-server webhook notifications when a checkout session completes and when disputes (chargebacks) occur. The Ingestion API has a `POST /payments/stripe-webhook` endpoint that listens for these.
 
-1. In the Braintree **Sandbox** dashboard, go to **Settings > Webhooks** (gear icon → Webhooks)
-2. Click **"Create New Webhook"**
-3. **Destination URL:** `https://<YOUR-INGESTION-API-URL>/payments/braintree-webhook`
-   - Replace `<YOUR-INGESTION-API-URL>` with the Cloud Run URL from Step 5, e.g. `https://ingestion-api-abc123-uc.a.run.app/payments/braintree-webhook`
-4. Under **Notifications**, tick these events:
-   - **Dispute** — select all (Opened, Disputed, Won, Lost, Expired, Accepted, Auto Accepted, Under Review). If a customer disputes a charge, the webhook reverts the prompt so it is not consumed.
-   - **Disbursement** — select **Disbursement**. Records when funds arrive in your bank account (informational only).
-5. Leave all other categories (Subscription, Payment Method, Refund) **unchecked** — Imbryk does not use subscriptions
-6. Click **"Create Webhook"**
-7. Braintree will show a **"Check"** button — click it to send a test notification and verify the endpoint responds with `200 OK`
+1. In the Stripe dashboard, go to **Developers > Webhooks**
+2. Click **"Add endpoint"**
+3. **Endpoint URL:** `https://<YOUR-INGESTION-API-URL>/payments/stripe-webhook`
+   - Replace `<YOUR-INGESTION-API-URL>` with the Cloud Run URL from Step 5, e.g. `https://ingestion-api-abc123-uc.a.run.app/payments/stripe-webhook`
+4. Under **Events to send**, select these events:
+   - `checkout.session.completed` — fires when a customer completes payment
+   - `charge.dispute.created` — fires when a customer disputes a charge
+   - `charge.dispute.closed` — fires when a dispute is resolved (won or lost)
+5. Click **"Add endpoint"**
+6. On the endpoint detail page, click **"Reveal"** under **Signing secret** — copy this value (`whsec_...`)
+7. Store this signing secret in Google Secret Manager as `stripe-webhook-secret` (Step 2.4)
 
-> **Note:** The webhook endpoint uses your existing Braintree API keys (Merchant ID, Public Key, Private Key) to verify the signature on every incoming notification. No additional secrets are needed.
+> **Note:** The webhook endpoint uses the signing secret to verify every incoming notification. This is separate from your API keys.
 
-> **Production:** When you switch to production keys (Step 2.4), repeat this setup in the **production** Braintree dashboard at [braintreegateway.com](https://www.braintreegateway.com) with the same destination URL and event selections.
+### 2.6 Enable Adaptive Pricing (Optional)
+
+Stripe Adaptive Pricing automatically converts prices and displays local currencies to international customers on the checkout page.
+
+1. In the Stripe dashboard, go to **Settings > Payments > Adaptive Pricing**
+2. Toggle it on
+3. No code changes are needed — Stripe handles everything on the hosted checkout page
+
+> **Production:** When you switch to live keys (Step 2.3), repeat the webhook setup in the **live mode** dashboard with the same endpoint URL and events. You will get a new signing secret for live mode.
 
 ---
 
@@ -647,9 +646,8 @@ gcloud run deploy ingestion-api \
   --service-account=$SA \
   --set-cloudsql-instances="${PROJECT_ID}:us-central1:imbryk-db" \
   --set-secrets=DATABASE_URL=database-url:latest \
-  --set-secrets=BRAINTREE_MERCHANT_ID=braintree-merchant-id:latest \
-  --set-secrets=BRAINTREE_PUBLIC_KEY=braintree-public-key:latest \
-  --set-secrets=BRAINTREE_PRIVATE_KEY=braintree-private-key:latest \
+  --set-secrets=STRIPE_SECRET_KEY=stripe-secret-key:latest \
+  --set-secrets=STRIPE_WEBHOOK_SECRET=stripe-webhook-secret:latest \
   --set-env-vars=VERTEX_PROJECT="${PROJECT_ID}" \
   --set-env-vars=VERTEX_LOCATION=global \
   --set-env-vars=CORS_ALLOWED_ORIGINS=https://imbryk.pages.dev \
@@ -796,17 +794,16 @@ To see what the services are doing:
 2. Click on the service or job name
 3. Click the **"Logs"** tab
 
-### Switching Braintree from Sandbox to Production
+### Switching Stripe from Test to Live
 
 When you are ready to accept real payments:
 
-1. Get your production Braintree API keys (see Step 2.4)
-2. Go to **Secret Manager** in Google Cloud Console
-3. Click on each Braintree secret (`braintree-merchant-id`, `braintree-public-key`, `braintree-private-key`)
-4. Click **"New Version"**
-5. Paste the production key value
-6. Click **"Add New Version"**
-7. Redeploy the ingestion API (repeat the `gcloud run services update` command above)
+1. Complete Stripe account activation (see Step 2.3)
+2. Copy your live API keys (`sk_live_...`) from the Stripe dashboard
+3. Go to **Secret Manager** in Google Cloud Console
+4. Click on `stripe-secret-key`, then **"New Version"**, paste the live secret key, and click **"Add New Version"**
+5. Set up a new webhook endpoint in **live mode** (same URL and events as Step 2.5) and update `stripe-webhook-secret` with the new signing secret
+6. Redeploy the ingestion API (repeat the `gcloud run services update` command above)
 
 ---
 
@@ -894,9 +891,10 @@ The frontend cannot reach the backend API. Check:
 
 ### "Payments are not working"
 
-1. Check you are using the right Braintree keys (sandbox vs production)
-2. In sandbox mode, use the test card `4111 1111 1111 1111` with any future expiry and any CVV
-3. Check the API logs in Cloud Run for error messages related to Braintree
+1. Check you are using the right Stripe keys (test vs live)
+2. In test mode, use the test card `4242 4242 4242 4242` with any future expiry and any CVC
+3. Check the API logs in Cloud Run for error messages related to Stripe
+4. Verify the webhook signing secret matches the one in your Stripe dashboard
 
 ### "The gazette website is not updating"
 
@@ -919,9 +917,8 @@ These are all the configuration values used by the backend services. Most are st
 | `VERTEX_PROJECT`        | Env var | Your Google Cloud project ID                                                              |
 | `VERTEX_LOCATION`       | Env var | Google Cloud region for AI (default: `global`)                                            |
 | `CATEGORISER_MODEL`     | Env var | Vertex AI model used for prompt categorisation (default: `gemini-3.1-flash-lite-preview`) |
-| `BRAINTREE_MERCHANT_ID` | Secret  | Your Braintree Merchant ID                                                                |
-| `BRAINTREE_PUBLIC_KEY`  | Secret  | Your Braintree Public Key                                                                 |
-| `BRAINTREE_PRIVATE_KEY` | Secret  | Your Braintree Private Key                                                                |
+| `STRIPE_SECRET_KEY`     | Secret  | Your Stripe secret API key (`sk_test_...` or `sk_live_...`)                               |
+| `STRIPE_WEBHOOK_SECRET` | Secret  | Stripe webhook signing secret (`whsec_...`)                                               |
 | `CORS_ALLOWED_ORIGINS`  | Env var | The URL of your prompt UI website (e.g., `https://imbryk.pages.dev`)                      |
 | `SENTRY_DSN`            | Env var | Error tracking URL (optional — leave empty to disable)                                    |
 

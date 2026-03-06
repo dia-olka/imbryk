@@ -7,13 +7,12 @@ ogType: website
 
 {% set edition = editions | latestEdition %}
 
-<div class="edition-header">
-  <p class="edition-header__label">Gazette</p>
-  <h1 class="edition-header__date">Today's Edition</h1>
-  {% if edition %}
-    <p class="edition-header__sub"><time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time></p>
-  {% endif %}
-</div>
+{% if edition %}
+<p class="edition-dateline">
+  <time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time>
+  &mdash; Today&rsquo;s Edition
+</p>
+{% endif %}
 
 {% if edition %}
   <ul class="front-page-grid" role="list">

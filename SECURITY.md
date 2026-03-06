@@ -30,7 +30,7 @@ Transitive dependencies audited: `tough-cookie`, `cross-spawn`, `braces`, `micro
 | `sqlalchemy` | `>=2.0` | `>=2.0.36` | Tightened lower bound; avoids unnecessarily old 2.0.x releases |
 | `alembic` | `>=1.13` | `>=1.13.3` | Tightened lower bound to latest 1.13.x patch |
 | `slowapi` | `>=0.1` | `>=0.1.9` | Versions <0.1.5 allow rate-limit bypass via X-Forwarded-For header manipulation; 0.1.9 is the latest release |
-| `braintree` | `>=4.0` | `>=4.30.0` | Early 4.0.x versions carry older `requests` transitive constraints; `requests` had CVE-2023-32681 (auth header leak on redirect, fixed in requests 2.31.0). Recent braintree 4.x pins a patched requests version. |
+| `stripe` | — | `>=11.0.0` | Stripe Python SDK for payment processing via Stripe Checkout. No known CVEs in current versions. |
 
 No known CVEs in `fastapi`, `pydantic`, `uvicorn`, `google-genai`, or `sentry-sdk` within the versions specified (current lower bounds are already well above all known vulnerability thresholds for these packages).
 
