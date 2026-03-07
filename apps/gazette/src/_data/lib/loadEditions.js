@@ -220,9 +220,15 @@ async function loadFromR2() {
     editions.push(transformed);
   }
 
+  // Deduplicate by date (URL structure uses date as the unique key).
+  // Later entries overwrite earlier ones, so the last edition_id for a date wins.
+  const byDate = new Map();
+  for (const ed of editions) {
+    byDate.set(ed.date, ed);
+  }
+
   // Sort newest first
-  editions.sort((a, b) => b.date.localeCompare(a.date));
-  return editions;
+  return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function loadFromFixture() {
