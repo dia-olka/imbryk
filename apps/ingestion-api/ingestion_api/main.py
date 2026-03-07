@@ -18,6 +18,8 @@ from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
     RATE_LIMIT_QUOTE,
     SENTRY_DSN,
+    STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET,
     VERTEX_LOCATION,
     VERTEX_PROJECT,
     _log_level_int,
@@ -77,6 +79,15 @@ app.add_middleware(
 async def startup_event():
     """Log API startup for visibility in Cloud Logging & Sentry."""
     configure_stripe()
+    if not STRIPE_SECRET_KEY:
+        logger.error(
+            "STRIPE_SECRET_KEY is not set — checkout session creation will fail. "
+            "Set the env var (or Secret Manager secret) before accepting payments."
+        )
+    if not STRIPE_WEBHOOK_SECRET:
+        logger.warning(
+            "STRIPE_WEBHOOK_SECRET is not set — incoming Stripe webhooks will fail signature verification."
+        )
     if VERTEX_PROJECT:
         from ingestion_api.categoriser import GeminiFlashCategoriser
 
@@ -245,6 +256,14 @@ async def create_checkout_session(
             },
             success_url=f"{origin}?session_id={{CHECKOUT_SESSION_ID}}&status=success",
             cancel_url=f"{origin}?status=cancelled",
+        )
+    except stripe.AuthenticationError:
+        logger.error(
+            "Stripe authentication failed — STRIPE_SECRET_KEY is missing or invalid"
+        )
+        return JSONResponse(
+            status_code=502,
+            content={"detail": "Payment service unavailable — configuration error"},
         )
     except stripe.StripeError as e:
         logger.warning("Stripe checkout session creation failed: %s", e)

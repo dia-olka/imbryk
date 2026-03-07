@@ -105,6 +105,9 @@ jobs:
             VERTEX_PROJECT=${{ vars.GCP_PROJECT_ID }}
             VERTEX_LOCATION=${{ env.VERTEX_AI_LOCATION }}
             CATEGORISER_MODEL=${{ vars.CATEGORISER_MODEL }}
+          secrets: |
+            STRIPE_SECRET_KEY=stripe-secret-key:latest
+            STRIPE_WEBHOOK_SECRET=stripe-webhook-secret:latest
 
       - name: Run database migrations
         run: |
