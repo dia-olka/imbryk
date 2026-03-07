@@ -343,6 +343,26 @@ def run_morning_press(
         # Step 14: Trigger gazette rebuild via Cloudflare deploy hook
         _trigger_deploy_hook()
 
+        # Step 15: Backfill missing images from previous editions (best-effort).
+        # Runs after today's edition is committed and published so a slow
+        # Imagen backfill cannot delay the current edition reaching readers.
+        try:
+            from .config import MAX_BACKFILL_IMAGES_PER_RUN
+            from .image_gen.backfill import run_image_backfill
+
+            run_image_backfill(
+                session=session,
+                today_date=edition_date,
+                imagen_client=img_client,
+                storage=store,
+                max_images_per_run=MAX_BACKFILL_IMAGES_PER_RUN,
+            )
+        except Exception:
+            logger.warning(
+                "Image backfill step failed, today's edition unaffected",
+                exc_info=True,
+            )
+
         total_ms = int((time.monotonic() - start_time) * 1000)
         summary = {
             "edition_id": edition_id,

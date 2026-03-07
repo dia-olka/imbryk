@@ -71,6 +71,24 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
         parsed.newspaper_id = newspaperId;
       }
 
+      // Normalise field name variants produced by LLMs that deviate from the schema.
+      // The LLM prompt specifies exact names, but flash-tier models occasionally use
+      // alternatives (e.g. "title"/"content" instead of "headline"/"body").
+      if (Array.isArray(parsed.articles)) {
+        parsed.articles = parsed.articles.map((a) => ({
+          ...a,
+          headline: a.headline ?? a.title ?? undefined,
+          body: a.body ?? a.content ?? a.text ?? undefined,
+        }));
+      }
+      if (Array.isArray(parsed.in_brief)) {
+        parsed.in_brief = parsed.in_brief.map((item) => ({
+          ...item,
+          headline: item.headline ?? item.title ?? undefined,
+          summary: item.summary ?? item.content ?? item.text ?? undefined,
+        }));
+      }
+
       // Validate the parsed newspaper content
       const npResult = R2NewspaperContentSchema.safeParse(parsed);
       if (!npResult.success) {

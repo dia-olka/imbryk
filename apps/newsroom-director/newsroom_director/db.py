@@ -113,6 +113,19 @@ class PromptRecord:
     category_ids: list[str]
 
 
+@dataclass
+class EditionBackfillTarget:
+    """An edition that has at least one newspaper with missing article images."""
+
+    edition_id: str
+    edition_date: str
+    # All newspaper articles for this edition (newspaper_id -> content_json).
+    # Includes curator. Required so write_edition can re-upload the full envelope.
+    newspaper_articles: dict[str, str]
+    # Subset of newspaper_ids that have articles with imagePrompt but no image_url.
+    newspapers_to_backfill: list[str]
+
+
 # --- Engine / session helpers ---
 
 
@@ -237,3 +250,74 @@ def save_edition(
         session.add(article)
 
     return edition_id
+
+
+def fetch_editions_needing_image_backfill(
+    session: Session,
+    exclude_date: str,
+    max_editions: int = 7,
+) -> list[EditionBackfillTarget]:
+    """Return previous editions that have articles with imagePrompt but no image_url.
+
+    Scans the last *max_editions* editions (by date, descending), excluding
+    *exclude_date* (today). For each edition, parses every newspaper's
+    content_json and identifies which newspapers have at least one article
+    that needs an image.
+
+    Args:
+        session: Active DB session.
+        exclude_date: Date string (YYYY-MM-DD) to exclude from the scan.
+        max_editions: Maximum number of past editions to inspect.
+
+    Returns:
+        List of EditionBackfillTarget, one per edition that needs backfill.
+    """
+    edition_rows = (
+        session.query(EditionRow)
+        .filter(EditionRow.date != exclude_date)
+        .order_by(EditionRow.date.desc())
+        .limit(max_editions)
+        .all()
+    )
+
+    targets: list[EditionBackfillTarget] = []
+
+    for edition_row in edition_rows:
+        article_rows = (
+            session.query(EditionArticleRow)
+            .filter(EditionArticleRow.edition_id == edition_row.id)
+            .all()
+        )
+
+        newspaper_articles: dict[str, str] = {}
+        newspapers_to_backfill: list[str] = []
+
+        for article_row in article_rows:
+            newspaper_articles[article_row.newspaper_id] = article_row.content_json
+
+            if article_row.newspaper_id == "curator":
+                continue
+
+            try:
+                parsed = json.loads(article_row.content_json)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            needs_backfill = any(
+                isinstance(a, dict) and a.get("imagePrompt") and not a.get("image_url")
+                for a in parsed.get("articles", [])
+            )
+            if needs_backfill:
+                newspapers_to_backfill.append(article_row.newspaper_id)
+
+        if newspapers_to_backfill:
+            targets.append(
+                EditionBackfillTarget(
+                    edition_id=edition_row.id,
+                    edition_date=edition_row.date,
+                    newspaper_articles=newspaper_articles,
+                    newspapers_to_backfill=newspapers_to_backfill,
+                )
+            )
+
+    return targets

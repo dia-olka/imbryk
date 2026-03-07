@@ -916,50 +916,59 @@ These are all the configuration values used by the backend services. Most are st
 
 ### Ingestion API
 
-| Variable                | Storage | What it is                                                                                |
-| ----------------------- | ------- | ----------------------------------------------------------------------------------------- |
-| `DATABASE_URL`          | Secret  | Connection string for the PostgreSQL database                                             |
-| `VERTEX_PROJECT`        | Env var | Your Google Cloud project ID                                                              |
-| `VERTEX_LOCATION`       | Env var | Google Cloud region for AI (default: `global`)                                            |
-| `CATEGORISER_MODEL`     | Env var | Vertex AI model used for prompt categorisation (default: `gemini-3.1-flash-lite-preview`) |
-| `STRIPE_SECRET_KEY`     | Secret  | Your Stripe secret API key (`sk_test_...` or `sk_live_...`)                               |
-| `STRIPE_WEBHOOK_SECRET` | Secret  | Stripe webhook signing secret (`whsec_...`)                                               |
-| `CORS_ALLOWED_ORIGINS`  | Env var | The URL of your prompt UI website (e.g., `https://imbryk.pages.dev`)                      |
-| `SENTRY_DSN`            | Env var | Error tracking URL (optional — leave empty to disable)                                    |
+| Variable                | Storage | Default                        | What it is                                                          |
+| ----------------------- | ------- | ------------------------------ | ------------------------------------------------------------------- |
+| `DATABASE_URL`          | Secret  | —                              | PostgreSQL connection string                                        |
+| `STRIPE_SECRET_KEY`     | Secret  | —                              | Stripe secret API key (`sk_test_...` or `sk_live_...`)              |
+| `STRIPE_WEBHOOK_SECRET` | Secret  | —                              | Stripe webhook signing secret (`whsec_...`)                         |
+| `VERTEX_PROJECT`        | Env var | —                              | Your Google Cloud project ID                                        |
+| `VERTEX_LOCATION`       | Env var | `global`                       | Google Cloud region for Vertex AI                                   |
+| `CATEGORISER_MODEL`     | Env var | `gemini-3.1-flash-lite-preview`| Vertex AI model used to categorise prompts                          |
+| `CORS_ALLOWED_ORIGINS`  | Env var | `http://localhost:4200`        | Comma-separated list of allowed origins (set to your prompt UI URL) |
+| `RATE_LIMIT_QUOTE`      | Env var | `10/minute`                    | Rate limit on the `/prompts/quote` endpoint per IP                  |
+| `LOG_LEVEL`             | Env var | `INFO`                         | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                 |
+| `SENTRY_DSN`            | Env var | _(empty)_                      | Sentry error tracking URL — leave empty to disable                  |
 
 ### Newsroom Director
 
-| Variable                 | Storage | What it is                                                                                                        |
-| ------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`           | Secret  | Connection string for the PostgreSQL database                                                                     |
-| `VERTEX_AI_PROJECT`      | Env var | Your Google Cloud project ID                                                                                      |
-| `VERTEX_AI_LOCATION`     | Env var | Google Cloud region for AI models (default: `global`)                                                             |
-| `R2_ACCOUNT_ID`          | Secret  | Your Cloudflare account ID                                                                                        |
-| `R2_ACCESS_KEY_ID`       | Secret  | R2 API access key                                                                                                 |
-| `R2_SECRET_ACCESS_KEY`   | Secret  | R2 API secret key                                                                                                 |
-| `R2_BUCKET_NAME`         | Env var | The R2 bucket name (default: `imbryk-editions`)                                                                   |
-| `R2_PUBLIC_URL`          | Env var | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to generate public image URLs |
-| `ENABLE_IMAGES`          | Env var | Generate article and hero images via Imagen (default: `true`)                                                     |
-| `ENABLE_VALIDATION`      | Env var | Check prompt coherence before generating (default: `true`)                                                        |
-| `GENERATION_MODEL_PRO`   | Env var | Gemini model for premium newspaper generation (default: `gemini-3.1-pro-preview`)                                 |
-| `GENERATION_MODEL_FLASH` | Env var | Gemini model for standard newspaper generation (default: `gemini-2.0-flash`)                                      |
-| `IMAGE_GENERATION_MODEL` | Env var | Vertex AI Imagen model for article images (default: `gemini-3-pro-image-preview`)                                 |
-| `SENTRY_DSN`             | Env var | Error tracking URL (optional — leave empty to disable)                                                            |
-| `TOTAL_BUDGET_TOKENS`    | Env var | Max AI tokens per newspaper (default: `800000`)                                                                   |
-| `MAX_CLUSTERS`           | Env var | Max topic groups per newspaper (default: `30`)                                                                    |
-| `CF_DEPLOY_HOOK_URL`     | Secret  | Cloudflare Pages deploy hook URL — triggers gazette rebuild after a new edition is published                      |
+| Variable                      | Storage | Default                      | What it is                                                                                                        |
+| ----------------------------- | ------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                | Secret  | —                            | PostgreSQL connection string                                                                                      |
+| `R2_ACCOUNT_ID`               | Secret  | —                            | Your Cloudflare account ID                                                                                        |
+| `R2_ACCESS_KEY_ID`            | Secret  | —                            | R2 API access key ID                                                                                              |
+| `R2_SECRET_ACCESS_KEY`        | Secret  | —                            | R2 API secret key                                                                                                 |
+| `CF_DEPLOY_HOOK_URL`          | Secret  | —                            | Cloudflare Pages deploy hook URL — triggers gazette rebuild after each edition                                    |
+| `VERTEX_AI_PROJECT`           | Env var | —                            | Your Google Cloud project ID                                                                                      |
+| `VERTEX_AI_LOCATION`          | Env var | `global`                     | Google Cloud region for Vertex AI models                                                                          |
+| `GENERATION_MODEL_PRO`        | Env var | `gemini-3.1-pro-preview`     | Gemini model used for Pro-tier newspapers (The Sovereign, The Owner, Curator, validation, ledger mutation)        |
+| `GENERATION_MODEL_FLASH`      | Env var | `gemini-3-flash-preview`     | Gemini model used for Flash-tier newspapers (The Aspirant, The Moralist, The Radical, The Hedonist)              |
+| `IMAGE_GENERATION_MODEL`      | Env var | `gemini-3-pro-image-preview` | Vertex AI Imagen model for article and hero images                                                                |
+| `R2_BUCKET_NAME`              | Env var | `imbryk-editions`            | R2 bucket where editions and images are stored                                                                    |
+| `R2_PUBLIC_URL`               | Env var | _(empty)_                    | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to build public image URLs   |
+| `ENABLE_IMAGES`               | Env var | `true`                       | Set to `false` to skip Imagen calls (useful when testing)                                                         |
+| `ENABLE_VALIDATION`           | Env var | `true`                       | Set to `false` to skip world-coherence validation of prompts                                                      |
+| `TOTAL_BUDGET_TOKENS`         | Env var | `800000`                     | Total AI token budget allocated across all topic clusters per newspaper                                           |
+| `MAX_CLUSTERS`                | Env var | `30`                         | Maximum number of topic clusters per newspaper before low-weight ones are merged                                  |
+| `MAX_BACKFILL_IMAGES_PER_RUN` | Env var | `20`                         | Max images to generate during the end-of-run backfill step for previously failed image generations                |
+| `LOG_LEVEL`                   | Env var | `INFO`                       | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                               |
+| `SENTRY_DSN`                  | Env var | _(empty)_                    | Sentry error tracking URL — leave empty to disable                                                                |
 
 ### Prompt UI (Cloudflare Pages)
 
-| Variable          | Where to set              | What it is                             |
-| ----------------- | ------------------------- | -------------------------------------- |
-| `NODE_VERSION`    | Cloudflare Pages env vars | Node.js version (set to `20`)          |
-| `VITE_API_URL`    | Cloudflare Pages env vars | The URL of your deployed Ingestion API |
-| `VITE_SENTRY_DSN` | Cloudflare Pages env vars | Error tracking URL (optional)          |
+| Variable           | Default                           | What it is                                                              |
+| ------------------ | --------------------------------- | ----------------------------------------------------------------------- |
+| `NODE_VERSION`     | —                                 | Node.js version to use for the build (set to `20`)                      |
+| `VITE_API_URL`     | —                                 | URL of your deployed Ingestion API (e.g. `https://api.yourdomain.com`)  |
+| `VITE_APP_URL`     | `https://imbryk.pages.dev`        | The prompt UI's own public URL — used in meta tags and redirects        |
+| `VITE_GAZETTE_URL` | `https://imbryk-gazette.pages.dev`| URL of the gazette — linked from the confirmation screen                |
+| `VITE_SENTRY_DSN`  | _(empty)_                         | Sentry error tracking URL — leave empty to disable                      |
 
 ### Gazette (Cloudflare Pages)
 
-| Variable        | Where to set              | What it is                                                                                                                                                      |
-| --------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_VERSION`  | Cloudflare Pages env vars | Node.js version (set to `20`)                                                                                                                                   |
-| `R2_PUBLIC_URL` | Cloudflare Pages env vars | Custom domain URL of the R2 bucket (e.g. `https://editions.yourdomain.com`) — when set, the gazette fetches editions from R2 instead of using the local fixture |
+| Variable          | Default                           | What it is                                                                                                                |
+| ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_VERSION`    | —                                 | Node.js version to use for the build (set to `20`)                                                                        |
+| `R2_PUBLIC_URL`   | _(empty)_                         | Custom domain URL of the R2 bucket — when set, the gazette fetches live editions from R2 instead of the local fixture     |
+| `GAZETTE_URL`     | `https://imbryk-gazette.pages.dev`| The gazette's own public URL — used in canonical links and the sitemap                                                    |
+| `IMBRYK_APP_URL`  | `https://imbryk.pages.dev`        | URL of the prompt UI — used in the "Submit a prompt" call-to-action link                                                  |
+| `SENTRY_DSN`      | _(empty)_                         | Sentry error tracking URL — leave empty to disable                                                                        |

@@ -21,6 +21,10 @@ IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "gemini-3-pro-image
 TOTAL_BUDGET_TOKENS = int(os.getenv("TOTAL_BUDGET_TOKENS", "800000"))
 MAX_CLUSTERS = int(os.getenv("MAX_CLUSTERS", "30"))
 
+# Image backfill — max images to generate per pipeline run when catching up
+# on previous editions with failed image generation.
+MAX_BACKFILL_IMAGES_PER_RUN = int(os.getenv("MAX_BACKFILL_IMAGES_PER_RUN", "20"))
+
 # Cloudflare R2 storage
 R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
 R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
