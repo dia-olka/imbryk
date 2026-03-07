@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -14,10 +13,9 @@ from newsroom_director.db import (
     EditionRow,
     fetch_editions_needing_image_backfill,
 )
-from newsroom_director.image_gen.backfill import BackfillResult, run_image_backfill
+from newsroom_director.image_gen.backfill import run_image_backfill
 from newsroom_director.image_gen.client import StubImageClient
 from newsroom_director.storage import StubEditionStorage
-
 
 # ---------------------------------------------------------------------------
 # Helpers
