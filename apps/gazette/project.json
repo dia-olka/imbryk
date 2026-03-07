@@ -4,6 +4,12 @@
   "projectType": "application",
   "sourceRoot": "apps/gazette/src",
   "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "configFile": "apps/gazette/vitest.config.mts"
+      }
+    },
     "build": {
       "executor": "nx:run-commands",
       "options": {
