@@ -13,6 +13,8 @@ const PERSONA_DESIGN_MAP = {
     fontBody: "'Source Sans 3', sans-serif",
     borderStyle: '4px solid',
     borderStyleName: 'geometric',
+    googleFontsUrl:
+      'https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap',
   },
   aspirant: {
     primary: '#1a8a7d',
@@ -22,6 +24,8 @@ const PERSONA_DESIGN_MAP = {
     fontBody: "'Merriweather Sans', sans-serif",
     borderStyle: '2px solid',
     borderStyleName: 'clean',
+    googleFontsUrl:
+      'https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700&family=Merriweather+Sans:wght@400;700&display=swap',
   },
   owner: {
     primary: '#2c3e50',
@@ -31,6 +35,8 @@ const PERSONA_DESIGN_MAP = {
     fontBody: "'Lora', serif",
     borderStyle: '1px solid',
     borderStyleName: 'rule',
+    googleFontsUrl:
+      'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap',
   },
   sovereign: {
     primary: '#1b4332',
@@ -40,6 +46,8 @@ const PERSONA_DESIGN_MAP = {
     fontBody: "'Source Serif 4', serif",
     borderStyle: '3px double',
     borderStyleName: 'ornate',
+    googleFontsUrl:
+      'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,700;1,400&display=swap',
   },
   moralist: {
     primary: '#6c3483',
@@ -49,6 +57,8 @@ const PERSONA_DESIGN_MAP = {
     fontBody: "'Nunito', sans-serif",
     borderStyle: '2px dashed',
     borderStyleName: 'traditional',
+    googleFontsUrl:
+      'https://fonts.googleapis.com/css2?family=Vollkorn:ital,wght@0,400;0,700;1,400&family=Nunito:wght@400;700&display=swap',
   },
   hedonist: {
     primary: '#d4ac0d',
@@ -58,6 +68,8 @@ const PERSONA_DESIGN_MAP = {
     fontBody: "'Inter', sans-serif",
     borderStyle: '2px dotted',
     borderStyleName: 'playful',
+    googleFontsUrl:
+      'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;600;700&display=swap',
   },
   curator: {
     primary: '#34495e',
@@ -67,6 +79,8 @@ const PERSONA_DESIGN_MAP = {
     fontBody: "'Inter', sans-serif",
     borderStyle: '1px solid',
     borderStyleName: 'neutral',
+    googleFontsUrl:
+      'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap',
   },
 };
 

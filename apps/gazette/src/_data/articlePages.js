@@ -71,6 +71,7 @@ export default async function () {
           allNewspaperIds,
           designTokens: tokens,
           cssVars,
+          googleFontsUrl: tokens?.googleFontsUrl || null,
         });
       }
     }

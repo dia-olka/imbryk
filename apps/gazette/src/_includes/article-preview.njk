@@ -11,8 +11,9 @@
 {% set truncateCount = previewTruncate if previewTruncate else 30 %}
 
 <a href="/edition/{{ previewEditionDate }}/{{ previewNewspaperId }}/{{ previewArticle.slug }}/"
+   id="{{ previewArticle.slug }}"
    class="article-preview{% if previewIsLead %} article-preview--lead{% endif %}">
-  <article id="{{ previewArticle.slug }}">
+  <article>
     {% if previewArticle.image_url %}
       <img src="{{ previewArticle.image_url }}"
            alt="{{ previewArticle.imagePrompt }}"
@@ -24,7 +25,10 @@
     <div class="article-preview__body">
       <h3 class="article-preview__title">{{ previewArticle.headline }}</h3>
       <p class="article-preview__excerpt">{{ previewArticle.body | truncateWords(truncateCount) }}</p>
-      <p class="article-preview__meta">{{ previewArticle.word_count }} words</p>
+      <p class="article-preview__meta">
+        {{ previewArticle.word_count }} words
+        <span class="article-preview__read-more" aria-hidden="true">Read article →</span>
+      </p>
     </div>
   </article>
 </a>

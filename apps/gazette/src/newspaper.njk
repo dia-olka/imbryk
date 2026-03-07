@@ -11,6 +11,7 @@ eleventyComputed:
   description: "{{ np.newspaperName }} — AI-powered perspective on how today's world-shaping events will unfold. {{ np.editionDate | dateDisplay }} edition."
   ogImage: "{% if np.heroImageUrl %}{{ np.heroImageUrl }}{% endif %}"
   ogImageAlt: "{{ np.newspaperName }} front page — {{ np.editionDate | dateDisplay }}"
+  googleFontsUrl: "{{ np.googleFontsUrl }}"
 ---
 
 {% set persona = personas.newspapers | findPersona(np.newspaperId) %}
@@ -49,7 +50,10 @@ eleventyComputed:
   {% endif %}
 
   <section id="articles" aria-labelledby="articles-heading">
-    <h2 id="articles-heading" class="visually-hidden">Articles</h2>
+    <h2 id="articles-heading" class="section-label">
+      Articles
+      <a href="#articles" class="anchor-link" aria-label="Link to Articles section">#</a>
+    </h2>
 
     <div class="newspaper-articles">
       {% for article in np.articles %}
@@ -73,7 +77,10 @@ eleventyComputed:
 
   {% if np.inBrief.length %}
     <section id="in-brief" class="in-brief" aria-labelledby="in-brief-heading">
-      <h2 id="in-brief-heading">In Brief</h2>
+      <h2 id="in-brief-heading">
+        In Brief
+        <a href="#in-brief" class="anchor-link" aria-label="Link to In Brief section">#</a>
+      </h2>
 
       {% for item in np.inBrief %}
         <div class="in-brief-item">
@@ -86,7 +93,10 @@ eleventyComputed:
 
   {% if np.editorsNote %}
     <aside id="editors-note" class="editors-note" aria-label="Editor's note">
-      <h2>Editor's Note</h2>
+      <h2>
+        Editor's Note
+        <a href="#editors-note" class="anchor-link" aria-label="Link to Editor's Note">#</a>
+      </h2>
       <p>{{ np.editorsNote }}</p>
     </aside>
   {% endif %}

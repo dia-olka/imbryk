@@ -8,7 +8,7 @@
 
 {% set leadHeadline = cardNewspaper.articles[0].headline if cardNewspaper.articles.length else "" %}
 
-<li>
+<li{% if cardId %} id="{{ cardId }}"{% endif %}>
   <a href="/edition/{{ cardEditionDate }}/{{ cardNewspaper.newspaper_id }}/"
      class="front-page-card"
      style="{{ cardPersona.cssVars if cardPersona else '' }}"
