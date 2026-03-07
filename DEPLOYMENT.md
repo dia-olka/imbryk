@@ -347,9 +347,11 @@ Stripe handles credit card payments. Users are redirected to a Stripe-hosted che
 
 1. In the Stripe dashboard, go to **Developers > API keys**
 2. You will see two values:
-   - **Publishable key** (`pk_test_...`) — used by the frontend website (safe to share)
+   - **Publishable key** (`pk_test_...`) — used by browser-side integrations (not needed for Imbryk)
    - **Secret key** (`sk_test_...`) — used by the backend server (keep secret — click "Reveal" to see it)
-3. Write down both
+3. Write down the **Secret key** — that is the only key Imbryk needs
+
+> **Why not the Publishable key?** Imbryk uses Stripe Hosted Checkout: the server creates a checkout session and redirects the user to a Stripe-hosted page. The Publishable key is only needed when embedding Stripe's JavaScript directly in a webpage, which Imbryk does not do.
 
 ### 2.3 Going Live (When Ready for Real Payments)
 
@@ -364,12 +366,14 @@ When you are ready to accept real money (not just test transactions):
 
 ### 2.4 Store Stripe Keys in Google Cloud
 
-Go to **Secret Manager** in the Google Cloud Console and create two secrets (three if you deploy the publishable key as a secret):
+Go to **Secret Manager** in the Google Cloud Console and create two secrets:
 
 | Secret Name              | Value                              |
 | ------------------------ | ---------------------------------- |
 | `stripe-secret-key`      | Your Secret Key from Step 2.2      |
 | `stripe-webhook-secret`  | Your Webhook Signing Secret (2.5)  |
+
+> **Note:** Create the `stripe-webhook-secret` placeholder now (you can update its value after completing Step 2.5). Both secrets must exist in Secret Manager before deploying the Ingestion API.
 
 For each one:
 
@@ -891,10 +895,11 @@ The frontend cannot reach the backend API. Check:
 
 ### "Payments are not working"
 
-1. Check you are using the right Stripe keys (test vs live)
-2. In test mode, use the test card `4242 4242 4242 4242` with any future expiry and any CVC
-3. Check the API logs in Cloud Run for error messages related to Stripe
-4. Verify the webhook signing secret matches the one in your Stripe dashboard
+1. Verify `STRIPE_SECRET_KEY` is set in Secret Manager and mounted to the Cloud Run service: go to **Cloud Run > ingestion-api > Edit & Deploy New Revision > Variables & Secrets** and confirm `stripe-secret-key` is listed under **Secrets**. If it is missing, add `--set-secrets=STRIPE_SECRET_KEY=stripe-secret-key:latest` to your deploy command (Step 5.1) and redeploy.
+2. Check you are using the right Stripe keys (test vs live) — test keys start with `sk_test_`, live keys with `sk_live_`
+3. In test mode, use the test card `4242 4242 4242 4242` with any future expiry and any CVC
+4. Check the API logs in Cloud Run for error messages related to Stripe — a missing or invalid key will log `"Stripe authentication failed"` at startup and on each failed payment attempt
+5. Verify the `stripe-webhook-secret` in Secret Manager matches the Signing Secret shown on your endpoint in the Stripe dashboard (**Developers > Webhooks > your endpoint > Signing secret**)
 
 ### "The gazette website is not updating"
 
