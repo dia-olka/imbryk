@@ -5,7 +5,7 @@
   "sourceRoot": "apps/gazette/src",
   "targets": {
     "test": {
-      "executor": "@nx/vitest:vitest",
+      "executor": "@nx/vitest:test",
       "options": {
         "configFile": "apps/gazette/vitest.config.mts"
       }

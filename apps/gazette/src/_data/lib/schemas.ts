@@ -32,13 +32,13 @@ export const R2NewspaperContentSchema = z.object({
   articles: z.array(R2ArticleSchema),
   in_brief: z.array(R2InBriefSchema).optional(),
   editors_note: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const R2EditionSchema = z.object({
   edition_id: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-  articles: z.record(z.union([z.string(), z.record(z.unknown())])).optional(),
+  articles: z.record(z.string(), z.union([z.string(), z.record(z.string(), z.unknown())])).optional(),
 });
 
 // ─── Gazette template shapes (post-transform) ──────────────────────────────
@@ -68,14 +68,14 @@ export const NewspaperSchema = z.object({
   articles: z.array(ArticleSchema),
   in_brief: z.array(InBriefSchema).optional(),
   editors_note: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const EditionSchema = z.object({
   edition_id: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
   newspapers: z.array(NewspaperSchema),
-  curator_synthesis: z.record(z.unknown()).nullable().optional(),
+  curator_synthesis: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 // ─── Inferred types ────────────────────────────────────────────────────────
