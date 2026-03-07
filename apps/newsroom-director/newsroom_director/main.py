@@ -291,33 +291,45 @@ def run_morning_press(
             parsed = _try_parse_edition_json(content)
             if parsed is None:
                 continue
+
+            # Always re-serialize to clean JSON (strips any markdown fences
+            # that the LLM may have emitted) before attempting image generation.
+            # This ensures R2 always receives valid JSON regardless of whether
+            # image generation succeeds or fails.
+            articles[newspaper_id] = json.dumps(parsed, ensure_ascii=False)
+
             article_list = parsed.get("articles", [])
             front_page_prompt = parsed.get("frontPageImagePrompt")
 
-            result = generate_images_for_newspaper(
-                newspaper_id=newspaper_id,
-                articles=article_list,
-                front_page_image_prompt=front_page_prompt,
-                imagen_client=img_client,
-                storage=store,
-                edition_id=str(
-                    datetime.now(timezone.utc).strftime("%Y-%m-%d")
-                ),
-            )
+            try:
+                result = generate_images_for_newspaper(
+                    newspaper_id=newspaper_id,
+                    articles=article_list,
+                    front_page_image_prompt=front_page_prompt,
+                    imagen_client=img_client,
+                    storage=store,
+                    edition_id=str(
+                        datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                    ),
+                )
 
-            # Embed image URLs into articles
-            for idx, url in result.article_image_urls.items():
-                if idx < len(article_list):
-                    article_list[idx]["image_url"] = url
+                # Embed image URLs into articles
+                for idx, url in result.article_image_urls.items():
+                    if idx < len(article_list):
+                        article_list[idx]["image_url"] = url
+                        image_counts += 1
+                if result.hero_image_url:
+                    parsed["heroImageUrl"] = result.hero_image_url
                     image_counts += 1
-            if result.hero_image_url:
-                parsed["heroImageUrl"] = result.hero_image_url
-                image_counts += 1
 
-            # Re-serialize back to JSON string
-            articles[newspaper_id] = json.dumps(
-                parsed, ensure_ascii=False
-            )
+                # Re-serialize with image URLs embedded
+                articles[newspaper_id] = json.dumps(parsed, ensure_ascii=False)
+            except Exception:
+                logger.exception(
+                    "Image generation failed for newspaper %s, "
+                    "continuing without images",
+                    newspaper_id,
+                )
 
         logger.info(
             "Image generation complete",

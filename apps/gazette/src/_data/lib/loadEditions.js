@@ -29,6 +29,35 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 /**
+ * Static mapping from newspaper ID to display name.
+ * Derived from data/personas.json — update if personas change.
+ */
+const NEWSPAPER_NAMES = {
+  sovereign: 'The Sovereign',
+  aspirant: 'The Aspirant',
+  owner: 'The Owner',
+  moralist: 'The Moralist',
+  radical: 'The Radical',
+  hedonist: 'The Hedonist',
+  curator: 'The Curator',
+};
+
+/**
+ * Strip markdown code fences from a string, if present.
+ * Handles ```json ... ``` or ``` ... ``` wrappers that LLMs occasionally emit.
+ */
+function stripMarkdownFences(text) {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('```')) return trimmed;
+  const lines = trimmed.split('\n');
+  const inner = lines.slice(1); // remove opening fence line (```json or ```)
+  if (inner.length > 0 && inner[inner.length - 1].trim() === '```') {
+    inner.pop(); // remove closing fence
+  }
+  return inner.join('\n');
+}
+
+/**
  * Transform an R2 edition JSON into the gazette template shape.
  *
  * R2 shape:
@@ -52,8 +81,12 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
   )) {
     let parsed;
     try {
-      parsed =
-        typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+      if (typeof rawContent === 'string') {
+        const cleaned = stripMarkdownFences(rawContent);
+        parsed = JSON.parse(cleaned);
+      } else {
+        parsed = rawContent;
+      }
     } catch (err) {
       await captureLoadError(
         sourceUrl,
@@ -71,9 +104,16 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
         parsed.newspaper_id = newspaperId;
       }
 
+      // Inject newspaper_name from the static mapping when the LLM omits it.
+      if (!parsed.newspaper_name && NEWSPAPER_NAMES[newspaperId]) {
+        parsed.newspaper_name = NEWSPAPER_NAMES[newspaperId];
+      }
+
       // Normalise field name variants produced by LLMs that deviate from the schema.
       // The LLM prompt specifies exact names, but flash-tier models occasionally use
-      // alternatives (e.g. "title"/"content" instead of "headline"/"body").
+      // alternatives (e.g. "title"/"content" instead of "headline"/"body",
+      // "inBrief"/"inBriefs" instead of "in_brief", "editorsNote"/"editorNote"
+      // instead of "editors_note").
       if (Array.isArray(parsed.articles)) {
         parsed.articles = parsed.articles.map((a) => ({
           ...a,
@@ -81,6 +121,20 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
           body: a.body ?? a.content ?? a.text ?? undefined,
         }));
       }
+
+      // Normalise in_brief key variants
+      if (!parsed.in_brief) {
+        parsed.in_brief = parsed.inBrief ?? parsed.inBriefs;
+      }
+
+      // Normalise editors_note key variants
+      if (!parsed.editors_note) {
+        const alt = parsed.editorsNote ?? parsed.editorNote ?? parsed.editor_note;
+        if (typeof alt === 'string') {
+          parsed.editors_note = alt;
+        }
+      }
+
       if (Array.isArray(parsed.in_brief)) {
         parsed.in_brief = parsed.in_brief.map((item) => ({
           ...item,
