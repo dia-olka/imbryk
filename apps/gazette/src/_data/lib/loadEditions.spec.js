@@ -270,7 +270,7 @@ describe('captureValidationError', () => {
     const result = schema.safeParse({ headline: '' });
     expect(result.success).toBe(false);
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { /* empty */ });
     await captureValidationError(
       {
         sourceUrl: 'https://r2.example.com/editions/2026-03-01/abc.json',
