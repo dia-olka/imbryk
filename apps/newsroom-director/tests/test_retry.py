@@ -7,26 +7,14 @@ import pytest
 from newsroom_director.retry import _is_rate_limit, _is_retryable, with_retry
 
 
-class _ServiceUnavailable(Exception):
-    pass
+class _ServerError(Exception):
+    def __init__(self):
+        self.code = 503
 
 
-# Give it the right __name__ so _is_retryable recognises it.
-_ServiceUnavailable.__name__ = "ServiceUnavailable"
-
-
-class _ResourceExhausted(Exception):
-    pass
-
-
-_ResourceExhausted.__name__ = "ResourceExhausted"
-
-
-class _TooManyRequests(Exception):
-    pass
-
-
-_TooManyRequests.__name__ = "TooManyRequests"
+class _RateLimitError(Exception):
+    def __init__(self):
+        self.code = 429
 
 
 class _NonRetryable(Exception):
@@ -34,53 +22,51 @@ class _NonRetryable(Exception):
 
 
 class TestIsRetryable:
-    def test_service_unavailable(self):
-        assert _is_retryable(_ServiceUnavailable()) is True
+    def test_server_error(self):
+        assert _is_retryable(_ServerError()) is True
 
     def test_non_retryable(self):
         assert _is_retryable(_NonRetryable()) is False
 
-    def test_resource_exhausted(self):
-        assert _is_retryable(_ResourceExhausted()) is True
+    def test_rate_limit_is_retryable(self):
+        assert _is_retryable(_RateLimitError()) is True
 
-    def test_too_many_requests(self):
-        assert _is_retryable(_TooManyRequests()) is True
+    def test_500_is_retryable(self):
+        class Err(Exception):
+            def __init__(self):
+                self.code = 500
 
-    def test_client_error_429_is_retryable(self):
-        """google.genai raises ClientError for 429; retryable via status_code."""
+        assert _is_retryable(Err()) is True
 
-        class ClientError(Exception):
-            def __init__(self) -> None:
-                self.status_code = 429
+    def test_502_is_retryable(self):
+        class Err(Exception):
+            def __init__(self):
+                self.code = 502
 
-        assert _is_retryable(ClientError()) is True
+        assert _is_retryable(Err()) is True
 
-    def test_client_error_400_not_retryable(self):
+    def test_400_not_retryable(self):
         """Safety rejections (400) must not be retried."""
 
-        class ClientError(Exception):
-            def __init__(self) -> None:
-                self.status_code = 400
+        class Err(Exception):
+            def __init__(self):
+                self.code = 400
 
-        assert _is_retryable(ClientError()) is False
+        assert _is_retryable(Err()) is False
+
+    def test_no_code_not_retryable(self):
+        assert _is_retryable(RuntimeError("boom")) is False
 
 
 class TestIsRateLimit:
-    def test_resource_exhausted(self):
-        assert _is_rate_limit(_ResourceExhausted()) is True
+    def test_429_is_rate_limit(self):
+        assert _is_rate_limit(_RateLimitError()) is True
 
-    def test_too_many_requests(self):
-        assert _is_rate_limit(_TooManyRequests()) is True
+    def test_server_error_not_rate_limit(self):
+        assert _is_rate_limit(_ServerError()) is False
 
-    def test_service_unavailable_not_rate_limit(self):
-        assert _is_rate_limit(_ServiceUnavailable()) is False
-
-    def test_client_error_429_is_rate_limit(self):
-        class ClientError(Exception):
-            def __init__(self) -> None:
-                self.status_code = 429
-
-        assert _is_rate_limit(ClientError()) is True
+    def test_no_code_not_rate_limit(self):
+        assert _is_rate_limit(_NonRetryable()) is False
 
 
 class TestWithRetry:
@@ -98,10 +84,10 @@ class TestWithRetry:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise _ServiceUnavailable("unavailable")
+                raise _ServerError()
             return "ok"
 
-        result = with_retry(flaky, max_retries=5, backoff_base=1.0)
+        result = with_retry(flaky, max_retries=3, backoff_base=1.0)
         assert result == "ok"
         assert call_count == 3
 
@@ -110,15 +96,15 @@ class TestWithRetry:
             raise _NonRetryable("nope")
 
         with pytest.raises(_NonRetryable), patch("newsroom_director.retry.throttle"):
-            with_retry(bad, max_retries=5)
+            with_retry(bad, max_retries=3)
 
     @patch("newsroom_director.retry.throttle")
     @patch("newsroom_director.retry.time.sleep")
     def test_raises_after_max_retries(self, mock_sleep, _mock_throttle):
         def always_fail():
-            raise _ServiceUnavailable("down")
+            raise _ServerError()
 
-        with pytest.raises(_ServiceUnavailable):
+        with pytest.raises(_ServerError):
             with_retry(always_fail, max_retries=2, backoff_base=1.0)
 
     @patch("newsroom_director.retry.throttle")
@@ -140,10 +126,10 @@ class TestWithRetry:
             nonlocal call_count
             call_count += 1
             if call_count <= 2:
-                raise _ServiceUnavailable("down")
+                raise _ServerError()
             return "done"
 
-        with_retry(fail_twice, max_retries=5, backoff_base=2.0)
+        with_retry(fail_twice, max_retries=3, backoff_base=2.0)
         assert mock_sleep.call_count == 2
         # First delay: 2^0 + jitter (1.0 to 2.0)
         assert 1.0 <= mock_sleep.call_args_list[0][0][0] <= 2.0
@@ -153,17 +139,17 @@ class TestWithRetry:
     @patch("newsroom_director.retry.throttle")
     @patch("newsroom_director.retry.time.sleep")
     def test_rate_limit_uses_longer_backoff(self, mock_sleep, _mock_throttle):
-        """TooManyRequests / ResourceExhausted use a longer backoff."""
+        """429 errors use a longer backoff."""
         call_count = 0
 
         def fail_once():
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise _TooManyRequests("429")
+                raise _RateLimitError()
             return "ok"
 
-        with_retry(fail_once, max_retries=5, backoff_base=2.0)
+        with_retry(fail_once, max_retries=3, backoff_base=2.0)
         assert mock_sleep.call_count == 1
         # First delay: 15 * 2^0 + jitter(0,3) → 15.0 to 18.0
         assert 15.0 <= mock_sleep.call_args_list[0][0][0] <= 18.0

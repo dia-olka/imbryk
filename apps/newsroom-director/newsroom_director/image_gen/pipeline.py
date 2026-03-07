@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass
 
 from ..storage import EditionStorage
+from ..validation import sanitize_prompt_text
 from .client import ImageGenerationStrategy
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ def generate_images_for_newspaper(
 
     # Generate article images
     for idx, article in candidates:
-        image_prompt = article["imagePrompt"]
+        image_prompt = sanitize_prompt_text(article["imagePrompt"])
         logger.info(
             "Generating article image",
             extra={
@@ -106,7 +107,7 @@ def generate_images_for_newspaper(
             },
         )
 
-        hero_bytes = imagen_client.generate(front_page_image_prompt)
+        hero_bytes = imagen_client.generate(sanitize_prompt_text(front_page_image_prompt))
         if hero_bytes is not None:
             hero_image_url = storage.write_image(
                 edition_id, newspaper_id, "hero.webp", hero_bytes

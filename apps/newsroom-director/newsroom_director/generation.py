@@ -25,7 +25,7 @@ class GenerationStrategy(ABC):
     """Abstract base for LLM generation backends."""
 
     @abstractmethod
-    def generate(self, system_prompt: str, model_tier: str) -> str:
+    def generate(self, system_prompt: str, model_tier: str, user_content: str = "") -> str:
         """Generate text from a system prompt using the specified model tier."""
 
 
@@ -40,24 +40,29 @@ class VertexAIStrategy(GenerationStrategy):
     def _get_client(self) -> genai.Client:
         if self._client is None:
             from google import genai
+            from google.genai import types
 
             self._client = genai.Client(
                 vertexai=True,
                 project=self._project,
                 location=self._location,
+                http_options=types.HttpOptions(
+                    retry_options=types.HttpRetryOptions(),
+                ),
             )
         return self._client
 
-    def generate(self, system_prompt: str, model_tier: str) -> str:
+    def generate(self, system_prompt: str, model_tier: str, user_content: str = "") -> str:
         from google.genai import types
 
         client = self._get_client()
         model_name = MODEL_MAP.get(model_tier, MODEL_MAP["flash"])
+        contents = user_content or "Generate today's edition."
 
         def _call() -> str:
             response = client.models.generate_content(
                 model=model_name,
-                contents="Generate today's edition.",
+                contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
                 ),
@@ -74,9 +79,9 @@ class StubGenerationStrategy(GenerationStrategy):
         self._responses = responses or {}
         self._calls: list[dict[str, str]] = []
 
-    def generate(self, system_prompt: str, model_tier: str) -> str:
+    def generate(self, system_prompt: str, model_tier: str, user_content: str = "") -> str:
         self._calls.append(
-            {"system_prompt": system_prompt, "model_tier": model_tier}
+            {"system_prompt": system_prompt, "model_tier": model_tier, "user_content": user_content}
         )
         if model_tier in self._responses:
             return self._responses[model_tier]

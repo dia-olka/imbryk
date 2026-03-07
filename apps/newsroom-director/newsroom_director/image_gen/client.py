@@ -44,11 +44,15 @@ class ImagenClient(ImageGenerationStrategy):
     def _get_client(self) -> genai.Client:
         if self._client is None:
             from google import genai
+            from google.genai import types
 
             self._client = genai.Client(
                 vertexai=True,
                 project=self._project,
                 location=self._location,
+                http_options=types.HttpOptions(
+                    retry_options=types.HttpRetryOptions(),
+                ),
             )
         return self._client
 

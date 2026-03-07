@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 
 from .db import PromptRecord
 from .generation import GenerationStrategy
@@ -12,6 +13,16 @@ logger = logging.getLogger(__name__)
 
 # Maximum prompts per validation call to stay within context limits.
 BATCH_SIZE = 50
+
+def sanitize_prompt_text(text: str) -> str:
+    """Strip control patterns that could be interpreted as LLM directives."""
+    text = re.sub(r'\n{3,}', '\n\n', text)  # collapse visual separation attacks
+    text = re.sub(
+        r'</?(?:system|instruction|prompt|role|assistant|user)\b[^>]*>',
+        '', text, flags=re.IGNORECASE,
+    )
+    return text.strip()
+
 
 _VALIDATION_SYSTEM_PROMPT = """\
 You are a world-coherence validator for a fictional newspaper simulation.
@@ -48,7 +59,7 @@ def validate_prompts(
     for batch_start in range(0, len(prompts), BATCH_SIZE):
         batch = prompts[batch_start : batch_start + BATCH_SIZE]
         prompt_list = "\n".join(
-            f"- [{pr.prompt_id}] {pr.text}" for pr in batch
+            f"- [{pr.prompt_id}] {sanitize_prompt_text(pr.text)}" for pr in batch
         )
 
         user_prompt = (
@@ -56,9 +67,8 @@ def validate_prompts(
             f"PROMPTS TO VALIDATE:\n{prompt_list}"
         )
 
-        system_prompt = _VALIDATION_SYSTEM_PROMPT
         response = generation_strategy.generate(
-            system_prompt + "\n\n" + user_prompt, "pro"
+            _VALIDATION_SYSTEM_PROMPT, "pro", user_prompt
         )
 
         batch_accepted = _parse_validation_response(

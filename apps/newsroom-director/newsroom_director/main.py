@@ -220,14 +220,17 @@ def run_morning_press(
                 budgeted = pipeline.run(dist_prompts)
                 digests_text = pipeline.serialize_all(budgeted)
 
-                # Build the user prompt with cluster digests for this newspaper
-                user_prompt = persona.system_prompt_template.replace(
+                # System instruction: persona identity + world context
+                system_instruction = persona.system_prompt_template.replace(
                     "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
-                ).replace("{{CLUSTER_DIGESTS}}", digests_text)
+                ).replace("{{CLUSTER_DIGESTS}}", "[See user content below]")
+
+                # User content: cluster digests (may contain verbatim user prompts)
+                user_content = f"CLUSTER DIGESTS:\n{digests_text}\n\nGenerate today's edition."
 
                 # Call LLM
                 gen_start = time.monotonic()
-                article = gen.generate(user_prompt, persona.model_tier)
+                article = gen.generate(system_instruction, persona.model_tier, user_content)
                 gen_ms = int((time.monotonic() - gen_start) * 1000)
 
                 logger.info(
@@ -252,11 +255,12 @@ def run_morning_press(
         if articles:
             try:
                 all_articles_text = _format_all_articles(articles)
-                curator_prompt = CURATOR_PERSONA.system_prompt_template.replace(
-                    "{{ALL_ARTICLES}}", all_articles_text
+                curator_system = CURATOR_PERSONA.system_prompt_template.replace(
+                    "{{ALL_ARTICLES}}", "[See user content below]"
                 )
+                curator_content = f"TODAY'S ARTICLES:\n{all_articles_text}\n\nGenerate today's synthesis."
                 curator_article = gen.generate(
-                    curator_prompt, CURATOR_PERSONA.model_tier
+                    curator_system, CURATOR_PERSONA.model_tier, curator_content
                 )
                 articles["curator"] = curator_article
             except Exception:
@@ -267,8 +271,8 @@ def run_morning_press(
         # Step 9: WorldLedger mutation via LLM
         if articles:
             try:
-                mutation_prompt = _build_mutation_prompt(synopsis, articles)
-                mutation_response = gen.generate(mutation_prompt, "pro")
+                mutation_system, mutation_content = _build_mutation_prompt(synopsis, articles)
+                mutation_response = gen.generate(mutation_system, "pro", mutation_content)
                 mutation = _parse_mutation(mutation_response)
                 if mutation:
                     ledger = apply_mutation(ledger, mutation)
@@ -475,10 +479,11 @@ def _try_parse_edition_json(content: str) -> dict | None:
 
 def _build_mutation_prompt(
     synopsis: str, articles: dict[str, str]
-) -> str:
-    """Build a prompt asking the LLM to produce a WorldLedger mutation."""
+) -> tuple[str, str]:
+    """Build a system instruction + user content for WorldLedger mutation."""
     articles_text = _format_all_articles(articles)
-    return f"""\
+
+    system_instruction = """\
 You are a world-state updater. Given the current world state and today's \
 newspaper articles, produce a JSON object describing changes to the world \
 ledger. Only include fields that should change.
@@ -486,30 +491,33 @@ ledger. Only include fields that should change.
 The mutation JSON should follow this schema (all fields optional):
 - synopsis: string (updated world synopsis)
 - add_nations: list of new nations
-- update_nations: list of {{name, ...fields_to_update}}
+- update_nations: list of {name, ...fields_to_update}
 - add_alliances, add_conflicts, update_conflicts
 - add_currencies, add_trading_blocs, add_scarcities
 - update_global_gdp_trend: string
 - update_ai, update_energy, update_biotech: partial tech domain update objects \
-with optional keys: {{"name": str, "maturity_level": "emerging"|"growth"|\
-"mature"|"declining", "key_players": [str], "description": str}}
+with optional keys: {"name": str, "maturity_level": "emerging"|"growth"|\
+"mature"|"declining", "key_players": [str], "description": str}
 - add_dominant_narratives: list of strings
-- add_movements: list of {{name, reach, description}}
+- add_movements: list of {name, reach, description}
 - update_media_landscape: string
 - add_forces, update_forces
 - add_arms_races, add_doctrine_shifts: lists of strings
 - update_temperature_anomaly: float
 - add_crises, add_mitigation_efforts
-- add_historical_events: list of {{date, headline, description, impact, \
+- add_historical_events: list of {date, headline, description, impact, \
 sectors}}
 
+Respond with ONLY the JSON mutation object, no explanation."""
+
+    user_content = f"""\
 CURRENT WORLD STATE:
 {synopsis}
 
 TODAY'S ARTICLES:
-{articles_text}
+{articles_text}"""
 
-Respond with ONLY the JSON mutation object, no explanation."""
+    return system_instruction, user_content
 
 
 def _parse_mutation(response: str) -> LedgerMutation | None:

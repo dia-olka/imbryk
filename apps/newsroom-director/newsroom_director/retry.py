@@ -11,48 +11,26 @@ T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
-# Exception class names that are retryable (checked by name to avoid
-# hard-importing google.api_core at module level).
-RETRYABLE_EXCEPTIONS = frozenset(
-    {
-        "ServiceUnavailable",
-        "ResourceExhausted",
-        "TooManyRequests",
-        "DeadlineExceeded",
-        "InternalServerError",
-    }
-)
-
-# Subset that should use a longer backoff because the API is rate-limiting.
-_RATE_LIMIT_EXCEPTIONS = frozenset({"ResourceExhausted", "TooManyRequests"})
-
-# HTTP 429 status code — google.genai raises ClientError for all 4xx responses,
-# so we also inspect the status_code attribute to catch rate-limit errors that
-# don't match by class name alone (e.g. when google-genai's internal tenacity
-# exhausts its retries and re-raises as ClientError).
-_RATE_LIMIT_HTTP_STATUS = 429
-
 # Minimum seconds between successive API calls (prevents bursting).
 _MIN_CALL_INTERVAL = 1.5
 _last_call_ts: float = 0.0
 
 
 def _is_retryable(exc: BaseException) -> bool:
-    """Check if an exception is a retryable Google API error."""
-    if type(exc).__name__ in RETRYABLE_EXCEPTIONS:
-        return True
-    # google.genai wraps all 4xx/5xx as ClientError/ServerError.  A 429
-    # response is a transient rate-limit and should be retried.
-    status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
-    return status == _RATE_LIMIT_HTTP_STATUS
+    """Check if an exception is a retryable Google API error.
+
+    google-genai raises exceptions with a `code` attribute for HTTP status.
+    We retry on 429 (rate limit) and 5xx (server errors).
+    """
+    code = getattr(exc, "code", None)
+    if code is None:
+        return False
+    return code == 429 or 500 <= code < 600
 
 
 def _is_rate_limit(exc: BaseException) -> bool:
     """Check if an exception is a rate-limit (429) error."""
-    if type(exc).__name__ in _RATE_LIMIT_EXCEPTIONS:
-        return True
-    status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
-    return status == _RATE_LIMIT_HTTP_STATUS
+    return getattr(exc, "code", None) == 429
 
 
 def throttle() -> None:
@@ -68,15 +46,15 @@ def throttle() -> None:
 def with_retry(
     fn: Callable[..., T],
     *args: object,
-    max_retries: int = 5,
+    max_retries: int = 3,
     backoff_base: float = 2.0,
     **kwargs: object,
 ) -> T:
     """Call *fn* with exponential backoff on transient Gemini errors.
 
-    Retries on ServiceUnavailable, ResourceExhausted, TooManyRequests,
-    DeadlineExceeded, and InternalServerError.  Non-retryable exceptions
-    propagate immediately.
+    Retries on 429 and 5xx errors.  Non-retryable exceptions propagate
+    immediately.  The SDK already performs up to 4 internal retries, so
+    the default max_retries is kept low (3).
 
     Rate-limit errors (429) use a longer initial delay to let quotas reset.
     """

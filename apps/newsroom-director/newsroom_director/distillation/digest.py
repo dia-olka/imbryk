@@ -17,6 +17,7 @@ from collections import Counter
 import numpy as np
 from numpy.typing import NDArray
 
+from ..validation import sanitize_prompt_text
 from .types import Cluster, ClusterDigest, WeightedPrompt
 
 # Maximum number of verbatim prompts per cluster
@@ -43,7 +44,7 @@ def build_digest(cluster: Cluster) -> ClusterDigest:
     sorted_prompts = sorted(cluster.prompts, key=lambda wp: wp.weight, reverse=True)
 
     k = min(MAX_VERBATIM, len(sorted_prompts))
-    verbatim = [(wp.weight, wp.prompt.text) for wp in sorted_prompts[:k]]
+    verbatim = [(wp.weight, sanitize_prompt_text(wp.prompt.text)) for wp in sorted_prompts[:k]]
 
     # Long-tail summary for remaining prompts
     remaining = sorted_prompts[k:]
