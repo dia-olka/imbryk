@@ -37,6 +37,14 @@ either exist in the world state or are plausible extensions of it.  Reject
 prompts that reference real-world entities not present in the fiction, or that
 contradict established facts in the world state.
 
+Prompts may be written in any language. Evaluate world coherence based on
+the meaning of the content, not the language it is written in.
+
+If a prompt appears to be nonsense, garbled, or unrecognisable text (e.g. an
+encoded or encrypted message), treat it as valid — such prompts are permitted
+as encrypted user submissions. Only reject prompts that explicitly contradict
+established world-state facts.
+
 Respond with ONLY a JSON object: {"accepted": ["id1", "id2", ...]}
 Include only the IDs of prompts that pass validation."""
 

@@ -56,7 +56,9 @@ class GeminiFlashCategoriser(CategoriserStrategy):
         system_prompt = (
             "You are a news categoriser. Given a user prompt, classify it into "
             "one or more of these categories. Return ONLY a JSON array of "
-            f"category ID strings. Valid categories: [{category_list}]"
+            f"category ID strings. Valid categories: [{category_list}]. "
+            "The prompt may be in any language. Classify it by topic — "
+            "the language does not affect category assignment."
         )
 
         response = client.models.generate_content(
