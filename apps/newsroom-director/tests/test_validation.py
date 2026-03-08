@@ -5,8 +5,8 @@ import json
 from newsroom_director.db import PromptRecord
 from newsroom_director.generation import StubGenerationStrategy
 from newsroom_director.validation import (
-    BATCH_SIZE,
     _VALIDATION_SYSTEM_PROMPT,
+    BATCH_SIZE,
     _parse_validation_response,
     sanitize_prompt_text,
     validate_prompts,

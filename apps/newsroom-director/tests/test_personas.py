@@ -1,11 +1,11 @@
 """Tests for persona definitions."""
 
 from newsroom_director.personas import (
+    _PREAMBLE,
     ALL_PERSONAS,
     CURATOR_PERSONA,
     MODEL_TIER_MAP,
     NEWSPAPER_PERSONAS,
-    _PREAMBLE,
 )
 from newsroom_director.taxonomy import NEWSPAPER_SUBSCRIPTIONS
 
