@@ -66,6 +66,7 @@ export default async function () {
         allNewspaperIds,
         designTokens: tokens,
         cssVars: toCSSCustomProperties(tokens),
+        googleFontsUrl: tokens?.googleFontsUrl || null,
       });
     }
   }

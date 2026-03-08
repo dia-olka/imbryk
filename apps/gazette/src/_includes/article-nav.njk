@@ -9,22 +9,40 @@
 #}
 
 <nav class="article-nav" aria-label="Article navigation">
-  {% if prevArticle %}
-    <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ prevArticle.slug }}/">
-      <span class="article-nav__label">← Previous</span>
-      {{ prevArticle.headline }}
-    </a>
-  {% else %}
-    <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/">
-      <span class="article-nav__label">←</span>
-      Back to {{ articleNewspaperName }}
-    </a>
-  {% endif %}
+  <div class="article-nav__inner">
 
-  {% if nextArticle %}
-    <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ nextArticle.slug }}/" class="article-nav__next">
-      <span class="article-nav__label">Next →</span>
-      {{ nextArticle.headline }}
-    </a>
-  {% endif %}
+    <div class="article-nav__prev">
+      {% if prevArticle %}
+        <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ prevArticle.slug }}/"
+           class="article-nav__link">
+          <span class="article-nav__arrow" aria-hidden="true">←</span>
+          <span class="article-nav__info">
+            <span class="article-nav__label">Previous</span>
+            <span class="article-nav__headline">{{ prevArticle.headline }}</span>
+          </span>
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="article-nav__center">
+      <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/"
+         class="article-nav__back">
+        All articles
+      </a>
+    </div>
+
+    <div class="article-nav__next-col">
+      {% if nextArticle %}
+        <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ nextArticle.slug }}/"
+           class="article-nav__link article-nav__link--next">
+          <span class="article-nav__info">
+            <span class="article-nav__label">Next</span>
+            <span class="article-nav__headline">{{ nextArticle.headline }}</span>
+          </span>
+          <span class="article-nav__arrow" aria-hidden="true">→</span>
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
 </nav>

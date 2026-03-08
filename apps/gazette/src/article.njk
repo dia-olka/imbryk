@@ -13,6 +13,7 @@ eleventyComputed:
   ogDescription: "{{ ap.article.body | truncateChars(200) }}"
   ogImage: "{% if ap.article.image_url %}{{ ap.article.image_url }}{% elif ap.heroImageUrl %}{{ ap.heroImageUrl }}{% endif %}"
   ogImageAlt: "{{ ap.article.imagePrompt | default(ap.article.headline) }}"
+  googleFontsUrl: "{{ ap.googleFontsUrl }}"
 ---
 
 {% set persona = personas.newspapers | findPersona(ap.newspaperId) %}
@@ -54,8 +55,11 @@ eleventyComputed:
 
 <div class="newspaper" style="{{ ap.cssVars }}">
 
-  <article>
-    <h1 class="article-full__title">{{ ap.article.headline }}</h1>
+  <article id="{{ ap.slug }}">
+    <h1 class="article-full__title">
+      {{ ap.article.headline }}
+      <a href="#{{ ap.slug }}" class="anchor-link" aria-label="Permalink to this article">#</a>
+    </h1>
 
     <p class="article-full__meta">
       {{ ap.newspaperName }} · {{ ap.editionDate | dateDisplay }} · {{ ap.article.word_count }} words

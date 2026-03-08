@@ -27,6 +27,7 @@ eleventyComputed:
     {% set cardPersona = personas.newspapers | findPersona(newspaper.newspaper_id) %}
     {% set cardNewspaper = newspaper %}
     {% set cardEditionDate = edition.date %}
+    {% set cardId = newspaper.newspaper_id %}
     {% include "front-page-card.njk" %}
   {% endfor %}
 

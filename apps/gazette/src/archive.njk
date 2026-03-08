@@ -19,13 +19,23 @@ ogType: website
 </header>
 
 {% if editions.length %}
-  <ul class="edition-list" role="list">
+  <ul class="archive-grid" role="list">
     {% for edition in editions %}
-      <li class="edition-list-item">
-        <a href="/edition/{{ edition.date }}/">
-          <time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay }}</time>
+      <li class="archive-card">
+        <a href="/edition/{{ edition.date }}/" class="archive-card__date-link">
+          <time datetime="{{ edition.date | dateISO }}" class="archive-card__date">{{ edition.date | dateDisplay }}</time>
         </a>
-        — {{ edition.newspapers.length }} newspaper{{ "s" if edition.newspapers.length != 1 }}
+        <ul class="archive-card__newspapers" role="list">
+          {% for newspaper in edition.newspapers %}
+            {% set persona = personas.newspapers | findPersona(newspaper.newspaper_id) %}
+            <li>
+              <a href="/edition/{{ edition.date }}/{{ newspaper.newspaper_id }}/"
+                 class="archive-card__np-link">
+                {{ persona.paperName if persona else newspaper.newspaper_name }}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
       </li>
     {% endfor %}
   </ul>
