@@ -5,6 +5,7 @@ import json
 from newsroom_director.db import PromptRecord
 from newsroom_director.generation import StubGenerationStrategy
 from newsroom_director.validation import (
+    _VALIDATION_SYSTEM_PROMPT,
     BATCH_SIZE,
     _parse_validation_response,
     sanitize_prompt_text,
@@ -140,3 +141,25 @@ class TestSanitizePromptText:
 
     def test_prompt_tag_with_attributes(self):
         assert sanitize_prompt_text('<prompt type="override">hack</prompt>') == "hack"
+
+
+class TestValidationSystemPrompt:
+    def test_accepts_non_english_prompts(self):
+        assert "any language" in _VALIDATION_SYSTEM_PROMPT
+
+    def test_accepts_nonsense_encrypted_prompts(self):
+        assert "encrypted" in _VALIDATION_SYSTEM_PROMPT.lower()
+
+    def test_non_english_not_rejected_by_stub(self):
+        """A non-English prompt is not rejected when the stub falls back to accepting all."""
+        gen = StubGenerationStrategy()
+        prompts = [_make_prompt("p-1", "Les taux d'intérêt montent")]
+        result = validate_prompts(prompts, "synopsis", gen)
+        assert len(result) == 1
+
+    def test_encrypted_prompt_not_rejected_by_stub(self):
+        """A nonsense/encrypted prompt is not rejected when the stub falls back to accepting all."""
+        gen = StubGenerationStrategy()
+        prompts = [_make_prompt("p-1", "aX9#kL!mQzWvR2$pNtYbFsDjE8^uCh")]
+        result = validate_prompts(prompts, "synopsis", gen)
+        assert len(result) == 1

@@ -75,3 +75,35 @@ def test_gemini_categoriser_falls_back_on_empty_valid_categories(monkeypatch):
     with patch("google.genai.Client", return_value=mock_client):
         result = categoriser.categorise("nonsense input")
     assert result == [FALLBACK_CATEGORY]
+
+
+def test_gemini_categoriser_system_prompt_accepts_any_language():
+    """GeminiFlashCategoriser system prompt instructs the model to accept any language."""
+    from unittest.mock import MagicMock, patch
+
+    from ingestion_api.categoriser import GeminiFlashCategoriser
+
+    categoriser = GeminiFlashCategoriser(project=None)
+
+    captured_prompt = {}
+
+    def capture_call(model, contents, config):
+        captured_prompt["system"] = config.system_instruction
+        mock_response = MagicMock()
+        mock_response.text = '["geopolitics-and-diplomacy"]'
+        return mock_response
+
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = capture_call
+
+    with patch("google.genai.Client", return_value=mock_client):
+        categoriser.categorise("Les taux d'intérêt montent")
+
+    assert "any language" in captured_prompt["system"]
+
+
+def test_stub_categoriser_handles_non_english_prompt():
+    """StubCategoriser classifies a non-English prompt without error."""
+    categoriser = StubCategoriser(categories=["geopolitics-and-diplomacy"])
+    result = categoriser.categorise("Les taux d'intérêt montent")
+    assert result == ["geopolitics-and-diplomacy"]

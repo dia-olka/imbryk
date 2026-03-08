@@ -1,6 +1,7 @@
 """Tests for persona definitions."""
 
 from newsroom_director.personas import (
+    _PREAMBLE,
     ALL_PERSONAS,
     CURATOR_PERSONA,
     MODEL_TIER_MAP,
@@ -62,3 +63,20 @@ class TestPersonaDefinitions:
         for persona in ALL_PERSONAS:
             assert len(persona.biases) > 0
             assert len(persona.blindspots) > 0
+
+
+class TestPreambleLanguageInstructions:
+    def test_preamble_instructs_english_output(self):
+        assert "LANGUAGE:" in _PREAMBLE
+        assert "English" in _PREAMBLE
+
+    def test_preamble_handles_encrypted_prompts(self):
+        assert "ENCRYPTED PROMPTS:" in _PREAMBLE
+        assert "encrypted" in _PREAMBLE.lower()
+
+    def test_newspaper_system_prompts_contain_language_instruction(self):
+        for persona in NEWSPAPER_PERSONAS:
+            assert "LANGUAGE:" in persona.system_prompt_template
+
+    def test_curator_prompt_instructs_english_output(self):
+        assert "English" in CURATOR_PERSONA.system_prompt_template
