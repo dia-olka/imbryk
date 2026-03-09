@@ -2,6 +2,7 @@
 
 The Gazette is an [Eleventy](https://www.11ty.dev/) static site that renders AI-generated newspapers from the Imbryk world-building engine.
 
+
 ## Data flow
 
 ```

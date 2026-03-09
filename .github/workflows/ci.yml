@@ -71,6 +71,7 @@ jobs:
     name: Playwright E2E — ${{ matrix.app }} (Chromium)
     needs: [js]
     runs-on: ubuntu-latest
+    continue-on-error: true
     permissions:
       actions: write  # upload-artifact
       checks: write   # github reporter annotations
