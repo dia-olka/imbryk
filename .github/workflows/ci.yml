@@ -75,6 +75,7 @@ jobs:
       actions: write  # upload-artifact
       checks: write   # github reporter annotations
       contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
