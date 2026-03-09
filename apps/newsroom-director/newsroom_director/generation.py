@@ -76,7 +76,10 @@ class VertexAIStrategy(GenerationStrategy):
         model_name = MODEL_MAP.get(model_tier, MODEL_MAP["flash"])
         contents = user_content or "Generate today's edition."
 
-        config_kwargs: dict = {"system_instruction": system_prompt}
+        config_kwargs: dict = {
+            "system_instruction": system_prompt,
+            "thinking_config": types.ThinkingConfig(thinking_budget=-1),
+        }
         if response_schema is not None:
             config_kwargs["response_mime_type"] = "application/json"
             config_kwargs["response_schema"] = response_schema
