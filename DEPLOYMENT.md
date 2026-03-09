@@ -482,7 +482,7 @@ Go to **Secret Manager** in Google Cloud Console and create three secrets:
    - `VITE_API_URL` = (you will fill this in after deploying the API in Step 5 — come back to this)
 7. Click **"Save and Deploy"**
 
-Your prompt UI will be live at `https://imbryk.pages.dev` (or whatever project name you chose).
+Your prompt UI will be live at `https://whisper.imbryk.news` (or whatever project name you chose).
 
 ### 3.6 Deploy the Gazette Website
 
@@ -659,7 +659,7 @@ gcloud run deploy ingestion-api \
   --set-secrets=STRIPE_WEBHOOK_SECRET=stripe-webhook-secret:latest \
   --set-env-vars=VERTEX_PROJECT="${PROJECT_ID}" \
   --set-env-vars=VERTEX_LOCATION=global \
-  --set-env-vars=CORS_ALLOWED_ORIGINS=https://imbryk.pages.dev \
+  --set-env-vars=CORS_ALLOWED_ORIGINS=https://whisper.imbryk.news \
   --set-env-vars=SENTRY_DSN="" \
   --memory=512Mi \
   --cpu=1 \
@@ -964,8 +964,8 @@ These are all the configuration values used by the backend services. Most are st
 | ------------------ | --------------------------------- | ----------------------------------------------------------------------- |
 | `NODE_VERSION`     | —                                 | Node.js version to use for the build (set to `20`)                      |
 | `VITE_API_URL`     | —                                 | URL of your deployed Ingestion API (e.g. `https://api.yourdomain.com`)  |
-| `VITE_APP_URL`     | `https://imbryk.pages.dev`        | The prompt UI's own public URL — used in meta tags and redirects        |
-| `VITE_GAZETTE_URL` | `https://imbryk-gazette.pages.dev`| URL of the gazette — linked from the confirmation screen                |
+| `VITE_APP_URL`     | `https://whisper.imbryk.news`        | The prompt UI's own public URL — used in meta tags and redirects        |
+| `VITE_GAZETTE_URL` | `https://imbryk.news`| URL of the gazette — linked from the confirmation screen                |
 | `VITE_SENTRY_DSN`  | _(empty)_                         | Sentry error tracking URL — leave empty to disable                      |
 
 ### Gazette (Cloudflare Pages)
@@ -974,6 +974,6 @@ These are all the configuration values used by the backend services. Most are st
 | ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `NODE_VERSION`    | —                                 | Node.js version to use for the build (set to `20`)                                                                        |
 | `R2_PUBLIC_URL`   | _(empty)_                         | Custom domain URL of the R2 bucket — when set, the gazette fetches live editions from R2 instead of the local fixture     |
-| `GAZETTE_URL`     | `https://imbryk-gazette.pages.dev`| The gazette's own public URL — used in canonical links and the sitemap                                                    |
-| `IMBRYK_APP_URL`  | `https://imbryk.pages.dev`        | URL of the prompt UI — used in the "Submit a prompt" call-to-action link                                                  |
+| `GAZETTE_URL`     | `https://imbryk.news`| The gazette's own public URL — used in canonical links and the sitemap                                                    |
+| `IMBRYK_APP_URL`  | `https://whisper.imbryk.news`        | URL of the prompt UI — used in the "Submit a prompt" call-to-action link                                                  |
 | `SENTRY_DSN`      | _(empty)_                         | Sentry error tracking URL — leave empty to disable                                                                        |

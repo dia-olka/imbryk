@@ -7,6 +7,6 @@ export const WEIGHT_MULTIPLIER_MAX = 100;
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 export const APP_URL =
-  import.meta.env.VITE_APP_URL ?? 'https://imbryk.pages.dev';
+  import.meta.env.VITE_APP_URL ?? 'https://whisper.imbryk.news';
 export const GAZETTE_URL =
-  import.meta.env.VITE_GAZETTE_URL ?? 'https://imbryk-gazette.pages.dev';
+  import.meta.env.VITE_GAZETTE_URL ?? 'https://imbryk.news';

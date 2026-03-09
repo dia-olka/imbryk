@@ -42,6 +42,9 @@ export default defineConfig({
         url: 'http://localhost:4200',
         reuseExistingServer: !isCI,
         timeout: 120_000,
+        env: {
+          VITE_APP_URL: 'http://localhost:4200',
+        },
       },
 
   use: {

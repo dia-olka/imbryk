@@ -7,8 +7,8 @@
  */
 export default function () {
   return {
-    url: process.env.GAZETTE_URL ?? 'https://imbryk-gazette.pages.dev',
-    submitUrl: process.env.IMBRYK_APP_URL ?? 'https://imbryk.pages.dev',
+    url: process.env.GAZETTE_URL ?? 'https://imbryk.news',
+    submitUrl: process.env.IMBRYK_APP_URL ?? 'https://whisper.imbryk.news',
     name: 'Imbryk Gazette',
     description:
       'AI-powered perspectives on how world events ripple through society, politics, and culture — six ideologically distinct newspapers, each driven by advanced AI systems.',
