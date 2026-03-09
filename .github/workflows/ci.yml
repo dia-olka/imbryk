@@ -9,6 +9,7 @@ on:
 permissions:
   actions: read
   contents: read
+  checks: write       # Playwright github reporter posts check annotations
 
 jobs:
   js:
@@ -65,6 +66,38 @@ jobs:
       - uses: nrwl/nx-set-shas@v4
 
       - run: npx nx run-many --targets=lint,test --projects=ingestion-api,newsroom-director
+
+  e2e:
+    name: Playwright E2E (Chromium)
+    needs: [js]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write  # upload-artifact
+      checks: write   # github reporter annotations
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        run: npx nx run imbryk-e2e:e2e:ci
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-ci
+          path: apps/imbryk-e2e/playwright-report/
+          retention-days: 14
 
   docker:
     name: Docker build check

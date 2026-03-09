@@ -13,7 +13,9 @@ env:
 
 permissions:
   contents: read
-  id-token: write # Required for Workload Identity Federation
+  id-token: write  # Required for Workload Identity Federation
+  actions: write   # upload / download artifacts
+  checks: write    # Playwright github reporter annotations
 
 jobs:
   # Only run if CI succeeded
@@ -194,3 +196,122 @@ jobs:
             --region=${{ env.GCP_REGION }} \
             --update-env-vars=SENTRY_DSN=${{ vars.SENTRY_DSN }},R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }},GENERATION_MODEL_PRO=${{ vars.GENERATION_MODEL_PRO }},GENERATION_MODEL_FLASH=${{ vars.GENERATION_MODEL_FLASH }},IMAGE_GENERATION_MODEL=${{ vars.IMAGE_GENERATION_MODEL }},VERTEX_AI_PROJECT=${{ vars.GCP_PROJECT_ID }},VERTEX_AI_LOCATION=${{ env.VERTEX_AI_LOCATION }} \
             --update-secrets=CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest
+
+  # ── Post-deployment E2E smoke tests ─────────────────────────────────────────
+  # Runs after both deploy jobs (skipped deploys are fine — smoke tests still
+  # validate that the live app is healthy after every CD run).
+  #
+  # 3 parallel workers × 5 browser/device projects (chromium, firefox, webkit,
+  # mobile-chrome, mobile-safari).  Each worker writes a blob report to a
+  # uniquely-named artifact so no results are ever overwritten.
+  # The merge-e2e-reports job then combines all blobs into a single HTML report
+  # and posts annotations directly to the workflow via the github reporter.
+  #
+  # Requires:  vars.IMBRYK_URL  — the deployed frontend base URL,
+  #            e.g. https://app.imbryk.com
+  e2e-shards:
+    name: E2E shard ${{ matrix.shard }}/${{ strategy.job-total }}
+    needs: [deploy-ingestion-api, deploy-newsroom-director]
+    # Run even when individual deploy jobs were skipped (no relevant changes),
+    # but abort if something actually failed or was cancelled.
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      SHARD_INDEX: ${{ matrix.shard }}
+      SHARD_TOTAL: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E shard ${{ matrix.shard }}/${{ strategy.job-total }}
+        run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        working-directory: apps/imbryk-e2e
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: ${{ vars.IMBRYK_URL }}
+          PLAYWRIGHT_FULL_SUITE: 'true'
+
+      # Each shard uploads its blob under a unique artifact name so parallel
+      # workers never overwrite each other.
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-blob-shard-${{ matrix.shard }}
+          path: apps/imbryk-e2e/blob-report/
+          retention-days: 1   # blobs are only needed until merge-reports runs
+
+  merge-e2e-reports:
+    name: Merge E2E reports
+    needs: [e2e-shards]
+    if: always() && needs.e2e-shards.result != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Collect every blob from all three shards into ./all-blobs/
+      - name: Download all blob reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: playwright-blob-shard-*
+          path: all-blobs
+          merge-multiple: true
+
+      # Merge blobs → HTML report (artifact) + github reporter (annotations
+      # appear inline in the Actions log, no JSON parsing required).
+      - name: Merge reports
+        run: npx playwright merge-reports --reporter=github,html ./all-blobs
+        working-directory: apps/imbryk-e2e
+        env:
+          CI: true
+
+      - name: Upload merged HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-cd
+          path: apps/imbryk-e2e/playwright-report/
+          retention-days: 30
+
+      # Write a summary card so the result is visible at a glance on the
+      # workflow run page without downloading the artifact.
+      - name: Write step summary
+        if: always()
+        run: |
+          STATUS="${{ needs.e2e-shards.result }}"
+          if [ "$STATUS" = "success" ]; then
+            echo "## ✅ E2E smoke tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ E2E smoke tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "3 shards · 5 devices (Chromium, Firefox, WebKit, Pixel 5, iPhone 13)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📄 [Download full HTML report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
