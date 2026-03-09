@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -25,8 +26,18 @@ class GenerationStrategy(ABC):
     """Abstract base for LLM generation backends."""
 
     @abstractmethod
-    def generate(self, system_prompt: str, model_tier: str, user_content: str = "") -> str:
-        """Generate text from a system prompt using the specified model tier."""
+    def generate(
+        self,
+        system_prompt: str,
+        model_tier: str,
+        user_content: str = "",
+        response_schema: type | None = None,
+    ) -> str:
+        """Generate text from a system prompt using the specified model tier.
+
+        When response_schema is provided, the response is constrained to valid
+        JSON matching that schema (Gemini controlled generation).
+        """
 
 
 class VertexAIStrategy(GenerationStrategy):
@@ -52,20 +63,29 @@ class VertexAIStrategy(GenerationStrategy):
             )
         return self._client
 
-    def generate(self, system_prompt: str, model_tier: str, user_content: str = "") -> str:
+    def generate(
+        self,
+        system_prompt: str,
+        model_tier: str,
+        user_content: str = "",
+        response_schema: type | None = None,
+    ) -> str:
         from google.genai import types
 
         client = self._get_client()
         model_name = MODEL_MAP.get(model_tier, MODEL_MAP["flash"])
         contents = user_content or "Generate today's edition."
 
+        config_kwargs: dict = {"system_instruction": system_prompt}
+        if response_schema is not None:
+            config_kwargs["response_mime_type"] = "application/json"
+            config_kwargs["response_schema"] = response_schema
+
         def _call() -> str:
             response = client.models.generate_content(
                 model=model_name,
                 contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                ),
+                config=types.GenerateContentConfig(**config_kwargs),
             )
             return response.text
 
@@ -79,12 +99,34 @@ class StubGenerationStrategy(GenerationStrategy):
         self._responses = responses or {}
         self._calls: list[dict[str, str]] = []
 
-    def generate(self, system_prompt: str, model_tier: str, user_content: str = "") -> str:
+    def generate(
+        self,
+        system_prompt: str,
+        model_tier: str,
+        user_content: str = "",
+        response_schema: type | None = None,
+    ) -> str:
         self._calls.append(
             {"system_prompt": system_prompt, "model_tier": model_tier, "user_content": user_content}
         )
         if model_tier in self._responses:
             return self._responses[model_tier]
+        # When a schema is expected, return minimal valid JSON so validation passes.
+        if response_schema is not None:
+            from .output_schemas import CuratorOutput, NewspaperOutput
+            if response_schema is CuratorOutput:
+                return json.dumps({"text": (
+                    "## CONSENSUS\nStub consensus point one. Stub consensus point two.\n\n"
+                    "## FAULT LINES\nStub fault line analysis.\n\n"
+                    "## UNCOVERED ANGLES\nStub uncovered angle.\n\n"
+                    "## WHAT TO WATCH\nStub watch item."
+                )})
+            if response_schema is NewspaperOutput:
+                return json.dumps({
+                    "newspaper_name": f"Stub {model_tier}",
+                    "articles": [{"headline": "Stub headline", "body": "Stub body text."}],
+                    "in_brief": [],
+                })
         return f"[Stub article generated with {model_tier} model]"
 
     @property

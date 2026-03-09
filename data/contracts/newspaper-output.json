@@ -1,0 +1,35 @@
+{
+  "_comment": "Canonical sample of what the newsroom LLM produces per newspaper. Both sides of the pipeline test against this file — newsroom-director validates its output_schemas match this shape, gazette validates its Zod schemas accept it. Fields added AFTER the LLM call (newspaper_id, heroImageUrl, image_url, word_count) are intentionally absent here.",
+  "newspaper_name": "The Sovereign",
+  "frontPageImagePrompt": "A dramatic city skyline at dawn with newspaper headlines swirling in the wind.",
+  "articles": [
+    {
+      "headline": "Markets Brace for Tariff Fallout",
+      "body": "Global markets opened sharply lower on Monday as investors weighed the long-term implications of the newly announced trade tariffs. Analysts warn the 10% baseline could ripple through supply chains for months.",
+      "weight": 12500,
+      "clusters": [0, 1],
+      "imagePrompt": "A trader staring at falling stock charts on multiple screens, hands on head."
+    },
+    {
+      "headline": "WHO Funding Crisis Escalates",
+      "body": "The World Health Organisation faces a structural funding shortfall following the withdrawal of its largest contributor. Emergency talks in Geneva failed to produce a replacement mechanism.",
+      "weight": 8200,
+      "clusters": [2],
+      "imagePrompt": null
+    }
+  ],
+  "in_brief": [
+    {
+      "headline": "Bulgaria Joins Eurozone",
+      "summary": "Bulgaria formally adopted the euro on 1 January, becoming the 21st member of the single currency area after years of economic convergence criteria.",
+      "clusters": [3]
+    },
+    {
+      "headline": "F1 Season Opener Safety Concerns",
+      "summary": "Aston Martin drivers flagged potential nerve damage from chassis vibration ahead of the Australian Grand Prix, prompting an emergency technical review.",
+      "clusters": [4]
+    }
+  ],
+  "editors_note": "Today's edition reflects a world grappling with the economics of conflict and the slow erosion of multilateral institutions.",
+  "metadata": {}
+}

@@ -70,6 +70,10 @@
     "test": {
       "dependsOn": ["generate-data"],
       "executor": "@nxlv/python:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/data/contracts/**"
+      ],
       "outputs": [
         "{workspaceRoot}/reports/{projectRoot}/unittests",
         "{workspaceRoot}/coverage/{projectRoot}"

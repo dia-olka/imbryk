@@ -61,53 +61,9 @@ eleventyComputed:
   {% include "newspaper-masthead.njk" %}
 
   {% if synthesis %}
-    <section class="synthesis-section" aria-labelledby="analysis-heading">
-      <h2 id="analysis-heading">Analysis</h2>
-      {{ synthesis.analysis | markdown | safe }}
+    <section class="synthesis-section">
+      {{ (synthesis.text or synthesis.analysis or "") | markdown | safe }}
     </section>
-
-    {% if synthesis.consensus.length %}
-      <section class="synthesis-section" aria-labelledby="consensus-heading">
-        <h2 id="consensus-heading">Points of Consensus</h2>
-        <ul>
-          {% for point in synthesis.consensus %}
-            <li>{{ point }}</li>
-          {% endfor %}
-        </ul>
-      </section>
-    {% endif %}
-
-    {% if synthesis.disagreements %}
-      <section class="synthesis-section" aria-labelledby="disagreements-heading">
-        <h2 id="disagreements-heading">Points of Disagreement</h2>
-        {% for topic, positions in synthesis.disagreements %}
-          <div class="disagreement-topic">
-            <h3>{{ topic }}</h3>
-            <ul>
-              {% for position in positions %}
-                <li>{{ position }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endfor %}
-      </section>
-    {% endif %}
-
-    {% if synthesis.watch_list %}
-      <section class="synthesis-section" aria-labelledby="watch-heading">
-        <h2 id="watch-heading">What to Watch</h2>
-        {% for topic, items in synthesis.watch_list %}
-          <div class="watch-topic">
-            <h3>{{ topic }}</h3>
-            <ul>
-              {% for item in items %}
-                <li>{{ item }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endfor %}
-      </section>
-    {% endif %}
   {% else %}
     <p>No curator synthesis available for this edition.</p>
   {% endif %}

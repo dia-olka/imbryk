@@ -6,6 +6,10 @@
   "targets": {
     "test": {
       "executor": "@nx/vitest:test",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/data/contracts/**"
+      ],
       "options": {
         "configFile": "apps/gazette/vitest.config.mts"
       }

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { transformR2Edition } from './loadEditions.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CONTRACTS_DIR = join(__dirname, '../../../../../data/contracts');
 
 // ─── transformR2Edition ────────────────────────────────────────────────────
 
@@ -372,5 +378,87 @@ describe('captureValidationError', () => {
       expect.stringContaining('article in newspaper "sovereign"')
     );
     warnSpy.mockRestore();
+  });
+});
+
+// ─── Contract tests ────────────────────────────────────────────────────────
+// These tests validate that the shared contract files in data/contracts/ pass
+// the Zod schemas used by the gazette to consume R2 data.
+//
+// If a contract test fails it means the newsroom and the gazette have drifted:
+//   - Zod schema added a new required field → add it to the contract JSON
+//   - Contract JSON added a new field → add it to the Zod schema (or NewspaperOutput)
+
+describe('Contract — newsroom output vs gazette schemas', () => {
+  it('newspaper-output.json passes R2NewspaperContentSchema', async () => {
+    const { R2NewspaperContentSchema } = await import('./schemas.js');
+    const contract = JSON.parse(
+      readFileSync(join(CONTRACTS_DIR, 'newspaper-output.json'), 'utf-8')
+    );
+    const result = R2NewspaperContentSchema.safeParse(contract);
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      console.error('R2NewspaperContentSchema errors:', JSON.stringify(result.error.flatten(), null, 2));
+    }
+  });
+
+  it('newspaper-output.json articles pass R2ArticleSchema', async () => {
+    const { R2ArticleSchema } = await import('./schemas.js');
+    const contract = JSON.parse(
+      readFileSync(join(CONTRACTS_DIR, 'newspaper-output.json'), 'utf-8')
+    );
+    for (const article of contract.articles) {
+      const result = R2ArticleSchema.safeParse(article);
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        console.error(`Article "${article.headline}" errors:`, JSON.stringify(result.error.flatten(), null, 2));
+      }
+    }
+  });
+
+  it('newspaper-output.json in_brief items pass R2InBriefSchema', async () => {
+    const { R2InBriefSchema } = await import('./schemas.js');
+    const contract = JSON.parse(
+      readFileSync(join(CONTRACTS_DIR, 'newspaper-output.json'), 'utf-8')
+    );
+    for (const item of contract.in_brief ?? []) {
+      const result = R2InBriefSchema.safeParse(item);
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        console.error(`in_brief "${item.headline}" errors:`, JSON.stringify(result.error.flatten(), null, 2));
+      }
+    }
+  });
+
+  it('curator-output.json is accepted as curator_synthesis in EditionSchema', async () => {
+    const { EditionSchema } = await import('./schemas.js');
+    const curatorContract = JSON.parse(
+      readFileSync(join(CONTRACTS_DIR, 'curator-output.json'), 'utf-8')
+    );
+    const result = EditionSchema.safeParse({
+      edition_id: 'contract-test',
+      date: '2026-03-01',
+      newspapers: [],
+      curator_synthesis: curatorContract,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      console.error('EditionSchema curator errors:', JSON.stringify(result.error.flatten(), null, 2));
+    }
+  });
+
+  it('newspaper-output.json is accepted through the full transformR2Edition pipeline', async () => {
+    const contract = JSON.parse(
+      readFileSync(join(CONTRACTS_DIR, 'newspaper-output.json'), 'utf-8')
+    );
+    const r2Edition = {
+      edition_id: 'contract-test',
+      date: '2026-03-01',
+      articles: { sovereign: contract },
+    };
+    const result = await transformR2Edition(r2Edition, 'contract-test');
+    expect(result.newspapers).toHaveLength(1);
+    expect(result.newspapers[0].articles).toHaveLength(contract.articles.length);
+    expect(result.newspapers[0].in_brief).toHaveLength(contract.in_brief.length);
   });
 });

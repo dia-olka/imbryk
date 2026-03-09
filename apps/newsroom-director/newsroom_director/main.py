@@ -74,6 +74,12 @@ from .image_gen import (
     generate_images_for_newspaper,
 )
 from .logging_config import configure_logging
+from .output_schemas import (
+    CuratorOutput,
+    NewspaperOutput,
+    is_valid_curator,
+    is_valid_newspaper,
+)
 from .personas import (
     CURATOR_PERSONA,
     NEWSPAPER_PERSONAS,
@@ -228,22 +234,44 @@ def run_morning_press(
                 # User content: cluster digests (may contain verbatim user prompts)
                 user_content = f"CLUSTER DIGESTS:\n{digests_text}\n\nGenerate today's edition."
 
-                # Call LLM
+                # Call LLM — response_schema enforces exact field names so the
+                # gazette always receives canonical JSON (no "title"/"content"/
+                # "fullArticles" deviations, no markdown fences, no plain text).
+                # Retry up to 3 times if the model returns empty/invalid output.
                 gen_start = time.monotonic()
-                article = gen.generate(system_instruction, persona.model_tier, user_content)
+                article = None
+                for attempt in range(1, 4):
+                    candidate = gen.generate(
+                        system_instruction, persona.model_tier, user_content,
+                        response_schema=NewspaperOutput,
+                    )
+                    if is_valid_newspaper(candidate):
+                        article = candidate
+                        break
+                    logger.warning(
+                        "Invalid newspaper output for %s (attempt %d/3), retrying",
+                        persona.id, attempt,
+                        extra={"step": "generate_retry", "newspaper_id": persona.id},
+                    )
                 gen_ms = int((time.monotonic() - gen_start) * 1000)
 
-                logger.info(
-                    "Article generated",
-                    extra={
-                        "step": "generated",
-                        "newspaper_id": persona.id,
-                        "model_tier": persona.model_tier,
-                        "latency_ms": gen_ms,
-                    },
-                )
-
-                articles[persona.id] = article
+                if article is None:
+                    logger.error(
+                        "All 3 attempts produced invalid output for %s, skipping",
+                        persona.id,
+                        extra={"step": "generate_failed", "newspaper_id": persona.id},
+                    )
+                else:
+                    logger.info(
+                        "Article generated",
+                        extra={
+                            "step": "generated",
+                            "newspaper_id": persona.id,
+                            "model_tier": persona.model_tier,
+                            "latency_ms": gen_ms,
+                        },
+                    )
+                    articles[persona.id] = article
 
             except Exception:
                 logger.exception(
@@ -259,10 +287,27 @@ def run_morning_press(
                     "{{ALL_ARTICLES}}", "[See user content below]"
                 )
                 curator_content = f"TODAY'S ARTICLES:\n{all_articles_text}\n\nGenerate today's synthesis."
-                curator_article = gen.generate(
-                    curator_system, CURATOR_PERSONA.model_tier, curator_content
-                )
-                articles["curator"] = curator_article
+                curator_article = None
+                for attempt in range(1, 4):
+                    candidate = gen.generate(
+                        curator_system, CURATOR_PERSONA.model_tier, curator_content,
+                        response_schema=CuratorOutput,
+                    )
+                    if is_valid_curator(candidate):
+                        curator_article = candidate
+                        break
+                    logger.warning(
+                        "Invalid curator output (attempt %d/3), retrying",
+                        attempt,
+                        extra={"step": "curator_retry"},
+                    )
+                if curator_article is None:
+                    logger.error(
+                        "All 3 attempts produced invalid curator output, skipping",
+                        extra={"step": "curator_failed"},
+                    )
+                else:
+                    articles["curator"] = curator_article
             except Exception:
                 logger.exception(
                     "Curator synthesis failed, skipping curator article"
@@ -486,11 +531,68 @@ def _format_all_articles(articles: dict[str, str]) -> str:
     return "\n\n".join(sections)
 
 
+def _normalize_newspaper_json(parsed: dict) -> dict:
+    """Normalize LLM field name deviations to the canonical gazette schema.
+
+    Applied before writing to R2 as defense-in-depth — even when
+    response_schema is in use, this ensures R2 always has canonical names
+    in case a model tier bypasses controlled generation.
+
+    Canonical names:
+      articles     (not fullArticles / article_list)
+      headline     (not title)
+      body         (not content / text)
+      in_brief     (not inBrief / inBriefs)
+      editors_note (not editorsNote / editorNote / editor_note)
+      summary      (not content / text, inside in_brief items)
+    """
+    # Normalize articles key
+    if not isinstance(parsed.get("articles"), list):
+        parsed["articles"] = parsed.pop("fullArticles", None) or parsed.pop("article_list", None) or []
+
+    # Normalize articles field names
+    parsed["articles"] = [
+        {
+            **a,
+            "headline": a.get("headline") or a.get("title"),
+            "body": a.get("body") or a.get("content") or a.get("text"),
+        }
+        for a in parsed["articles"]
+    ]
+
+    # Normalize in_brief key
+    if not isinstance(parsed.get("in_brief"), list):
+        parsed["in_brief"] = parsed.pop("inBrief", None) or parsed.pop("inBriefs", None) or []
+
+    # Normalize in_brief item field names
+    normalized_brief = []
+    for item in parsed["in_brief"]:
+        if isinstance(item, str):
+            first_sentence = item.split(".")[0].strip()[:80]
+            normalized_brief.append({"headline": first_sentence or item[:80], "summary": item})
+        else:
+            headline = item.get("headline") or item.get("title")
+            summary = item.get("summary") or item.get("content") or item.get("text")
+            if not headline and summary:
+                headline = summary.split(".")[0].strip()[:80]
+            normalized_brief.append({**item, "headline": headline, "summary": summary})
+    parsed["in_brief"] = normalized_brief
+
+    # Normalize editors_note key
+    if not parsed.get("editors_note"):
+        for alt in ("editorsNote", "editorNote", "editor_note"):
+            if isinstance(parsed.get(alt), str):
+                parsed["editors_note"] = parsed.pop(alt)
+                break
+
+    return parsed
+
+
 def _try_parse_edition_json(content: str) -> dict | None:
     """Attempt to parse a newspaper edition content string as JSON.
 
     The Gemini output may be raw JSON or wrapped in markdown code fences.
-    Returns the parsed dict, or None if parsing fails.
+    Returns the parsed and normalized dict, or None if parsing fails.
     """
     text = content.strip()
     if text.startswith("```"):
@@ -501,12 +603,14 @@ def _try_parse_edition_json(content: str) -> dict | None:
         text = "\n".join(lines)
 
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
     except (json.JSONDecodeError, TypeError):
         logger.warning(
             "Could not parse newspaper content as JSON for image generation"
         )
         return None
+
+    return _normalize_newspaper_json(parsed)
 
 
 def _build_mutation_prompt(
