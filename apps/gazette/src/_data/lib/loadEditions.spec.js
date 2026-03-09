@@ -129,6 +129,89 @@ describe('transformR2Edition', () => {
     expect(result.curator_synthesis).toBeNull();
   });
 
+  it('handles fullArticles key (LLM field name variant)', async () => {
+    const r2Edition = {
+      edition_id: '2026-03-01',
+      date: '2026-03-01',
+      articles: {
+        aspirant: {
+          newspaper_name: 'The Aspirant',
+          fullArticles: [
+            { title: 'Headline via title', content: 'Body via content' },
+          ],
+          inBrief: [],
+        },
+      },
+    };
+
+    const result = await transformR2Edition(r2Edition, 'fixture');
+
+    expect(result.newspapers[0].articles[0].headline).toBe('Headline via title');
+    expect(result.newspapers[0].articles[0].body).toBe('Body via content');
+  });
+
+  it('normalises in_brief plain strings into headline+summary objects', async () => {
+    const r2Edition = {
+      edition_id: '2026-03-01',
+      date: '2026-03-01',
+      articles: {
+        sovereign: {
+          newspaper_name: 'The Sovereign',
+          articles: [],
+          inBrief: [
+            'Bulgaria joined the eurozone. More details follow.',
+            'Strait of Hormuz shipping alert issued by insurers.',
+          ],
+        },
+      },
+    };
+
+    const result = await transformR2Edition(r2Edition, 'fixture');
+    const inBrief = result.newspapers[0].in_brief;
+
+    expect(inBrief).toHaveLength(2);
+    expect(inBrief[0].headline).toBe('Bulgaria joined the eurozone');
+    expect(inBrief[0].summary).toBe('Bulgaria joined the eurozone. More details follow.');
+  });
+
+  it('derives in_brief headline from content when headline field is missing', async () => {
+    const r2Edition = {
+      edition_id: '2026-03-01',
+      date: '2026-03-01',
+      articles: {
+        moralist: {
+          newspaper_name: 'The Moralist',
+          articles: [],
+          in_brief: [
+            { clusterId: '-1', content: 'Wales captain Dewi Lake expressed confidence. More follows.' },
+          ],
+        },
+      },
+    };
+
+    const result = await transformR2Edition(r2Edition, 'fixture');
+    const item = result.newspapers[0].in_brief[0];
+
+    expect(item.headline).toBe('Wales captain Dewi Lake expressed confidence');
+    expect(item.summary).toBe('Wales captain Dewi Lake expressed confidence. More follows.');
+  });
+
+  it('handles curator as plain text (not JSON)', async () => {
+    const r2Edition = {
+      edition_id: '2026-03-01',
+      date: '2026-03-01',
+      articles: {
+        curator: 'Welcome to The Curator. Today\'s themes are cost and crisis.',
+      },
+    };
+
+    const result = await transformR2Edition(r2Edition, 'fixture');
+
+    expect(result.curator_synthesis).toEqual({
+      text: "Welcome to The Curator. Today's themes are cost and crisis.",
+    });
+  });
+
   it('handles already-parsed objects (not JSON strings)', async () => {
     const r2Edition = {
       edition_id: '2026-03-01',

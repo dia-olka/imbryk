@@ -741,9 +741,7 @@ main:has(.newspaper) {
 
 /* === Article Preview === */
 .article-preview {
-  display: block;
-  text-decoration: none;
-  color: inherit;
+  position: relative;
   padding: var(--space-lg) 0;
   border-bottom: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border-light));
   transition: background-color 0.15s ease;
@@ -755,12 +753,25 @@ main:has(.newspaper) {
 
 .article-preview:hover {
   background-color: var(--np-secondary, var(--color-surface));
-  color: inherit;
 }
 
-.article-preview:focus-visible {
+/* Stretched card link covers the whole card */
+.article-preview__card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.article-preview__card-link:focus-visible::after {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+/* Anchor permalink sits above the stretched link */
+.article-preview__anchor {
+  position: relative;
+  z-index: 1;
 }
 
 .article-preview article {
@@ -819,8 +830,13 @@ main:has(.newspaper) {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--np-primary, var(--color-accent));
+  text-decoration: none;
   opacity: 1;
   margin-left: auto;
+}
+
+.article-preview__read-more:hover {
+  text-decoration: underline;
 }
 
 /* Lead article — full width with prominent styling */

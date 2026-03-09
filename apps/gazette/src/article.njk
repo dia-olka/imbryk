@@ -26,11 +26,6 @@ eleventyComputed:
 ] %}
 {% include "breadcrumb.njk" %}
 
-{% set siblingNewspaperIds = ap.allNewspaperIds %}
-{% set currentNewspaperId = ap.newspaperId %}
-{% set siblingEditionDate = ap.editionDate %}
-{% include "sibling-nav.njk" %}
-
 {# Article JSON-LD structured data #}
 <script type="application/ld+json">
 {
@@ -55,6 +50,11 @@ eleventyComputed:
 
 <div class="newspaper" style="{{ ap.cssVars }}">
 
+  {% set mastheadName = ap.newspaperName %}
+  {% set mastheadTagline = persona.tagline if persona else "" %}
+  {% set mastheadDate = ap.editionDate %}
+  {% include "newspaper-masthead.njk" %}
+
   <article id="{{ ap.slug }}">
     <h1 class="article-full__title">
       {{ ap.article.headline }}
@@ -62,7 +62,7 @@ eleventyComputed:
     </h1>
 
     <p class="article-full__meta">
-      {{ ap.newspaperName }} · {{ ap.editionDate | dateDisplay }} · {{ ap.article.word_count }} words
+      {{ ap.editionDate | dateDisplay }} · {{ ap.article.word_count }} words
     </p>
 
     {% if ap.article.image_url %}

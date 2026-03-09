@@ -80,20 +80,25 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
     r2Edition.articles || {}
   )) {
     let parsed;
-    try {
-      if (typeof rawContent === 'string') {
-        const cleaned = stripMarkdownFences(rawContent);
+    if (typeof rawContent === 'string') {
+      const cleaned = stripMarkdownFences(rawContent);
+      try {
         parsed = JSON.parse(cleaned);
-      } else {
-        parsed = rawContent;
+      } catch (err) {
+        if (newspaperId === 'curator') {
+          // Curator returned as plain text/markdown — store it as-is
+          curatorSynthesis = { text: cleaned };
+          continue;
+        }
+        await captureLoadError(
+          sourceUrl,
+          `JSON.parse newspaper "${newspaperId}"`,
+          err
+        );
+        continue;
       }
-    } catch (err) {
-      await captureLoadError(
-        sourceUrl,
-        `JSON.parse newspaper "${newspaperId}"`,
-        err
-      );
-      continue;
+    } else {
+      parsed = rawContent;
     }
 
     if (newspaperId === 'curator') {
@@ -113,7 +118,13 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
       // The LLM prompt specifies exact names, but flash-tier models occasionally use
       // alternatives (e.g. "title"/"content" instead of "headline"/"body",
       // "inBrief"/"inBriefs" instead of "in_brief", "editorsNote"/"editorNote"
-      // instead of "editors_note").
+      // instead of "editors_note", "fullArticles" instead of "articles").
+
+      // Normalise articles key variants (fullArticles, etc.)
+      if (!Array.isArray(parsed.articles)) {
+        parsed.articles = parsed.fullArticles ?? parsed.article_list;
+      }
+
       if (Array.isArray(parsed.articles)) {
         parsed.articles = parsed.articles.map((a) => ({
           ...a,
@@ -136,11 +147,19 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
       }
 
       if (Array.isArray(parsed.in_brief)) {
-        parsed.in_brief = parsed.in_brief.map((item) => ({
-          ...item,
-          headline: item.headline ?? item.title ?? undefined,
-          summary: item.summary ?? item.content ?? item.text ?? undefined,
-        }));
+        parsed.in_brief = parsed.in_brief.map((item) => {
+          if (typeof item === 'string') {
+            // Plain string — derive headline from first sentence
+            const headline = item.split(/[.!?]/)[0].trim().slice(0, 80) || item.slice(0, 80);
+            return { headline, summary: item };
+          }
+          const headline = item.headline ?? item.title ?? undefined;
+          const summary = item.summary ?? item.content ?? item.text ?? undefined;
+          // Derive headline from summary when the LLM omitted it entirely
+          const resolvedHeadline =
+            headline ?? (summary ? summary.split(/[.!?]/)[0].trim().slice(0, 80) : undefined);
+          return { ...item, headline: resolvedHeadline, summary };
+        });
       }
 
       // Validate the parsed newspaper content
