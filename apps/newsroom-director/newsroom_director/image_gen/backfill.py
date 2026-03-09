@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from ..db import fetch_editions_needing_image_backfill
+from ..db import fetch_editions_needing_image_backfill, update_article_content_json
 from ..storage import EditionStorage
 from ..validation import sanitize_prompt_text
 from .client import ImageGenerationStrategy
@@ -219,6 +219,17 @@ def run_image_backfill(
                         "images_generated": edition_generated,
                     },
                 )
+                # Persist the updated content_json to the DB so the next run
+                # does not re-detect the same articles as needing backfill.
+                for newspaper_id in target.newspapers_to_backfill:
+                    if newspaper_id in updated_articles:
+                        update_article_content_json(
+                            session,
+                            target.edition_id,
+                            newspaper_id,
+                            updated_articles[newspaper_id],
+                        )
+                session.commit()
             except Exception:
                 logger.warning(
                     "Backfill: failed to write updated edition %s to storage",

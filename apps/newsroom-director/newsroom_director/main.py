@@ -144,6 +144,26 @@ def run_morning_press(
     session_factory = get_session_factory(engine)
     session = session_factory()
 
+    today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    def _run_backfill() -> None:
+        try:
+            from .config import MAX_BACKFILL_IMAGES_PER_RUN
+            from .image_gen.backfill import run_image_backfill
+
+            run_image_backfill(
+                session=session,
+                today_date=today_date,
+                imagen_client=img_client,
+                storage=store,
+                max_images_per_run=MAX_BACKFILL_IMAGES_PER_RUN,
+            )
+        except Exception:
+            logger.warning(
+                "Image backfill step failed, today's edition unaffected",
+                exc_info=True,
+            )
+
     try:
         # Step 2: Fetch unprocessed prompts
         prompt_records = fetch_unprocessed_prompts(session)
@@ -154,6 +174,7 @@ def run_morning_press(
 
         if not prompt_records:
             logger.info("No unprocessed prompts found, skipping edition")
+            _run_backfill()
             return {
                 "edition_id": None,
                 "newspaper_count": 0,
@@ -180,6 +201,7 @@ def run_morning_press(
                     "All prompts rejected by coherence validation, "
                     "skipping edition"
                 )
+                _run_backfill()
                 return {
                     "edition_id": None,
                     "newspaper_count": 0,
@@ -382,7 +404,7 @@ def run_morning_press(
         )
 
         # Step 10: Save edition to DB
-        edition_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        edition_date = today_date
         edition_id = save_edition(session, edition_date, articles)
 
         # Step 11: Write edition to storage
@@ -403,22 +425,7 @@ def run_morning_press(
         # Step 15: Backfill missing images from previous editions (best-effort).
         # Runs after today's edition is committed and published so a slow
         # Imagen backfill cannot delay the current edition reaching readers.
-        try:
-            from .config import MAX_BACKFILL_IMAGES_PER_RUN
-            from .image_gen.backfill import run_image_backfill
-
-            run_image_backfill(
-                session=session,
-                today_date=edition_date,
-                imagen_client=img_client,
-                storage=store,
-                max_images_per_run=MAX_BACKFILL_IMAGES_PER_RUN,
-            )
-        except Exception:
-            logger.warning(
-                "Image backfill step failed, today's edition unaffected",
-                exc_info=True,
-            )
+        _run_backfill()
 
         total_ms = int((time.monotonic() - start_time) * 1000)
         summary = {
