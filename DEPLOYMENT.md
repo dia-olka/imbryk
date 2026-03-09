@@ -594,14 +594,19 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 
 **Variables** (Settings > Variables > New repository variable):
 
-| Variable              | Value                                                     | Example                                                                                  |
-| --------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `GCP_PROJECT_ID`      | Your Google Cloud project ID                              | `imbryk-123456`                                                                          |
-| `GCP_WIF_PROVIDER`    | The full Workload Identity provider resource name         | `projects/123456/locations/global/workloadIdentityPools/github/providers/github-actions` |
-| `GCP_SERVICE_ACCOUNT` | The service account email                                 | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com`                                  |
-| `GCP_REGION`          | Google Cloud region (optional, defaults to `us-central1`) | `us-central1`                                                                            |
-| `SENTRY_DSN`          | Sentry error tracking URL (leave empty to disable)        | `https://abc123@o0.ingest.sentry.io/0`                                                   |
-| `R2_PUBLIC_URL`       | Custom domain URL for the R2 bucket                       | `https://editions.yourdomain.com`                                                        |
+| Variable                 | Value                                                     | Example                                                                                  |
+| ------------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `GCP_PROJECT_ID`         | Your Google Cloud project ID                              | `imbryk-123456`                                                                          |
+| `GCP_WIF_PROVIDER`       | The full Workload Identity provider resource name         | `projects/123456/locations/global/workloadIdentityPools/github/providers/github-actions` |
+| `GCP_SERVICE_ACCOUNT`    | The service account email                                 | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com`                                  |
+| `GCP_REGION`             | Google Cloud region (optional, defaults to `us-central1`) | `us-central1`                                                                            |
+| `VERTEX_AI_LOCATION`     | Vertex AI region (optional, defaults to `global`)         | `global`                                                                                 |
+| `CATEGORISER_MODEL`      | Gemini model used to categorise prompts in ingestion-api  | `gemini-3.1-flash-lite-preview`                                                          |
+| `GENERATION_MODEL_PRO`   | Gemini Pro model for The Sovereign, The Owner, Curator, validation, and ledger mutation | `gemini-3.1-pro-preview`              |
+| `GENERATION_MODEL_FLASH` | Gemini Flash model for The Aspirant, The Moralist, The Radical, The Hedonist            | `gemini-3-flash-preview`              |
+| `IMAGE_GENERATION_MODEL` | Vertex AI Imagen model for article and hero images        | `gemini-3-pro-image-preview`                                                             |
+| `SENTRY_DSN`             | Sentry error tracking URL (leave empty to disable)        | `https://abc123@o0.ingest.sentry.io/0`                                                   |
+| `R2_PUBLIC_URL`          | Custom domain URL for the R2 bucket                       | `https://editions.yourdomain.com`                                                        |
 
 To find the full `GCP_WIF_PROVIDER` value:
 
