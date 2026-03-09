@@ -75,6 +75,8 @@ jobs:
       actions: write  # upload-artifact
       checks: write   # github reporter annotations
       contents: read
+      pull-requests: write
+
     strategy:
       fail-fast: false
       matrix:
@@ -108,6 +110,20 @@ jobs:
           name: playwright-report-${{ matrix.app }}-ci
           path: ${{ matrix.report-path }}
           retention-days: 14
+      
+      - name: Post failure comment
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const app = '${{ matrix.app }}';
+            const runUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `### ❌ Playwright E2E failed — ${app}\n\nSee the [workflow run](${runUrl}) for details and download the HTML report from the Artifacts section.`
+            });
 
   docker:
     name: Docker build check
