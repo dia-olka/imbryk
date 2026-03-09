@@ -68,7 +68,7 @@ jobs:
       - run: npx nx run-many --targets=lint,test --projects=ingestion-api,newsroom-director
 
   e2e:
-    name: Playwright E2E (Chromium)
+    name: Playwright E2E — ${{ matrix.app }} (Chromium)
     needs: [js]
     runs-on: ubuntu-latest
     permissions:
@@ -76,6 +76,17 @@ jobs:
       checks: write   # github reporter annotations
       contents: read
       pull-requests: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: imbryk
+            project: imbryk-e2e
+            report-path: apps/imbryk-e2e/playwright-report/
+          - app: gazette
+            project: gazette-e2e
+            report-path: apps/gazette-e2e/playwright-report/
     steps:
       - uses: actions/checkout@v4
 
@@ -90,15 +101,29 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Run E2E tests
-        run: npx nx run imbryk-e2e:e2e:ci
+        run: npx nx run ${{ matrix.project }}:e2e:ci
 
       - name: Upload HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-ci
-          path: apps/imbryk-e2e/playwright-report/
+          name: playwright-report-${{ matrix.app }}-ci
+          path: ${{ matrix.report-path }}
           retention-days: 14
+      
+      - name: Post failure comment
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const app = '${{ matrix.app }}';
+            const runUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `### ❌ Playwright E2E failed — ${app}\n\nSee the [workflow run](${runUrl}) for details and download the HTML report from the Artifacts section.`
+            });
 
   docker:
     name: Docker build check

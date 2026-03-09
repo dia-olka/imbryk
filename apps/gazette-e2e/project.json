@@ -1,14 +1,14 @@
 {
-  "name": "imbryk-e2e",
+  "name": "gazette-e2e",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "apps/imbryk-e2e/src",
+  "sourceRoot": "apps/gazette-e2e/src",
   "projectType": "application",
-  "implicitDependencies": ["imbryk"],
+  "implicitDependencies": ["gazette"],
   "targets": {
     "e2e": {
       "executor": "@nx/playwright:playwright",
       "options": {
-        "config": "apps/imbryk-e2e/playwright.config.ts"
+        "config": "apps/gazette-e2e/playwright.config.ts"
       },
       "configurations": {
         "ci": {}

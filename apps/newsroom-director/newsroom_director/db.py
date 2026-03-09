@@ -252,6 +252,29 @@ def save_edition(
     return edition_id
 
 
+def update_article_content_json(
+    session: Session,
+    edition_id: str,
+    newspaper_id: str,
+    content_json: str,
+) -> None:
+    """Overwrite content_json for a specific edition article row.
+
+    Called by the image backfill step after successfully generating images so
+    that subsequent runs do not re-query and re-generate the same images.
+    """
+    row = (
+        session.query(EditionArticleRow)
+        .filter(
+            EditionArticleRow.edition_id == edition_id,
+            EditionArticleRow.newspaper_id == newspaper_id,
+        )
+        .first()
+    )
+    if row is not None:
+        row.content_json = content_json
+
+
 def fetch_editions_needing_image_backfill(
     session: Session,
     exclude_date: str,
