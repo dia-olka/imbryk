@@ -406,7 +406,7 @@ async def stripe_webhook(
 
 @app.get("/editions", response_model=list[EditionSummary])
 async def list_editions(db: Session = Depends(get_db)):
-    """List available editions."""
+    """List available editions. """
     editions = db.query(Edition).order_by(Edition.date.desc()).all()
     results = []
     for edition in editions:

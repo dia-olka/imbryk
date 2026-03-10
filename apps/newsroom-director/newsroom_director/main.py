@@ -36,8 +36,8 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from .config import (
     CF_DEPLOY_HOOK_URL,
     DATABASE_URL,
-    LOG_LEVEL_INT,
     IMAGE_GENERATION_LOCATION,
+    LOG_LEVEL_INT,
     R2_ACCOUNT_ID,
     SENTRY_DSN,
     VERTEX_AI_LOCATION,
@@ -118,7 +118,7 @@ def run_morning_press(
     imagen_client: ImageGenerationStrategy | None = None,
     enable_validation: bool = True,
 ) -> dict:
-    """Execute the full Morning Press generation pipeline.
+    """Execute the full Morning Press generation pipeline.    
 
     Args:
         database_url: Override for the database connection string.
