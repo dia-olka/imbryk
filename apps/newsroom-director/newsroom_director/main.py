@@ -145,7 +145,9 @@ def run_morning_press(
     session_factory = get_session_factory(engine)
     session = session_factory()
 
-    today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    from .config import EDITION_DATE
+
+    today_date = EDITION_DATE or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     def _run_backfill() -> None:
         try:

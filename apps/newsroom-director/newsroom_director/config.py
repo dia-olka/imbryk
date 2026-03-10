@@ -26,6 +26,9 @@ MAX_CLUSTERS = int(os.getenv("MAX_CLUSTERS", "30"))
 # on previous editions with failed image generation.
 MAX_BACKFILL_IMAGES_PER_RUN = int(os.getenv("MAX_BACKFILL_IMAGES_PER_RUN", "20"))
 
+# Override the edition date (default: today UTC). Used for one-off regeneration.
+EDITION_DATE = os.getenv("EDITION_DATE", "")
+
 # Cloudflare R2 storage
 R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
 R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
