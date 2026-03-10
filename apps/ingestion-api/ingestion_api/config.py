@@ -22,6 +22,12 @@ WEIGHT_MULTIPLIER_MAX = 100
 
 RATE_LIMIT_QUOTE = os.getenv("RATE_LIMIT_QUOTE", "10/minute")
 
+# Quote expiry — reject checkout for quotes older than this many minutes.
+QUOTE_TTL_MINUTES: int = int(os.getenv("QUOTE_TTL_MINUTES", "15"))
+
+# Maximum number of Stripe checkout sessions that may be created per quote.
+QUOTE_MAX_CHECKOUT_ATTEMPTS: int = int(os.getenv("QUOTE_MAX_CHECKOUT_ATTEMPTS", "3"))
+
 # Vertex AI — set VERTEX_PROJECT to activate GeminiFlashCategoriser
 VERTEX_PROJECT = os.getenv("VERTEX_PROJECT", "")
 VERTEX_LOCATION = os.getenv("VERTEX_LOCATION", "global")

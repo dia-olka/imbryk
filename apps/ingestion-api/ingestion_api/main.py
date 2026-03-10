@@ -1,6 +1,7 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 import sentry_sdk
 import sentry_sdk.integrations.logging
@@ -16,6 +17,8 @@ from starlette.responses import JSONResponse
 from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
 from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
+    QUOTE_MAX_CHECKOUT_ATTEMPTS,
+    QUOTE_TTL_MINUTES,
     RATE_LIMIT_QUOTE,
     SENTRY_DSN,
     STRIPE_SECRET_KEY,
@@ -214,6 +217,34 @@ async def create_checkout_session(
             status_code=409,
             content={"detail": f"Quote already processed (status={prompt.status})"},
         )
+
+    # Reject expired quotes — prevent price-lock exploitation with stale quotes.
+    quote_age = datetime.now(timezone.utc) - prompt.created_at.replace(tzinfo=timezone.utc)
+    if quote_age > timedelta(minutes=QUOTE_TTL_MINUTES):
+        logger.warning(
+            "Expired quote checkout attempt: quote_id=%s age=%s",
+            body.quote_id,
+            quote_age,
+        )
+        return JSONResponse(
+            status_code=410,
+            content={"detail": f"Quote has expired (quotes are valid for {QUOTE_TTL_MINUTES} minutes)"},
+        )
+
+    # Reject if too many checkout sessions have already been created for this quote.
+    if prompt.checkout_attempts >= QUOTE_MAX_CHECKOUT_ATTEMPTS:
+        logger.warning(
+            "Max checkout attempts reached: quote_id=%s attempts=%d",
+            body.quote_id,
+            prompt.checkout_attempts,
+        )
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many checkout attempts for this quote"},
+        )
+
+    # Increment checkout attempt counter before creating the Stripe session.
+    prompt.checkout_attempts += 1
 
     # Base amount comes from the DB — tamper-proof.
     base_amount = prompt.amount
