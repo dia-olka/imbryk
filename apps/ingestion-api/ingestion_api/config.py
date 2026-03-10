@@ -22,6 +22,11 @@ WEIGHT_MULTIPLIER_MAX = 100
 
 RATE_LIMIT_QUOTE = os.getenv("RATE_LIMIT_QUOTE", "10/minute")
 
+# Cloudflare Turnstile — set TURNSTILE_SECRET_KEY to enable verification.
+# Leave empty to disable (local dev without a widget).
+TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
 # Vertex AI — set VERTEX_PROJECT to activate GeminiFlashCategoriser
 VERTEX_PROJECT = os.getenv("VERTEX_PROJECT", "")
 VERTEX_LOCATION = os.getenv("VERTEX_LOCATION", "global")

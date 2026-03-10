@@ -3,12 +3,13 @@ import type { CheckoutSessionResponse, QuoteResponse } from './types';
 
 export async function fetchQuote(
   prompt: string,
+  turnstileToken?: string,
   signal?: AbortSignal
 ): Promise<QuoteResponse> {
   const response = await fetch(`${API_BASE_URL}/prompts/quote`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, cf_turnstile_token: turnstileToken }),
     signal,
   });
 

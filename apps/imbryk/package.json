@@ -4,5 +4,8 @@
   "private": true,
   "nx": {
     "name": "imbryk"
+  },
+  "dependencies": {
+    "@marsidev/react-turnstile": "^1.4.2"
   }
 }

@@ -10,6 +10,7 @@ vi.mock('../constants', () => ({
   PROMPT_MIN: 10,
   PROMPT_MAX: 2000,
   API_BASE_URL: 'http://localhost:8000',
+  TURNSTILE_SITE_KEY: '',
 }));
 
 const mockFetchQuote = vi.mocked(fetchQuote);
@@ -95,6 +96,22 @@ describe('useQuote', () => {
     });
     // fetchQuote called twice (second call replaces first)
     expect(mockFetchQuote).toHaveBeenCalledTimes(2);
+  });
+
+  it('should forward turnstile token to fetchQuote', async () => {
+    mockFetchQuote.mockResolvedValue(MOCK_RESPONSE);
+    const { result } = renderHook(() => useQuote());
+    act(() => {
+      result.current.submit(VALID_PROMPT, 'turnstile_token_abc');
+    });
+    await waitFor(() => {
+      expect(result.current.quote).toEqual(MOCK_RESPONSE);
+    });
+    expect(mockFetchQuote).toHaveBeenCalledWith(
+      VALID_PROMPT,
+      'turnstile_token_abc',
+      expect.any(AbortSignal)
+    );
   });
 
   it('should clear quote and stop loading on reset', async () => {

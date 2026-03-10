@@ -2,6 +2,7 @@
 
 import logging
 
+import httpx
 import sentry_sdk
 import sentry_sdk.integrations.logging
 import stripe
@@ -20,6 +21,8 @@ from ingestion_api.config import (
     SENTRY_DSN,
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET,
+    TURNSTILE_SECRET_KEY,
+    TURNSTILE_VERIFY_URL,
     VERTEX_LOCATION,
     VERTEX_PROJECT,
     _log_level_int,
@@ -137,6 +140,27 @@ def get_categoriser() -> CategoriserStrategy:
     return _categoriser
 
 
+# --- Turnstile verification ---
+
+
+async def _verify_turnstile(token: str | None, remote_ip: str) -> bool:
+    """Return True if the token is valid or Turnstile is not configured."""
+    if not TURNSTILE_SECRET_KEY:
+        return True  # disabled in local dev
+    if not token:
+        return False
+    async with httpx.AsyncClient(timeout=5) as client:
+        resp = await client.post(
+            TURNSTILE_VERIFY_URL,
+            data={
+                "secret": TURNSTILE_SECRET_KEY,
+                "response": token,
+                "remoteip": remote_ip,
+            },
+        )
+    return resp.json().get("success", False)
+
+
 # --- Endpoints ---
 
 
@@ -154,6 +178,9 @@ async def quote(
     categoriser: CategoriserStrategy = Depends(get_categoriser),
 ):
     """Categorise, price, and persist a quote — locks in the amount server-side."""
+    if not await _verify_turnstile(body.cf_turnstile_token, get_remote_address(request)):
+        return JSONResponse(status_code=403, content={"detail": "CAPTCHA verification failed"})
+
     categories = categoriser.categorise(body.prompt)
     routing = route_prompt(categories)
     cost = calculate_cost(len(routing))
