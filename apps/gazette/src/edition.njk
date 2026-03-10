@@ -43,7 +43,7 @@ eleventyComputed:
           <p class="front-page-card__tagline">{{ personas.curator.tagline }}</p>
         </div>
         <div class="front-page-card__footer">
-          <p class="front-page-card__headline">{{ edition.curator_synthesis.analysis | truncateWords(20) }}</p>
+          <p class="front-page-card__headline">{{ (edition.curator_synthesis.text or edition.curator_synthesis.analysis or "") | truncateChars(120) }}</p>
           <p class="front-page-card__count">Synthesis &amp; Analysis</p>
         </div>
       </a>

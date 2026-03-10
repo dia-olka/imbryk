@@ -29,7 +29,15 @@ export default function (eleventyConfig) {
 
   eleventyConfig.addFilter('markdown', (value) => {
     if (!value) return '';
-    return md.render(value);
+    // Ensure known curator section headers have ## prefix even when the LLM
+    // omits the markdown formatting on the first header.
+    const normalized = value.replace(
+      /^(CONSENSUS|FAULT LINES|UNCOVERED ANGLES|WHAT TO WATCH)\b/gm,
+      '## $1',
+    );
+    // Collapse duplicate ## prefixes if the header already had one
+    const cleaned = normalized.replace(/^#{2,}\s*##\s*/gm, '## ');
+    return md.render(cleaned);
   });
 
   eleventyConfig.addFilter('truncateWords', (value, count) => {

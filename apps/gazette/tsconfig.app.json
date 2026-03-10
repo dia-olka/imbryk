@@ -37,5 +37,16 @@
     "eslint.config.cjs",
     "eslint.config.mjs"
   ],
-  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    {
+      "path": "../../packages/world-state/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/taxonomy/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/ai-personas/tsconfig.lib.json"
+    }
+  ]
 }

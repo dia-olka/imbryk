@@ -74,6 +74,7 @@ class ImagenClient(ImageGenerationStrategy):
                         number_of_images=1,
                         aspect_ratio="16:9",
                         output_mime_type="image/png",
+                        person_generation="ALLOW_ALL",
                     ),
                 )
                 return response.generated_images[0].image.image_bytes
