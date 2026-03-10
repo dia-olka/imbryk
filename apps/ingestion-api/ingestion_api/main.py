@@ -1,11 +1,13 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
 import logging
+from datetime import timedelta, timezone
+from datetime import datetime as dt
 
 import sentry_sdk
 import sentry_sdk.integrations.logging
 import stripe
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
@@ -16,6 +18,10 @@ from starlette.responses import JSONResponse
 from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
 from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
+    MAX_CHECKOUT_SESSIONS_PER_QUOTE,
+    QUOTE_EXPIRY_HOURS,
+    RATE_LIMIT_EDITIONS,
+    RATE_LIMIT_GLOBAL_QUOTE,
     RATE_LIMIT_QUOTE,
     SENTRY_DSN,
     STRIPE_SECRET_KEY,
@@ -63,6 +69,11 @@ from ingestion_api.taxonomy import route_prompt
 logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _global_key(_request: Request) -> str:
+    """Return a fixed key so all IPs share one global rate-limit bucket."""
+    return "global"
 
 app = FastAPI(title="Imbryk Ingestion API", version="0.2.0")
 app.state.limiter = limiter
@@ -146,6 +157,7 @@ async def health():
 
 
 @app.post("/prompts/quote", response_model=QuoteResponse)
+@limiter.limit(RATE_LIMIT_GLOBAL_QUOTE, key_func=_global_key)
 @limiter.limit(RATE_LIMIT_QUOTE)
 async def quote(
     request: Request,
@@ -163,6 +175,7 @@ async def quote(
         text=body.prompt,
         amount=cost,
         status="quoted",
+        expires_at=dt.now(timezone.utc) + timedelta(hours=QUOTE_EXPIRY_HOURS),
     )
     db.add(prompt)
     db.flush()
@@ -215,6 +228,20 @@ async def create_checkout_session(
             content={"detail": f"Quote already processed (status={prompt.status})"},
         )
 
+    if prompt.expires_at and dt.now(timezone.utc) > prompt.expires_at:
+        return JSONResponse(status_code=410, content={"detail": "Quote has expired"})
+
+    if (prompt.checkout_session_count or 0) >= MAX_CHECKOUT_SESSIONS_PER_QUOTE:
+        logger.warning(
+            "Checkout session cap reached for quote %s (count=%d)",
+            body.quote_id,
+            prompt.checkout_session_count,
+        )
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many checkout sessions for this quote"},
+        )
+
     # Base amount comes from the DB — tamper-proof.
     base_amount = prompt.amount
     if base_amount is None or base_amount <= 0:
@@ -227,8 +254,9 @@ async def create_checkout_session(
         weight_multiplier=1,
     ) * multiplier
 
-    # Mark the multiplier on the prompt now so we don't lose it.
+    # Mark the multiplier on the prompt and increment checkout session counter.
     prompt.weight_multiplier = multiplier
+    prompt.checkout_session_count = (prompt.checkout_session_count or 0) + 1
     db.commit()
 
     # Determine success/cancel URLs from the Referer or use the configured
@@ -405,9 +433,21 @@ async def stripe_webhook(
 
 
 @app.get("/editions", response_model=list[EditionSummary])
-async def list_editions(db: Session = Depends(get_db)):
-    """List available editions. """
-    editions = db.query(Edition).order_by(Edition.date.desc()).all()
+@limiter.limit(RATE_LIMIT_EDITIONS)
+async def list_editions(
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum number of editions to return."),
+    offset: int = Query(default=0, ge=0, description="Number of editions to skip."),
+    db: Session = Depends(get_db),
+):
+    """List available editions with pagination."""
+    editions = (
+        db.query(Edition)
+        .order_by(Edition.date.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     results = []
     for edition in editions:
         article_count = (

@@ -49,6 +49,24 @@ def test_quote_persists_prompt_in_db(client, db_session):
     assert len(cats) == len(data["categories"])
 
 
+def test_quote_sets_expires_at(client, db_session):
+    """POST /prompts/quote should set an expires_at timestamp on the stored prompt."""
+    from datetime import datetime, timezone
+
+    from ingestion_api.models import Prompt
+
+    response = client.post(
+        "/prompts/quote",
+        json={"prompt": "What major events are shaping geopolitics right now?"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    prompt = db_session.query(Prompt).filter_by(id=data["quote_id"]).first()
+    assert prompt.expires_at is not None
+    assert prompt.expires_at > datetime.now(timezone.utc)
+
+
 def test_quote_validates_prompt_too_short(client):
     response = client.post(
         "/prompts/quote",
@@ -69,6 +87,25 @@ def test_editions_returns_list(client):
     response = client.get("/editions")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_editions_pagination_params(client):
+    """Pagination query params should be accepted and return a list."""
+    response = client.get("/editions?limit=10&offset=0")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_editions_pagination_invalid_limit(client):
+    """limit=0 should be rejected (ge=1)."""
+    response = client.get("/editions?limit=0")
+    assert response.status_code == 422
+
+
+def test_editions_pagination_limit_too_high(client):
+    """limit=201 should be rejected (le=200)."""
+    response = client.get("/editions?limit=201")
+    assert response.status_code == 422
 
 
 def test_quote_rate_limiting(client):
@@ -152,6 +189,52 @@ def test_create_checkout_session_already_paid(client, db_session):
 
     assert response.status_code == 409
     assert "already processed" in response.json()["detail"]
+
+
+def test_create_checkout_session_expired_quote(client, db_session):
+    """create-checkout-session on an expired quote should return 410."""
+    from datetime import datetime, timedelta, timezone
+
+    from ingestion_api.models import Prompt
+
+    quote = _create_quote(client)
+
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+    prompt.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    db_session.commit()
+
+    with patch("stripe.checkout.Session.create"):
+        response = client.post(
+            "/payments/create-checkout-session",
+            json={"quote_id": quote["quote_id"]},
+        )
+
+    assert response.status_code == 410
+    assert "expired" in response.json()["detail"]
+
+
+def test_create_checkout_session_cap(client, db_session):
+    """Exceeding MAX_CHECKOUT_SESSIONS_PER_QUOTE should return 429."""
+    from ingestion_api.models import Prompt
+
+    quote = _create_quote(client)
+    mock_session = _mock_stripe_session()
+
+    with patch("stripe.checkout.Session.create", return_value=mock_session):
+        for _ in range(3):
+            client.post(
+                "/payments/create-checkout-session",
+                json={"quote_id": quote["quote_id"]},
+            )
+
+    with patch("stripe.checkout.Session.create", return_value=mock_session):
+        response = client.post(
+            "/payments/create-checkout-session",
+            json={"quote_id": quote["quote_id"]},
+        )
+
+    assert response.status_code == 429
+    assert "Too many checkout sessions" in response.json()["detail"]
 
 
 def test_create_checkout_session_stripe_error(client):

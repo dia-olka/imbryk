@@ -35,6 +35,12 @@ class Prompt(Base):
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="quoted"
     )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    checkout_session_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
