@@ -107,7 +107,7 @@ jobs:
             VERTEX_PROJECT=${{ vars.GCP_PROJECT_ID }}
             VERTEX_LOCATION=${{ env.VERTEX_AI_LOCATION }}
             CATEGORISER_MODEL=${{ vars.CATEGORISER_MODEL }}
-            ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
+            CORS_ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
           secrets: |
             STRIPE_SECRET_KEY=stripe-secret-key:latest
             STRIPE_WEBHOOK_SECRET=stripe-webhook-secret:latest
@@ -195,7 +195,7 @@ jobs:
           gcloud run jobs update newsroom-director \
             --image=${{ env.IMAGE_REGISTRY }}/newsroom-director:${{ env.DEPLOY_SHA }} \
             --region=${{ env.GCP_REGION }} \
-            --update-env-vars=SENTRY_DSN=${{ vars.SENTRY_DSN }},R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }},GENERATION_MODEL_PRO=${{ vars.GENERATION_MODEL_PRO }},GENERATION_MODEL_FLASH=${{ vars.GENERATION_MODEL_FLASH }},IMAGE_GENERATION_MODEL=${{ vars.IMAGE_GENERATION_MODEL }},VERTEX_AI_PROJECT=${{ vars.GCP_PROJECT_ID }},VERTEX_AI_LOCATION=${{ env.VERTEX_AI_LOCATION }} \
+            --update-env-vars=SENTRY_DSN=${{ vars.SENTRY_DSN }},R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }},GENERATION_MODEL_PRO=${{ vars.GENERATION_MODEL_PRO }},GENERATION_MODEL_FLASH=${{ vars.GENERATION_MODEL_FLASH }},IMAGE_GENERATION_MODEL=${{ vars.IMAGE_GENERATION_MODEL }},IMAGE_GENERATION_LOCATION=${{ vars.IMAGE_GENERATION_LOCATION || 'us-central1' }},VERTEX_AI_PROJECT=${{ vars.GCP_PROJECT_ID }},VERTEX_AI_LOCATION=${{ env.VERTEX_AI_LOCATION }} \
             --update-secrets=CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest
 
   # ── Post-deployment E2E smoke tests ─────────────────────────────────────────

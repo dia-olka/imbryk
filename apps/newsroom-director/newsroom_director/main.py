@@ -37,6 +37,7 @@ from .config import (
     CF_DEPLOY_HOOK_URL,
     DATABASE_URL,
     LOG_LEVEL_INT,
+    IMAGE_GENERATION_LOCATION,
     R2_ACCOUNT_ID,
     SENTRY_DSN,
     VERTEX_AI_LOCATION,
@@ -908,7 +909,7 @@ def cli_main() -> None:
 
         img_client = ImagenClient(
             project=VERTEX_AI_PROJECT,
-            location=VERTEX_AI_LOCATION,
+            location=IMAGE_GENERATION_LOCATION,
         )
     else:
         if not enable_images:

@@ -37,7 +37,7 @@ class ImagenClient(ImageGenerationStrategy):
         model: str | None = None,
     ) -> None:
         self._project = project
-        self._location = location or config.VERTEX_AI_LOCATION
+        self._location = location or config.IMAGE_GENERATION_LOCATION
         self._model = model or config.IMAGE_GENERATION_MODEL
         self._client: genai.Client | None = None
 

@@ -16,7 +16,8 @@ VERTEX_AI_LOCATION = os.getenv("VERTEX_AI_LOCATION", "global")
 # Generative model names — override per environment without code changes
 GENERATION_MODEL_PRO = os.getenv("GENERATION_MODEL_PRO", "gemini-3.1-pro-preview")
 GENERATION_MODEL_FLASH = os.getenv("GENERATION_MODEL_FLASH", "gemini-3-flash-preview")
-IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "gemini-3-pro-image-preview")
+IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "imagen-4.0-generate-001")
+IMAGE_GENERATION_LOCATION = os.getenv("IMAGE_GENERATION_LOCATION", "us-central1")
 
 TOTAL_BUDGET_TOKENS = int(os.getenv("TOTAL_BUDGET_TOKENS", "800000"))
 MAX_CLUSTERS = int(os.getenv("MAX_CLUSTERS", "30"))
