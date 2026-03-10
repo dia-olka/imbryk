@@ -816,7 +816,7 @@ main:has(.newspaper) {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
-  opacity: 0.7;
+  /* No opacity — compositing would reduce child link contrast below 4.5:1 WCAG AA */
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -1416,9 +1416,11 @@ main:has(.newspaper) {
   color: #fff;
 }
 
-/* When no image, use dark primary masthead over light bg */
+/* When no image, always use dark bg so white text meets WCAG 4.5:1.
+   Brand primary colours like aspirant (#1a8a7d) or hedonist (#d4ac0d) do not
+   provide sufficient contrast against white text on their own. */
 .front-page-card:not(:has(.front-page-card__image)) .front-page-card__masthead {
-  background: var(--np-primary, var(--color-text));
+  background: var(--color-text);
   padding-bottom: var(--space-md);
 }
 
@@ -1446,6 +1448,7 @@ main:has(.newspaper) {
 
 .front-page-card:not(:has(.front-page-card__image)) .front-page-card__tagline {
   text-shadow: none;
+  opacity: 1; /* restore full opacity — reduced opacity on coloured bg fails WCAG */
 }
 
 /* Bottom footer overlay */
@@ -1463,10 +1466,12 @@ main:has(.newspaper) {
   margin-top: auto;
 }
 
-/* When no image, style footer for light background */
+/* When no image, style footer for light background.
+   Use dark text colour instead of the brand primary to guarantee ≥4.5:1
+   contrast against the light secondary card background (WCAG 2 AA). */
 .front-page-card:not(:has(.front-page-card__image)) .front-page-card__footer {
   background: transparent;
-  color: var(--np-primary, var(--color-text));
+  color: var(--color-text);
 }
 
 .front-page-card__headline {
