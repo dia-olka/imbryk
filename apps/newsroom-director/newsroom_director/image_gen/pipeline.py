@@ -82,7 +82,7 @@ def generate_images_for_newspaper(
             )
             continue
 
-        filename = f"{idx}.webp"
+        filename = f"{idx}.png"
         url = storage.write_image(
             edition_id, newspaper_id, filename, image_bytes
         )
@@ -110,7 +110,7 @@ def generate_images_for_newspaper(
         hero_bytes = imagen_client.generate(sanitize_prompt_text(front_page_image_prompt))
         if hero_bytes is not None:
             hero_image_url = storage.write_image(
-                edition_id, newspaper_id, "hero.webp", hero_bytes
+                edition_id, newspaper_id, "hero.png", hero_bytes
             )
             logger.info(
                 "Hero image uploaded",

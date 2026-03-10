@@ -22,6 +22,7 @@ COPY newsroom_director/ newsroom_director/
 
 # Pre-download the embedding model into the image so
 # it doesn't need to be fetched at runtime
+ENV HF_HOME=/app/.hf_cache
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 CMD ["python", "-m", "newsroom_director.main"]

@@ -92,7 +92,7 @@ def _backfill_newspaper(
 
         # Use edition_date (not edition UUID) as the storage path prefix —
         # this matches the convention from the main pipeline.
-        url = storage.write_image(edition_date, newspaper_id, f"{idx}.webp", image_bytes)
+        url = storage.write_image(edition_date, newspaper_id, f"{idx}.png", image_bytes)
         article["image_url"] = url
         generated += 1
         logger.info(

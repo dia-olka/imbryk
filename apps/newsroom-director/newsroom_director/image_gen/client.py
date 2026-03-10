@@ -22,7 +22,7 @@ class ImageGenerationStrategy(ABC):
     def generate(self, prompt: str) -> bytes | None:
         """Generate an image from a text prompt.
 
-        Returns WebP image bytes on success, or None on failure.
+        Returns PNG image bytes on success, or None on failure.
         Image generation failures must never raise — they are non-blocking.
         """
 
@@ -59,7 +59,7 @@ class ImagenClient(ImageGenerationStrategy):
     def generate(self, prompt: str) -> bytes | None:
         """Generate an image using the Google Gen AI SDK.
 
-        Returns WebP image bytes on success, None on any failure.
+        Returns PNG image bytes on success, None on any failure.
         """
         try:
             from google.genai import types
@@ -73,7 +73,7 @@ class ImagenClient(ImageGenerationStrategy):
                     config=types.GenerateImagesConfig(
                         number_of_images=1,
                         aspect_ratio="16:9",
-                        output_mime_type="image/webp",
+                        output_mime_type="image/png",
                     ),
                 )
                 return response.generated_images[0].image.image_bytes

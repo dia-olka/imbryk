@@ -72,7 +72,7 @@ class R2EditionStorage(EditionStorage):
             Bucket=self._bucket,
             Key=key,
             Body=image_bytes,
-            ContentType="image/webp",
+            ContentType="image/png",
         )
         logger.info(
             "Image written to R2",

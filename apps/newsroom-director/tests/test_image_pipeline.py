@@ -148,8 +148,8 @@ class TestGenerateImagesForNewspaper:
         )
 
         assert result.hero_image_url is not None
-        assert "hero.webp" in result.hero_image_url
-        assert "editions/ed-001/sovereign/hero.webp" in storage._images
+        assert "hero.png" in result.hero_image_url
+        assert "editions/ed-001/sovereign/hero.png" in storage._images
 
     def test_no_hero_when_prompt_is_none(self):
         client = StubImageClient()
