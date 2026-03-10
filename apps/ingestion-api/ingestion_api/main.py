@@ -1,8 +1,8 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
 import logging
-from datetime import timedelta, timezone
 from datetime import datetime as dt
+from datetime import timedelta, timezone
 
 import sentry_sdk
 import sentry_sdk.integrations.logging
@@ -228,8 +228,13 @@ async def create_checkout_session(
             content={"detail": f"Quote already processed (status={prompt.status})"},
         )
 
-    if prompt.expires_at and dt.now(timezone.utc) > prompt.expires_at:
-        return JSONResponse(status_code=410, content={"detail": "Quote has expired"})
+    if prompt.expires_at:
+        expires = prompt.expires_at
+        # SQLite returns naive datetimes; treat them as UTC
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if dt.now(timezone.utc) > expires:
+            return JSONResponse(status_code=410, content={"detail": "Quote has expired"})
 
     if (prompt.checkout_session_count or 0) >= MAX_CHECKOUT_SESSIONS_PER_QUOTE:
         logger.warning(

@@ -31,6 +31,24 @@ All migrations run against **both SQLite (local) and PostgreSQL (production)**. 
 
 **Rule of thumb:** any DDL that modifies an existing column (rename, change type, change default, add/drop constraint) must be wrapped in `with op.batch_alter_table("table_name") as batch_op: ...`. Adding a new column with `op.add_column` is fine bare.
 
+# Code Quality — Required Verification After Every Fix
+
+After making **any** code change, you **must** run lint and tests for the affected project and confirm they pass before committing:
+
+```sh
+# Python projects (ingestion-api, newsroom-director)
+npx nx run ingestion-api:lint
+npx nx run ingestion-api:test
+
+# TypeScript projects
+npx nx run <project>:lint
+npx nx run <project>:test
+```
+
+- If lint or tests fail, fix the issues before pushing.
+- Never push code that fails lint or tests.
+- SQLite (local dev) returns **timezone-naive** datetimes. When comparing datetime columns to `datetime.now(timezone.utc)`, normalise the stored value: `if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)`.
+
 # UI Guidelines
 
 - **Mobile-first design** — all components and layouts must be designed for small screens first, then enhanced for larger viewports via progressive media queries.

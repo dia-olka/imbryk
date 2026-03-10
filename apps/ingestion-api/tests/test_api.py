@@ -64,7 +64,11 @@ def test_quote_sets_expires_at(client, db_session):
 
     prompt = db_session.query(Prompt).filter_by(id=data["quote_id"]).first()
     assert prompt.expires_at is not None
-    assert prompt.expires_at > datetime.now(timezone.utc)
+    expires_at = prompt.expires_at
+    # SQLite returns naive datetimes; normalise to UTC for comparison
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    assert expires_at > datetime.now(timezone.utc)
 
 
 def test_quote_validates_prompt_too_short(client):
@@ -215,8 +219,6 @@ def test_create_checkout_session_expired_quote(client, db_session):
 
 def test_create_checkout_session_cap(client, db_session):
     """Exceeding MAX_CHECKOUT_SESSIONS_PER_QUOTE should return 429."""
-    from ingestion_api.models import Prompt
-
     quote = _create_quote(client)
     mock_session = _mock_stripe_session()
 
