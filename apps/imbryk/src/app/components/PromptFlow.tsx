@@ -1,8 +1,10 @@
 import { useReducer, useState, useEffect, useCallback } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import type { FlowData, FlowAction } from './types';
 import { useQuote } from '../hooks/useQuote';
 import { usePromptValidation } from '../hooks/usePromptValidation';
 import { createCheckoutSession } from '../api/client';
+import { TURNSTILE_SITE_KEY } from '../constants';
 import { OrbInput } from './OrbInput';
 import { Confirmation } from './Confirmation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -34,6 +36,7 @@ export function PromptFlow() {
   const [prompt, setPrompt] = useState('');
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | undefined>();
   const { isValid } = usePromptValidation(prompt);
   const { quote, isLoading, error: quoteError, submit, reset: resetQuote } = useQuote();
 
@@ -69,11 +72,17 @@ export function PromptFlow() {
     }
   }, [quote, flow.weightMultiplier]);
 
+  const handleSubmit = useCallback(() => {
+    submit(prompt, turnstileToken);
+    setTurnstileToken(undefined);
+  }, [prompt, turnstileToken, submit]);
+
   const handleReset = () => {
     resetQuote();
     dispatch({ type: 'RESET' });
     setPrompt('');
     setCheckoutError(null);
+    setTurnstileToken(undefined);
   };
 
   if (flow.state === 'confirmed') {
@@ -82,12 +91,25 @@ export function PromptFlow() {
 
   return (
     <div className="flex flex-col items-center gap-8">
+      {TURNSTILE_SITE_KEY && (
+        <Turnstile
+          siteKey={TURNSTILE_SITE_KEY}
+          onSuccess={setTurnstileToken}
+          onError={() => setTurnstileToken(undefined)}
+          onExpire={() => setTurnstileToken(undefined)}
+          options={{ appearance: 'interaction-only' }}
+        />
+      )}
       <OrbInput
         value={prompt}
         onChange={setPrompt}
         onPay={handlePay}
-        onSubmit={() => submit(prompt)}
-        isSubmitDisabled={!isValid || isLoading}
+        onSubmit={handleSubmit}
+        isSubmitDisabled={
+          !isValid ||
+          isLoading ||
+          (!!TURNSTILE_SITE_KEY && !turnstileToken)
+        }
         isPayDisabled={!quote || isLoading || isCheckingOut}
         isCheckingOut={isCheckingOut}
         quote={quote}

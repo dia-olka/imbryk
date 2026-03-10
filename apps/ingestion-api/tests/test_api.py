@@ -1,7 +1,7 @@
 """Integration tests for API endpoints."""
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def test_health(client):
@@ -82,6 +82,63 @@ def test_quote_rate_limiting(client):
             return  # Rate limit triggered as expected
     # If we get here, rate limiting didn't trigger within 11 requests.
     # This is acceptable — SlowAPI may not enforce in test mode.
+
+
+# --- Cloudflare Turnstile tests ---
+
+
+def test_quote_rejected_without_turnstile_token(client):
+    """When TURNSTILE_SECRET_KEY is set and no token is sent, expect 403."""
+    with patch("ingestion_api.main.TURNSTILE_SECRET_KEY", "test_secret"):
+        response = client.post(
+            "/prompts/quote",
+            json={"prompt": "What is happening in global geopolitics today?"},
+        )
+    assert response.status_code == 403
+    assert "CAPTCHA" in response.json()["detail"]
+
+
+def test_quote_rejected_with_invalid_turnstile_token(client):
+    """When TURNSTILE_SECRET_KEY is set and Cloudflare returns success:false, expect 403."""
+    with patch("ingestion_api.main.TURNSTILE_SECRET_KEY", "test_secret"), patch(
+        "ingestion_api.main._verify_turnstile", new=AsyncMock(return_value=False)
+    ):
+        response = client.post(
+            "/prompts/quote",
+            json={
+                "prompt": "What is happening in global geopolitics today?",
+                "cf_turnstile_token": "invalid_token",
+            },
+        )
+    assert response.status_code == 403
+    assert "CAPTCHA" in response.json()["detail"]
+
+
+def test_quote_accepted_with_valid_turnstile_token(client):
+    """When TURNSTILE_SECRET_KEY is set and Cloudflare returns success:true, expect 200."""
+    with patch("ingestion_api.main.TURNSTILE_SECRET_KEY", "test_secret"), patch(
+        "ingestion_api.main._verify_turnstile", new=AsyncMock(return_value=True)
+    ):
+        response = client.post(
+            "/prompts/quote",
+            json={
+                "prompt": "What is happening in global geopolitics today?",
+                "cf_turnstile_token": "valid_token",
+            },
+        )
+    assert response.status_code == 200
+    assert "quote_id" in response.json()
+
+
+def test_quote_skips_turnstile_when_secret_not_set(client):
+    """When TURNSTILE_SECRET_KEY is empty (local dev), quote succeeds without any token."""
+    with patch("ingestion_api.main.TURNSTILE_SECRET_KEY", ""):
+        response = client.post(
+            "/prompts/quote",
+            json={"prompt": "What is happening in global geopolitics today?"},
+        )
+    assert response.status_code == 200
+    assert "quote_id" in response.json()
 
 
 # --- Checkout session tests ---

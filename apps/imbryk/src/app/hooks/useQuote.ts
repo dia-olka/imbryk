@@ -7,7 +7,7 @@ export interface UseQuoteResult {
   quote: QuoteResponse | null;
   isLoading: boolean;
   error: string | null;
-  submit: (prompt: string) => void;
+  submit: (prompt: string, turnstileToken?: string) => void;
   reset: () => void;
 }
 
@@ -24,7 +24,7 @@ export function useQuote(): UseQuoteResult {
     };
   }, []);
 
-  const submit = useCallback((prompt: string) => {
+  const submit = useCallback((prompt: string, turnstileToken?: string) => {
     if (prompt.length < PROMPT_MIN) return;
 
     abortRef.current?.abort();
@@ -35,7 +35,7 @@ export function useQuote(): UseQuoteResult {
     setError(null);
     setQuote(null);
 
-    fetchQuote(prompt, controller.signal)
+    fetchQuote(prompt, turnstileToken, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) {
           setQuote(data);

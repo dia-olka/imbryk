@@ -10,3 +10,5 @@ export const APP_URL =
   import.meta.env.VITE_APP_URL ?? 'https://whisper.imbryk.news';
 export const GAZETTE_URL =
   import.meta.env.VITE_GAZETTE_URL ?? 'https://imbryk.news';
+export const TURNSTILE_SITE_KEY =
+  import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '';
