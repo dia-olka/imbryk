@@ -11,6 +11,7 @@
 <li{% if cardId %} id="{{ cardId }}"{% endif %}>
   <a href="/edition/{{ cardEditionDate }}/{{ cardNewspaper.newspaper_id }}/"
      class="front-page-card"
+     data-persona="{{ cardNewspaper.newspaper_id }}"
      style="{{ cardPersona.cssVars if cardPersona else '' }}"
      aria-label="{{ cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name }} — {{ leadHeadline }}">
 

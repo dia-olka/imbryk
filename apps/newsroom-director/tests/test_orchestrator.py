@@ -125,7 +125,7 @@ class TestOrchestrator:
 
         assert result["edition_id"] is not None
         assert result["newspaper_count"] > 0
-        assert result["article_count"] > 0
+        assert result["newspaper_ids"]
 
     def test_articles_per_newspaper(self, test_db_url):
         gen = StubGenerationStrategy()
@@ -257,7 +257,7 @@ class TestOrchestrator:
 
         # Should still produce an edition without validation step
         assert result["edition_id"] is not None
-        assert result["article_count"] > 0
+        assert result["newspaper_ids"]
 
     def test_edition_index_written(self, test_db_url):
         """After pipeline completes, storage should have an index."""

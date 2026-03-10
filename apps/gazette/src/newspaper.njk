@@ -28,7 +28,7 @@ eleventyComputed:
 {% set siblingEditionDate = np.editionDate %}
 {% include "sibling-nav.njk" %}
 
-<div class="newspaper" style="{{ np.cssVars }}">
+<div class="newspaper" data-persona="{{ np.newspaperId }}" style="{{ np.cssVars }}">
 
   {% set mastheadName = np.newspaperName %}
   {% set mastheadTagline = persona.tagline if persona else "" %}

@@ -48,7 +48,7 @@ eleventyComputed:
 }
 </script>
 
-<div class="newspaper" style="{{ ap.cssVars }}">
+<div class="newspaper" data-persona="{{ ap.newspaperId }}" style="{{ ap.cssVars }}">
 
   {% set mastheadName = ap.newspaperName %}
   {% set mastheadTagline = persona.tagline if persona else "" %}

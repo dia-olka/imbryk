@@ -188,16 +188,30 @@ def run_morning_press(
         ledger_dict = load_world_ledger(session)
         if ledger_dict is not None:
             ledger = ledger_from_dict(ledger_dict)
+            logger.info("WorldLedger loaded from DB")
         else:
             ledger = INITIAL_WORLD_LEDGER
+            logger.info("No WorldLedger in DB, using initial lore")
 
         # Step 4: Serialize WorldLedger to synopsis
         synopsis = serialize_ledger_to_synopsis(ledger)
+        logger.info(
+            "WorldLedger synopsis serialized",
+            extra={"synopsis_length": len(synopsis)},
+        )
 
         # Step 5: Coherence validation — filter prompts against world state
         if enable_validation:
+            logger.info(
+                "Starting coherence validation",
+                extra={"prompt_count": len(prompt_records)},
+            )
             prompt_records = validate_prompts(
                 prompt_records, synopsis, gen
+            )
+            logger.info(
+                "Coherence validation complete",
+                extra={"surviving_prompts": len(prompt_records)},
             )
             if not prompt_records:
                 logger.info(
@@ -217,6 +231,16 @@ def run_morning_press(
             routes = route_prompt(pr.category_ids)
             for route in routes:
                 newspaper_prompts[route.newspaper_id].append(pr)
+
+        logger.info(
+            "Prompts routed to newspapers",
+            extra={
+                "step": "routing",
+                "newspapers": {
+                    nid: len(ps) for nid, ps in newspaper_prompts.items()
+                },
+            },
+        )
 
         # Step 7: For each newspaper, distill and generate.
         # Failures for individual newspapers are isolated — a single Gemini error
@@ -248,8 +272,20 @@ def run_morning_press(
                 ]
 
                 # Run distillation pipeline
+                dist_start = time.monotonic()
                 budgeted = pipeline.run(dist_prompts)
                 digests_text = pipeline.serialize_all(budgeted)
+                logger.info(
+                    "Distillation complete for %s",
+                    persona.id,
+                    extra={
+                        "step": "distillation",
+                        "newspaper_id": persona.id,
+                        "cluster_count": len(budgeted),
+                        "digest_length": len(digests_text),
+                        "latency_ms": int((time.monotonic() - dist_start) * 1000),
+                    },
+                )
 
                 # System instruction: persona identity + world context
                 system_instruction = persona.system_prompt_template.replace(
@@ -263,6 +299,16 @@ def run_morning_press(
                 # gazette always receives canonical JSON (no "title"/"content"/
                 # "fullArticles" deviations, no markdown fences, no plain text).
                 # Retry up to 3 times if the model returns empty/invalid output.
+                logger.info(
+                    "Calling Gemini for %s (%s tier)",
+                    persona.id,
+                    persona.model_tier,
+                    extra={
+                        "step": "llm_call",
+                        "newspaper_id": persona.id,
+                        "model_tier": persona.model_tier,
+                    },
+                )
                 gen_start = time.monotonic()
                 article = None
                 for attempt in range(1, 4):
@@ -408,6 +454,10 @@ def run_morning_press(
 
         # Step 10: Save edition to DB
         edition_date = today_date
+        logger.info(
+            "Saving edition to DB",
+            extra={"step": "save", "edition_date": edition_date},
+        )
         edition_id = save_edition(session, edition_date, articles)
 
         # Step 11: Write edition to storage
@@ -431,22 +481,29 @@ def run_morning_press(
         _run_backfill()
 
         total_ms = int((time.monotonic() - start_time) * 1000)
+        newspaper_ids = [k for k in articles if k != "curator"]
         summary = {
             "edition_id": edition_id,
-            "newspaper_count": len(
-                [k for k in articles if k != "curator"]
-            ),
-            "article_count": len(articles),
+            "edition_date": edition_date,
+            "newspaper_count": len(newspaper_ids),
+            "newspaper_ids": newspaper_ids,
+            "has_curator": "curator" in articles,
+            "image_count": image_counts,
+            "prompt_count": len(prompt_records),
             "latency_ms": total_ms,
         }
 
         logger.info(
-            "Edition complete",
-            extra={
-                "step": "complete",
-                "edition_id": edition_id,
-                "latency_ms": total_ms,
-            },
+            "Edition complete: %s | %d newspapers (%s) | curator=%s | "
+            "%d images | %d prompts | %.1fs",
+            edition_id,
+            len(newspaper_ids),
+            ", ".join(newspaper_ids),
+            "curator" in articles,
+            image_counts,
+            len(prompt_records),
+            total_ms / 1000,
+            extra={"step": "complete", **summary},
         )
 
         return summary
