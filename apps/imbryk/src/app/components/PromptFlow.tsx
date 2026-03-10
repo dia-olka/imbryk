@@ -1,22 +1,18 @@
-import { useReducer, useState, useEffect } from 'react';
+import { useReducer, useState, useEffect, useCallback } from 'react';
 import type { FlowData, FlowAction } from './types';
 import { useQuote } from '../hooks/useQuote';
 import { usePromptValidation } from '../hooks/usePromptValidation';
+import { createCheckoutSession } from '../api/client';
 import { OrbInput } from './OrbInput';
-import { PaymentForm } from './PaymentForm';
 import { Confirmation } from './Confirmation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 function flowReducer(state: FlowData, action: FlowAction): FlowData {
   switch (action.type) {
-    case 'PROCEED_TO_PAYMENT':
-      return { ...state, state: 'payment', quote: action.quote, errorMessage: null };
     case 'PAYMENT_SUCCESS':
       return { ...state, state: 'confirmed', errorMessage: null };
-    case 'BACK_TO_INPUT':
-      return { ...state, state: 'input', errorMessage: null };
     case 'RESET':
-      return { state: 'input', prompt: '', quote: null, weightMultiplier: 1, errorMessage: null };
+      return { state: 'input', prompt: '', weightMultiplier: 1, errorMessage: null };
     case 'SET_WEIGHT_MULTIPLIER':
       return { ...state, weightMultiplier: action.multiplier };
     case 'ERROR':
@@ -29,7 +25,6 @@ function flowReducer(state: FlowData, action: FlowAction): FlowData {
 const initialState: FlowData = {
   state: 'input',
   prompt: '',
-  quote: null,
   weightMultiplier: 1,
   errorMessage: null,
 };
@@ -37,7 +32,8 @@ const initialState: FlowData = {
 export function PromptFlow() {
   const [flow, dispatch] = useReducer(flowReducer, initialState);
   const [prompt, setPrompt] = useState('');
-  const [isReleasing, setIsReleasing] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { isValid } = usePromptValidation(prompt);
   const { quote, isLoading, error: quoteError, submit, reset: resetQuote } = useQuote();
 
@@ -54,43 +50,34 @@ export function PromptFlow() {
     }
   }, []);
 
-  const handleProceedToPayment = () => {
+  const handlePay = useCallback(async () => {
     if (!quote) return;
-    setIsReleasing(true);
-    setTimeout(() => {
-      dispatch({ type: 'PROCEED_TO_PAYMENT', quote });
-      setIsReleasing(false);
-    }, 800);
-  };
+    setCheckoutError(null);
+    setIsCheckingOut(true);
 
-  const handleBack = () => {
-    resetQuote();
-    dispatch({ type: 'BACK_TO_INPUT' });
-  };
+    try {
+      const { checkout_url } = await createCheckoutSession(
+        quote.quote_id,
+        flow.weightMultiplier
+      );
+      window.location.href = checkout_url;
+    } catch (err) {
+      setCheckoutError(
+        err instanceof Error ? err.message : 'Failed to start checkout'
+      );
+      setIsCheckingOut(false);
+    }
+  }, [quote, flow.weightMultiplier]);
 
   const handleReset = () => {
     resetQuote();
     dispatch({ type: 'RESET' });
     setPrompt('');
+    setCheckoutError(null);
   };
 
-  if (flow.state === 'confirmed' && flow.quote) {
-    return <Confirmation quote={flow.quote} onReset={handleReset} />;
-  }
-
-  // Also show confirmation when returning from Stripe (quote may be null)
   if (flow.state === 'confirmed') {
-    return <Confirmation quote={null} onReset={handleReset} />;
-  }
-
-  if (flow.state === 'payment' && flow.quote) {
-    return (
-      <PaymentForm
-        quote={flow.quote}
-        weightMultiplier={flow.weightMultiplier}
-        onBack={handleBack}
-      />
-    );
+    return <Confirmation quote={quote ?? null} onReset={handleReset} />;
   }
 
   return (
@@ -98,11 +85,11 @@ export function PromptFlow() {
       <OrbInput
         value={prompt}
         onChange={setPrompt}
-        onProceed={handleProceedToPayment}
+        onPay={handlePay}
         onSubmit={() => submit(prompt)}
         isSubmitDisabled={!isValid || isLoading}
-        isProceedDisabled={!quote || isLoading}
-        isReleasing={isReleasing}
+        isPayDisabled={!quote || isLoading || isCheckingOut}
+        isCheckingOut={isCheckingOut}
         quote={quote}
         weightMultiplier={flow.weightMultiplier}
         onWeightMultiplierChange={(m) =>
@@ -111,15 +98,11 @@ export function PromptFlow() {
         isQuoteLoading={isLoading}
       />
 
-      {quoteError && (
+      {(quoteError || checkoutError || flow.errorMessage) && (
         <Alert variant="destructive" className="max-w-md">
-          <AlertDescription>{quoteError}</AlertDescription>
-        </Alert>
-      )}
-
-      {flow.errorMessage && (
-        <Alert variant="destructive" className="max-w-md">
-          <AlertDescription>{flow.errorMessage}</AlertDescription>
+          <AlertDescription>
+            {quoteError || checkoutError || flow.errorMessage}
+          </AlertDescription>
         </Alert>
       )}
     </div>

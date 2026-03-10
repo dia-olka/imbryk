@@ -17,10 +17,10 @@ describe('OrbInput', () => {
   const defaultProps = {
     value: '',
     onChange: vi.fn(),
-    onProceed: vi.fn(),
+    onPay: vi.fn(),
     onSubmit: vi.fn(),
     isSubmitDisabled: true,
-    isProceedDisabled: true,
+    isPayDisabled: true,
     quote: null as QuoteResponse | null,
     isQuoteLoading: false,
     weightMultiplier: 1,
@@ -78,12 +78,12 @@ describe('OrbInput', () => {
     expect(body?.classList.contains('orb-body--flipped')).toBe(true);
   });
 
-  it('should show proceed button when flipped', () => {
+  it('should show pay button when flipped', () => {
     render(<OrbInput {...defaultProps} quote={mockQuote} isSubmitDisabled={false} />);
     act(() => {
       vi.advanceTimersByTime(300);
     });
-    expect(screen.getByRole('button', { name: /proceed to payment/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /pay \$/i })).toBeTruthy();
   });
 
   it('should flip back on click when flipped', () => {
@@ -124,6 +124,25 @@ describe('OrbInput', () => {
     );
     const front = container.querySelector('.orb-face--front');
     expect(front?.classList.contains('orb--divining')).toBe(true);
+  });
+
+  it('should show redirecting text when checking out', () => {
+    render(
+      <OrbInput
+        {...defaultProps}
+        quote={mockQuote}
+        isCheckingOut={true}
+        isPayDisabled={true}
+      />
+    );
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(screen.getByText('Redirecting to Stripe…')).toBeTruthy();
+  });
+
+  it('should show secure payment hint when flipped', () => {
+    render(<OrbInput {...defaultProps} quote={mockQuote} />);
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(screen.getByText('Secure payment via Stripe')).toBeTruthy();
   });
 
   // --- Editorial boost stepper ---

@@ -1,7 +1,7 @@
 /* Auto-generated from data/taxonomy.json
  * DO NOT EDIT — run `npx nx run taxonomy:generate-data` to regenerate. */
 
-/* eslint-disable */
+ 
 
 export const TAXONOMY_DATA = {
   groups: [

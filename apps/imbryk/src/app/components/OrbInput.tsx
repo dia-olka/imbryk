@@ -12,11 +12,11 @@ import { NEWSPAPER_DISPLAY } from './newspaper-display';
 interface OrbInputProps {
   value: string;
   onChange: (value: string) => void;
-  onProceed: () => void;
+  onPay: () => void;
   onSubmit: () => void;
   isSubmitDisabled: boolean;
-  isProceedDisabled: boolean;
-  isReleasing?: boolean;
+  isPayDisabled: boolean;
+  isCheckingOut?: boolean;
   quote: QuoteResponse | null;
   isQuoteLoading: boolean;
   weightMultiplier: number;
@@ -26,11 +26,11 @@ interface OrbInputProps {
 export function OrbInput({
   value,
   onChange,
-  onProceed,
+  onPay,
   onSubmit,
   isSubmitDisabled,
-  isProceedDisabled,
-  isReleasing = false,
+  isPayDisabled,
+  isCheckingOut = false,
   quote,
   isQuoteLoading,
   weightMultiplier,
@@ -98,7 +98,7 @@ export function OrbInput({
 
       <Orb3D
         isFlipped={isFlipped}
-        isReleasing={isReleasing}
+        isReleasing={isCheckingOut}
         onFlipBack={handleFlipBack}
       >
         <OrbFrontFace
@@ -161,7 +161,7 @@ export function OrbInput({
                 <button
                   type="button"
                   onClick={handleStepDown}
-                  disabled={weightMultiplier <= WEIGHT_MULTIPLIER_MIN}
+                  disabled={weightMultiplier <= WEIGHT_MULTIPLIER_MIN || isCheckingOut}
                   aria-label="Decrease boost multiplier"
                   className="w-8 h-8 rounded-full border border-input flex items-center justify-center
                              text-lg font-light font-sans leading-none
@@ -183,14 +183,16 @@ export function OrbInput({
                   value={weightMultiplier}
                   onChange={handleMultiplierInputChange}
                   onFocus={(e) => e.target.select()}
+                  disabled={isCheckingOut}
                   className="w-14 h-8 rounded-md border border-input text-center text-sm font-sans
                              focus:outline-none focus:ring-2 focus:ring-primary
+                             disabled:opacity-50
                              [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <button
                   type="button"
                   onClick={handleStepUp}
-                  disabled={weightMultiplier >= WEIGHT_MULTIPLIER_MAX}
+                  disabled={weightMultiplier >= WEIGHT_MULTIPLIER_MAX || isCheckingOut}
                   aria-label="Increase boost multiplier"
                   className="w-8 h-8 rounded-full border border-input flex items-center justify-center
                              text-lg font-light font-sans leading-none
@@ -208,13 +210,19 @@ export function OrbInput({
             </div>
           )}
           <Button
-            onClick={onProceed}
-            disabled={isProceedDisabled}
+            onClick={onPay}
+            disabled={isPayDisabled}
             size="lg"
             className="min-w-[200px]"
+            aria-busy={isCheckingOut}
           >
-            Proceed to payment — ${totalCost.toFixed(2)}
+            {isCheckingOut
+              ? 'Redirecting to Stripe…'
+              : `Pay $${totalCost.toFixed(2)}`}
           </Button>
+          <p className="text-xs text-text-muted font-sans">
+            Secure payment via Stripe
+          </p>
         </>
       ) : (
         <Button
