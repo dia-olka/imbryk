@@ -1,6 +1,7 @@
 """Integration tests for API endpoints."""
 
 import json
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 
@@ -405,6 +406,61 @@ def test_webhook_dispute_unknown_transaction(client):
     response = _post_webhook(client, event)
     assert response.status_code == 200
     assert "unknown transaction" in response.json()["detail"]
+
+
+# --- Quote expiry cleanup tests ---
+
+
+def test_purge_expired_quotes_removes_old_rows(client, db_session):
+    """Expired 'quoted' prompts should be deleted along with their category rows."""
+    from ingestion_api.main import purge_expired_quotes
+    from ingestion_api.models import CategorisedPrompt, Prompt
+
+    quote = _create_quote(client)
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+
+    # Back-date the prompt so it appears older than the expiry window.
+    prompt.created_at = datetime.now(timezone.utc) - timedelta(hours=2)
+    db_session.commit()
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+    purged = purge_expired_quotes(db_session, cutoff)
+
+    assert purged == 1
+    assert db_session.query(Prompt).filter_by(id=quote["quote_id"]).first() is None
+    assert db_session.query(CategorisedPrompt).filter_by(prompt_id=quote["quote_id"]).count() == 0
+
+
+def test_purge_expired_quotes_keeps_recent_rows(client, db_session):
+    """Quotes created recently must not be purged."""
+    from ingestion_api.main import purge_expired_quotes
+    from ingestion_api.models import Prompt
+
+    _create_quote(client)
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+    purged = purge_expired_quotes(db_session, cutoff)
+
+    assert purged == 0
+    assert db_session.query(Prompt).count() == 1
+
+
+def test_purge_expired_quotes_skips_accepted_prompts(client, db_session):
+    """Accepted prompts must not be deleted even if old."""
+    from ingestion_api.main import purge_expired_quotes
+    from ingestion_api.models import Prompt
+
+    quote = _create_quote(client)
+    prompt = db_session.query(Prompt).filter_by(id=quote["quote_id"]).first()
+    prompt.status = "accepted"
+    prompt.created_at = datetime.now(timezone.utc) - timedelta(hours=2)
+    db_session.commit()
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+    purged = purge_expired_quotes(db_session, cutoff)
+
+    assert purged == 0
+    assert db_session.query(Prompt).filter_by(id=quote["quote_id"]).first() is not None
 
 
 def test_webhook_unknown_event_ignored(client):

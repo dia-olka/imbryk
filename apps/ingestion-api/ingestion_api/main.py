@@ -1,6 +1,8 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
+import asyncio
 import logging
+from datetime import datetime, timedelta, timezone
 
 import sentry_sdk
 import sentry_sdk.integrations.logging
@@ -16,6 +18,8 @@ from starlette.responses import JSONResponse
 from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
 from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
+    QUOTE_CLEANUP_INTERVAL_SECONDS,
+    QUOTE_EXPIRY_SECONDS,
     RATE_LIMIT_QUOTE,
     SENTRY_DSN,
     STRIPE_SECRET_KEY,
@@ -39,7 +43,7 @@ if SENTRY_DSN:
     )
     logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
 
-from ingestion_api.database import get_db
+from ingestion_api.database import SessionLocal, get_db
 from ingestion_api.models import (
     CategorisedPrompt,
     Edition,
@@ -78,6 +82,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Log API startup for visibility in Cloud Logging & Sentry."""
+    global _cleanup_task
+    _cleanup_task = asyncio.create_task(_quote_cleanup_loop())
     configure_stripe()
     if not STRIPE_SECRET_KEY:
         logger.error(
@@ -103,6 +109,13 @@ async def startup_event():
     )
 
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cancel background tasks on graceful shutdown."""
+    if _cleanup_task is not None:
+        _cleanup_task.cancel()
+
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     logger.warning("Rate limit exceeded for %s", request.client)
@@ -120,6 +133,51 @@ async def general_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal server error"},
     )
+
+
+# --- Quote expiry cleanup ---
+
+
+def purge_expired_quotes(db, cutoff: datetime) -> int:
+    """Delete 'quoted' prompts older than *cutoff* and their category rows.
+
+    Returns the number of prompts purged.  Safe to call from tests.
+    """
+    expired_ids = [
+        p.id
+        for p in db.query(Prompt).filter(
+            Prompt.status == "quoted",
+            Prompt.created_at < cutoff,
+        ).all()
+    ]
+    if expired_ids:
+        db.query(CategorisedPrompt).filter(
+            CategorisedPrompt.prompt_id.in_(expired_ids)
+        ).delete(synchronize_session=False)
+        db.query(Prompt).filter(Prompt.id.in_(expired_ids)).delete(
+            synchronize_session=False
+        )
+        db.commit()
+        logger.info("Purged %d expired quoted prompt(s)", len(expired_ids))
+    return len(expired_ids)
+
+
+async def _quote_cleanup_loop() -> None:
+    """Background asyncio task: purge orphaned quotes on a fixed interval."""
+    while True:
+        await asyncio.sleep(QUOTE_CLEANUP_INTERVAL_SECONDS)
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=QUOTE_EXPIRY_SECONDS)
+        db = SessionLocal()
+        try:
+            purge_expired_quotes(db, cutoff)
+        except Exception:
+            logger.exception("Error during expired quote cleanup")
+            db.rollback()
+        finally:
+            db.close()
+
+
+_cleanup_task: asyncio.Task | None = None
 
 
 # --- Dependency: categoriser ---

@@ -20,7 +20,11 @@ PROMPT_MAX_LENGTH = 2000
 WEIGHT_MULTIPLIER_MIN = 1
 WEIGHT_MULTIPLIER_MAX = 100
 
-RATE_LIMIT_QUOTE = os.getenv("RATE_LIMIT_QUOTE", "10/minute")
+RATE_LIMIT_QUOTE = os.getenv("RATE_LIMIT_QUOTE", "3/minute")
+
+# Quote expiry: orphaned 'quoted' rows older than this are purged automatically.
+QUOTE_EXPIRY_SECONDS = int(os.getenv("QUOTE_EXPIRY_SECONDS", "3600"))  # 1 hour
+QUOTE_CLEANUP_INTERVAL_SECONDS = int(os.getenv("QUOTE_CLEANUP_INTERVAL_SECONDS", "300"))  # 5 min
 
 # Vertex AI — set VERTEX_PROJECT to activate GeminiFlashCategoriser
 VERTEX_PROJECT = os.getenv("VERTEX_PROJECT", "")
