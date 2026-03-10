@@ -16,6 +16,7 @@ from starlette.responses import JSONResponse
 from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
 from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
+    ENVIRONMENT,
     RATE_LIMIT_QUOTE,
     SENTRY_DSN,
     STRIPE_SECRET_KEY,
@@ -23,6 +24,7 @@ from ingestion_api.config import (
     VERTEX_LOCATION,
     VERTEX_PROJECT,
     _log_level_int,
+    validate_production_config,
 )
 
 if SENTRY_DSN:
@@ -64,7 +66,15 @@ logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="Imbryk Ingestion API", version="0.2.0")
+_docs_url = None if ENVIRONMENT == "production" else "/docs"
+_redoc_url = None if ENVIRONMENT == "production" else "/redoc"
+
+app = FastAPI(
+    title="Imbryk Ingestion API",
+    version="0.2.0",
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
+)
 app.state.limiter = limiter
 
 app.add_middleware(
@@ -78,6 +88,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Log API startup for visibility in Cloud Logging & Sentry."""
+    validate_production_config()
     configure_stripe()
     if not STRIPE_SECRET_KEY:
         logger.error(

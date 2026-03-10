@@ -3,6 +3,8 @@
 import logging
 import os
 
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 
 # Logging level
@@ -33,3 +35,32 @@ CORS_ALLOWED_ORIGINS = [
     for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:4200").split(",")
     if origin.strip()
 ]
+
+
+def validate_production_config() -> None:
+    """Raise RuntimeError if required env vars are missing in production.
+
+    Called at startup so the process refuses to start with a misconfigured
+    environment rather than silently degrading.
+    """
+    if ENVIRONMENT != "production":
+        return
+
+    errors: list[str] = []
+
+    if not STRIPE_SECRET_KEY:
+        errors.append("STRIPE_SECRET_KEY is required in production")
+    if not STRIPE_WEBHOOK_SECRET:
+        errors.append("STRIPE_WEBHOOK_SECRET is required in production")
+    if not VERTEX_PROJECT:
+        errors.append("VERTEX_PROJECT is required in production")
+    if "sqlite" in DATABASE_URL.lower():
+        errors.append(
+            "SQLite is not allowed in production; set DATABASE_URL to a PostgreSQL URL"
+        )
+
+    if errors:
+        raise RuntimeError(
+            "Missing required production configuration:\n"
+            + "\n".join(f"  - {e}" for e in errors)
+        )
