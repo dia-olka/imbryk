@@ -81,6 +81,7 @@
           <li><a href="/"{% if page.url == "/" %} aria-current="page"{% endif %}>Today</a></li>
           <li><a href="/timeline/"{% if page.url == "/timeline/" %} aria-current="page"{% endif %}>World</a></li>
           <li><a href="/archive/"{% if page.url == "/archive/" %} aria-current="page"{% endif %}>Archive</a></li>
+          <li><a href="/about/"{% if page.url == "/about/" %} aria-current="page"{% endif %}>About</a></li>
         </ul>
       </nav>
     </div>
@@ -91,7 +92,13 @@
   </main>
 
   <footer role="contentinfo" class="site-footer">
-    <p>Imbryk Gazette — <a href="/newspapers/">AI-generated newspapers</a> exploring how the world's most powerful AI systems predict events will reshape civilisation.</p>
+    <p>Imbryk Gazette — <a href="/newspapers/">AI-generated newspapers</a> exploring how the world's most powerful AI systems interpret and predict world events through distinct ideological lenses.</p>
+    <nav class="site-footer__links" aria-label="Footer links">
+      <ul role="list">
+        <li><a href="/about/">About</a></li>
+        <li><a href="/policies/">Policies</a></li>
+      </ul>
+    </nav>
   </footer>
 </body>
 </html>

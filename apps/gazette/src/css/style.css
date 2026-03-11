@@ -275,10 +275,16 @@ main {
   padding: var(--space-xl) var(--space-md);
 }
 
-/* Widen layout when bento grid or front-page grid is present */
-main:has(.bento-grid),
-main:has(.front-page-grid) {
+/* Widen layout when bento grid is present */
+main:has(.bento-grid) {
   max-width: 80rem;
+}
+
+/* Full-width layout for the front-page card grid */
+main:has(.front-page-grid) {
+  max-width: none;
+  padding-left: var(--space-xs);
+  padding-right: var(--space-xs);
 }
 
 /* Widen layout for newspaper detail pages */
@@ -298,6 +304,32 @@ main:has(.newspaper) {
   font-size: var(--type-xs);
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+.site-footer__links {
+  margin-top: var(--space-sm);
+}
+
+.site-footer__links ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.site-footer__links a {
+  font-size: var(--type-xs);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.site-footer__links a:hover,
+.site-footer__links a:focus-visible {
+  color: var(--color-text);
+  border-bottom-color: currentColor;
 }
 
 /* === Page Header === */
@@ -443,6 +475,25 @@ main:has(.newspaper) {
   margin-bottom: var(--space-sm);
 }
 
+/* === Front-page grid: desktop card layout (all pages) === */
+@media (min-width: 72rem) {
+  /* li acts as flex container so card stretches to fill the grid row */
+  .front-page-grid > li {
+    display: flex;
+  }
+
+  .front-page-card {
+    aspect-ratio: unset;
+    flex: 1;
+  }
+
+  /* Default fixed row height — gives cards enough room to show hero images */
+  .front-page-grid {
+    grid-auto-rows: 26rem;
+    gap: var(--space-xs);
+  }
+}
+
 /* === Homepage: viewport-fill layout on desktop === */
 @media (min-width: 72rem) {
   body.page-home {
@@ -456,25 +507,14 @@ main:has(.newspaper) {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    padding-top: var(--space-xs);
-    padding-bottom: 0;
+    padding: var(--space-xs) var(--space-xs) 0;
   }
 
-  /* Cards fill the remaining viewport height */
+  /* Override: cards fill the remaining viewport height */
   body.page-home .front-page-grid {
     flex: 1;
     min-height: 0;
-    gap: var(--space-xs);
     grid-auto-rows: 1fr;
-  }
-
-  body.page-home .front-page-grid > li {
-    display: flex;
-  }
-
-  body.page-home .front-page-card {
-    aspect-ratio: unset;
-    flex: 1;
   }
 }
 
