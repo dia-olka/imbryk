@@ -1,6 +1,8 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
+import asyncio
 import logging
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import sentry_sdk
@@ -18,7 +20,9 @@ from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
 from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
     ENVIRONMENT,
+    QUOTE_EXPIRY_HOURS,
     RATE_LIMIT_QUOTE,
+    RATE_LIMIT_QUOTE_GLOBAL,
     SENTRY_DSN,
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET,
@@ -90,6 +94,38 @@ app.add_middleware(
 )
 
 
+async def _expire_stale_quotes() -> None:
+    """Background task: delete quoted prompts never paid, older than QUOTE_EXPIRY_HOURS."""
+    from ingestion_api.database import SessionLocal
+
+    while True:
+        await asyncio.sleep(300)  # run every 5 minutes
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=QUOTE_EXPIRY_HOURS)
+            db = SessionLocal()
+            try:
+                stale_ids = [
+                    row.id
+                    for row in db.query(Prompt.id).filter(
+                        Prompt.status == "quoted",
+                        Prompt.created_at < cutoff,
+                    )
+                ]
+                if stale_ids:
+                    db.query(CategorisedPrompt).filter(
+                        CategorisedPrompt.prompt_id.in_(stale_ids)
+                    ).delete(synchronize_session=False)
+                    db.query(Prompt).filter(Prompt.id.in_(stale_ids)).delete(
+                        synchronize_session=False
+                    )
+                    db.commit()
+                    logger.info("Expired %d stale quotes older than %dh", len(stale_ids), QUOTE_EXPIRY_HOURS)
+            finally:
+                db.close()
+        except Exception:
+            logger.exception("Error in quote expiry job")
+
+
 @app.on_event("startup")
 async def startup_event():
     """Log API startup for visibility in Cloud Logging & Sentry."""
@@ -113,6 +149,7 @@ async def startup_event():
         logger.warning(
             "VERTEX_PROJECT not set — using StubCategoriser; all prompts will be classified as 'geopolitics'"
         )
+    asyncio.create_task(_expire_stale_quotes())
     logger.info(
         "Imbryk Ingestion API started",
         extra={"allowed_origins": CORS_ALLOWED_ORIGINS},
@@ -184,6 +221,7 @@ async def health():
 
 @app.post("/prompts/quote", response_model=QuoteResponse)
 @limiter.limit(RATE_LIMIT_QUOTE)
+@limiter.limit(RATE_LIMIT_QUOTE_GLOBAL, key_func=lambda request: "global")
 async def quote(
     request: Request,
     body: QuoteRequest,

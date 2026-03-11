@@ -22,7 +22,10 @@ PROMPT_MAX_LENGTH = 2000
 WEIGHT_MULTIPLIER_MIN = 1
 WEIGHT_MULTIPLIER_MAX = 100
 
-RATE_LIMIT_QUOTE = os.getenv("RATE_LIMIT_QUOTE", "10/minute")
+RATE_LIMIT_QUOTE = os.getenv("RATE_LIMIT_QUOTE", "3/minute")
+RATE_LIMIT_QUOTE_GLOBAL = os.getenv("RATE_LIMIT_QUOTE_GLOBAL", "100/minute")
+
+QUOTE_EXPIRY_HOURS = int(os.getenv("QUOTE_EXPIRY_HOURS", "1"))
 
 # Cloudflare Turnstile — set TURNSTILE_SECRET_KEY to enable verification.
 # Leave empty to disable (local dev without a widget).
