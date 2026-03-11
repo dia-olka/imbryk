@@ -445,13 +445,13 @@ main:has(.newspaper) {
 
 /* === Homepage: viewport-fill layout on desktop === */
 @media (min-width: 72rem) {
-  body:has(.front-page-grid) {
+  body.page-home {
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
   }
 
-  body:has(.front-page-grid) > main {
+  body.page-home > main {
     flex: 1;
     min-height: 0;
     display: flex;
@@ -461,18 +461,18 @@ main:has(.newspaper) {
   }
 
   /* Cards fill the remaining viewport height */
-  .front-page-grid {
+  body.page-home .front-page-grid {
     flex: 1;
     min-height: 0;
     gap: var(--space-xs);
     grid-auto-rows: 1fr;
   }
 
-  .front-page-grid > li {
+  body.page-home .front-page-grid > li {
     display: flex;
   }
 
-  .front-page-card {
+  body.page-home .front-page-card {
     aspect-ratio: unset;
     flex: 1;
   }

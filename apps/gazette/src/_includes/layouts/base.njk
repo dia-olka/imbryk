@@ -60,7 +60,7 @@
   </script>
   {% endif %}
 </head>
-<body>
+<body{% if bodyClass %} class="{{ bodyClass }}"{% endif %}>
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <header role="banner" class="site-header">
