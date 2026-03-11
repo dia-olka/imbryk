@@ -18,6 +18,10 @@ class QuoteRequest(BaseModel):
     prompt: str = Field(
         ..., min_length=PROMPT_MIN_LENGTH, max_length=PROMPT_MAX_LENGTH
     )
+    cf_turnstile_token: str | None = Field(
+        default=None,
+        description="Cloudflare Turnstile token. Required when TURNSTILE_SECRET_KEY is set.",
+    )
 
 
 class RoutingDetail(BaseModel):

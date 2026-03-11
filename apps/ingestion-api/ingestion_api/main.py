@@ -4,31 +4,39 @@ import logging
 from datetime import datetime as dt
 from datetime import timedelta, timezone
 
+import httpx
 import sentry_sdk
 import sentry_sdk.integrations.logging
 import stripe
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
 from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
 from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
+    ENVIRONMENT,
     MAX_CHECKOUT_SESSIONS_PER_QUOTE,
     QUOTE_EXPIRY_HOURS,
     RATE_LIMIT_EDITIONS,
     RATE_LIMIT_GLOBAL_QUOTE,
     RATE_LIMIT_QUOTE,
+    REDIS_URL,
     SENTRY_DSN,
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET,
+    TURNSTILE_SECRET_KEY,
+    TURNSTILE_VERIFY_URL,
     VERTEX_LOCATION,
     VERTEX_PROJECT,
     _log_level_int,
+    validate_production_config,
 )
 
 if SENTRY_DSN:
@@ -68,14 +76,32 @@ from ingestion_api.taxonomy import route_prompt
 
 logger = logging.getLogger(__name__)
 
-limiter = Limiter(key_func=get_remote_address)
+# Use a shared Redis backend when REDIS_URL is set so the global rate-limit
+# bucket is consistent across multiple Gunicorn workers. Without it each
+# worker maintains its own in-memory counter, making the effective ceiling
+# RATE_LIMIT_GLOBAL_QUOTE * num_workers.
+_limiter_storage = REDIS_URL if REDIS_URL else "memory://"
+limiter = Limiter(key_func=get_remote_address, storage_uri=_limiter_storage)
 
 
 def _global_key(_request: Request) -> str:
-    """Return a fixed key so all IPs share one global rate-limit bucket."""
+    """Return a fixed key so all IPs share one global rate-limit bucket.
+
+    NOTE: this limit is only truly global when a shared backend (REDIS_URL) is
+    configured. With in-memory storage each worker process has its own counter.
+    """
     return "global"
 
-app = FastAPI(title="Imbryk Ingestion API", version="0.2.0")
+
+_docs_url = None if ENVIRONMENT == "production" else "/docs"
+_redoc_url = None if ENVIRONMENT == "production" else "/redoc"
+
+app = FastAPI(
+    title="Imbryk Ingestion API",
+    version="0.2.0",
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
+)
 app.state.limiter = limiter
 
 app.add_middleware(
@@ -89,6 +115,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Log API startup for visibility in Cloud Logging & Sentry."""
+    validate_production_config()
     configure_stripe()
     if not STRIPE_SECRET_KEY:
         logger.error(
@@ -148,6 +175,27 @@ def get_categoriser() -> CategoriserStrategy:
     return _categoriser
 
 
+# --- Turnstile verification ---
+
+
+async def _verify_turnstile(token: str | None, remote_ip: str) -> bool:
+    """Return True if the token is valid or Turnstile is not configured."""
+    if not TURNSTILE_SECRET_KEY:
+        return True  # disabled in local dev
+    if not token:
+        return False
+    async with httpx.AsyncClient(timeout=5) as client:
+        resp = await client.post(
+            TURNSTILE_VERIFY_URL,
+            data={
+                "secret": TURNSTILE_SECRET_KEY,
+                "response": token,
+                "remoteip": remote_ip,
+            },
+        )
+    return resp.json().get("success", False)
+
+
 # --- Endpoints ---
 
 
@@ -166,6 +214,9 @@ async def quote(
     categoriser: CategoriserStrategy = Depends(get_categoriser),
 ):
     """Categorise, price, and persist a quote — locks in the amount server-side."""
+    if not await _verify_turnstile(body.cf_turnstile_token, get_remote_address(request)):
+        return JSONResponse(status_code=403, content={"detail": "CAPTCHA verification failed"})
+
     categories = categoriser.categorise(body.prompt)
     routing = route_prompt(categories)
     cost = calculate_cost(len(routing))
@@ -228,6 +279,8 @@ async def create_checkout_session(
             content={"detail": f"Quote already processed (status={prompt.status})"},
         )
 
+    # expires_at is always set for quotes created after migration 007.
+    # The guard handles older rows that pre-date the column.
     if prompt.expires_at:
         expires = prompt.expires_at
         # SQLite returns naive datetimes; treat them as UTC
@@ -236,16 +289,29 @@ async def create_checkout_session(
         if dt.now(timezone.utc) > expires:
             return JSONResponse(status_code=410, content={"detail": "Quote has expired"})
 
-    if (prompt.checkout_session_count or 0) >= MAX_CHECKOUT_SESSIONS_PER_QUOTE:
+    # Atomic check-and-increment to prevent a TOCTOU race under concurrent load.
+    # The WHERE clause ensures we only increment if still below the cap,
+    # making the check and update a single DB operation.
+    updated = (
+        db.query(Prompt)
+        .filter(
+            Prompt.id == prompt.id,
+            Prompt.checkout_session_count < MAX_CHECKOUT_SESSIONS_PER_QUOTE,
+        )
+        .update({"checkout_session_count": Prompt.checkout_session_count + 1})
+    )
+    if updated == 0:
         logger.warning(
-            "Checkout session cap reached for quote %s (count=%d)",
+            "Checkout session cap reached for quote %s",
             body.quote_id,
-            prompt.checkout_session_count,
         )
         return JSONResponse(
             status_code=429,
             content={"detail": "Too many checkout sessions for this quote"},
         )
+    db.commit()
+    # Refresh to get the updated count (and other fields) after the bulk update.
+    db.refresh(prompt)
 
     # Base amount comes from the DB — tamper-proof.
     base_amount = prompt.amount
@@ -259,9 +325,8 @@ async def create_checkout_session(
         weight_multiplier=1,
     ) * multiplier
 
-    # Mark the multiplier on the prompt and increment checkout session counter.
+    # Record the weight multiplier on the prompt.
     prompt.weight_multiplier = multiplier
-    prompt.checkout_session_count = (prompt.checkout_session_count or 0) + 1
     db.commit()
 
     # Determine success/cancel URLs from the Referer or use the configured
@@ -445,7 +510,14 @@ async def list_editions(
     offset: int = Query(default=0, ge=0, description="Number of editions to skip."),
     db: Session = Depends(get_db),
 ):
-    """List available editions with pagination."""
+    """List available editions with pagination.
+
+    Responds with an ``X-Total-Count`` header containing the total number of
+    editions so clients can implement paging without walking all pages.
+    """
+    import json
+
+    total = db.query(func.count(Edition.id)).scalar()
     editions = (
         db.query(Edition)
         .order_by(Edition.date.desc())
@@ -467,4 +539,8 @@ async def list_editions(
                 newspaper_count=article_count,
             )
         )
-    return results
+    return Response(
+        content=json.dumps([r.model_dump() for r in results]),
+        media_type="application/json",
+        headers={"X-Total-Count": str(total)},
+    )

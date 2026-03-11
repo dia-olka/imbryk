@@ -1,7 +1,7 @@
 """Integration tests for API endpoints."""
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def test_health(client):
@@ -112,6 +112,71 @@ def test_editions_pagination_limit_too_high(client):
     assert response.status_code == 422
 
 
+def test_editions_total_count_header(client):
+    """GET /editions should include X-Total-Count header with total edition count."""
+    response = client.get("/editions")
+    assert response.status_code == 200
+    assert "x-total-count" in response.headers
+    assert response.headers["x-total-count"] == "0"
+
+
+# --- Cloudflare Turnstile tests ---
+
+
+def test_quote_rejected_without_turnstile_token(client):
+    """When TURNSTILE_SECRET_KEY is set and no token is sent, expect 403."""
+    with patch("ingestion_api.main.TURNSTILE_SECRET_KEY", "test_secret"):
+        response = client.post(
+            "/prompts/quote",
+            json={"prompt": "What is happening in global geopolitics today?"},
+        )
+    assert response.status_code == 403
+    assert "CAPTCHA" in response.json()["detail"]
+
+
+def test_quote_rejected_with_invalid_turnstile_token(client):
+    """When TURNSTILE_SECRET_KEY is set and Cloudflare returns success:false, expect 403."""
+    with patch("ingestion_api.main.TURNSTILE_SECRET_KEY", "test_secret"), patch(
+        "ingestion_api.main._verify_turnstile", new=AsyncMock(return_value=False)
+    ):
+        response = client.post(
+            "/prompts/quote",
+            json={
+                "prompt": "What is happening in global geopolitics today?",
+                "cf_turnstile_token": "invalid_token",
+            },
+        )
+    assert response.status_code == 403
+    assert "CAPTCHA" in response.json()["detail"]
+
+
+def test_quote_accepted_with_valid_turnstile_token(client):
+    """When TURNSTILE_SECRET_KEY is set and Cloudflare returns success:true, expect 200."""
+    with patch("ingestion_api.main.TURNSTILE_SECRET_KEY", "test_secret"), patch(
+        "ingestion_api.main._verify_turnstile", new=AsyncMock(return_value=True)
+    ):
+        response = client.post(
+            "/prompts/quote",
+            json={
+                "prompt": "What is happening in global geopolitics today?",
+                "cf_turnstile_token": "valid_token",
+            },
+        )
+    assert response.status_code == 200
+    assert "quote_id" in response.json()
+
+
+def test_quote_skips_turnstile_when_secret_not_set(client):
+    """When TURNSTILE_SECRET_KEY is empty (local dev), quote succeeds without any token."""
+    with patch("ingestion_api.main.TURNSTILE_SECRET_KEY", ""):
+        response = client.post(
+            "/prompts/quote",
+            json={"prompt": "What is happening in global geopolitics today?"},
+        )
+    assert response.status_code == 200
+    assert "quote_id" in response.json()
+
+
 def test_quote_rate_limiting(client):
     """Burst 11 requests — the 11th should be rate-limited."""
     for i in range(11):
@@ -218,7 +283,13 @@ def test_create_checkout_session_expired_quote(client, db_session):
 
 
 def test_create_checkout_session_cap(client, db_session):
-    """Exceeding MAX_CHECKOUT_SESSIONS_PER_QUOTE should return 429."""
+    """Exceeding MAX_CHECKOUT_SESSIONS_PER_QUOTE should return 429.
+
+    The prompt stays in 'quoted' status across all Stripe session creations
+    because status only changes to 'accepted' on the webhook event, not on
+    checkout session creation. This is by design and allows the cap check
+    (status == 'quoted') to remain valid for all 3+1 attempts.
+    """
     quote = _create_quote(client)
     mock_session = _mock_stripe_session()
 
