@@ -1394,7 +1394,8 @@ main:has(.newspaper) {
 }
 
 /* Desktop: 7 cards in a row (6 newspapers + curator) */
-@media (min-width: 72rem) {
+/* Only use 7 columns on extra-large screens to avoid horizontal scroll */
+@media (min-width: 90rem) {
   .front-page-grid {
     grid-template-columns: repeat(7, 1fr);
     max-width: 112rem;
