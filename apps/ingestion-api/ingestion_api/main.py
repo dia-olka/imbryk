@@ -71,12 +71,14 @@ limiter = Limiter(key_func=get_remote_address)
 
 _docs_url = None if ENVIRONMENT == "production" else "/docs"
 _redoc_url = None if ENVIRONMENT == "production" else "/redoc"
+_openapi_url = None if ENVIRONMENT == "production" else "/openapi.json"
 
 app = FastAPI(
     title="Imbryk Ingestion API",
     version="0.2.0",
     docs_url=_docs_url,
     redoc_url=_redoc_url,
+    openapi_url=_openapi_url,
 )
 app.state.limiter = limiter
 

@@ -53,6 +53,8 @@ def validate_production_config() -> None:
 
     errors: list[str] = []
 
+    if not os.getenv("CORS_ALLOWED_ORIGINS"):
+        errors.append("CORS_ALLOWED_ORIGINS is required in production")
     if not STRIPE_SECRET_KEY:
         errors.append("STRIPE_SECRET_KEY is required in production")
     if not STRIPE_WEBHOOK_SECRET:
