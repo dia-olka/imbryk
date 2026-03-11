@@ -118,7 +118,7 @@ def run_morning_press(
     imagen_client: ImageGenerationStrategy | None = None,
     enable_validation: bool = True,
 ) -> dict:
-    """Execute the full Morning Press generation pipeline.    
+    """Execute the full  Morning Press generation pipeline.    
 
     Args:
         database_url: Override for the database connection string.

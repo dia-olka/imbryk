@@ -256,7 +256,7 @@ async def quote(
     db: Session = Depends(get_db),
     categoriser: CategoriserStrategy = Depends(get_categoriser),
 ):
-    """Categorise, price, and persist a quote — locks in the amount server-side."""
+    """Categorise, price,  and persist a quote — locks in the amount server-side."""
     if not await _verify_turnstile(body.cf_turnstile_token, get_remote_address(request)):
         return JSONResponse(status_code=403, content={"detail": "CAPTCHA verification failed"})
 
