@@ -1393,6 +1393,16 @@ main:has(.newspaper) {
   }
 }
 
+/* Desktop: 7 cards in a row (6 newspapers + curator) */
+@media (min-width: 72rem) {
+  .front-page-grid {
+    grid-template-columns: repeat(7, 1fr);
+    max-width: 112rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 /* Let the last card (curator) span remaining space on even-total rows */
 @media (min-width: 52rem) {
   .front-page-grid > li:last-child:nth-child(3n + 1) {
@@ -1418,6 +1428,14 @@ main:has(.newspaper) {
   text-decoration: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   isolation: isolate; /* contain stacking context */
+}
+
+/* Prevent curator card (no image) from stretching too tall */
+.front-page-card--curator,
+.front-page-card:not(:has(.front-page-card__image)) {
+  aspect-ratio: unset;
+  min-height: 18rem;
+  max-height: 28rem;
 }
 
 .front-page-card:hover {
