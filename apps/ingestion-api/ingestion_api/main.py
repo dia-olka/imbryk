@@ -1,6 +1,9 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
+import asyncio
 import logging
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import sentry_sdk
@@ -18,7 +21,9 @@ from ingestion_api.categoriser import CategoriserStrategy, StubCategoriser
 from ingestion_api.config import (
     CORS_ALLOWED_ORIGINS,
     ENVIRONMENT,
+    QUOTE_EXPIRY_HOURS,
     RATE_LIMIT_QUOTE,
+    RATE_LIMIT_QUOTE_GLOBAL,
     SENTRY_DSN,
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET,
@@ -73,26 +78,62 @@ _docs_url = None if ENVIRONMENT == "production" else "/docs"
 _redoc_url = None if ENVIRONMENT == "production" else "/redoc"
 _openapi_url = None if ENVIRONMENT == "production" else "/openapi.json"
 
-app = FastAPI(
-    title="Imbryk Ingestion API",
-    version="0.2.0",
-    docs_url=_docs_url,
-    redoc_url=_redoc_url,
-    openapi_url=_openapi_url,
-)
-app.state.limiter = limiter
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ALLOWED_ORIGINS,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
-)
+_expiry_task: asyncio.Task | None = None
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Log API startup for visibility in Cloud Logging & Sentry."""
+def _do_expire_sync() -> int:
+    """Synchronous DB work for the expiry job; runs in a thread pool."""
+    from ingestion_api.database import SessionLocal
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=QUOTE_EXPIRY_HOURS)
+    db = SessionLocal()
+    try:
+        stale_ids = [
+            row.id
+            for row in db.query(Prompt.id).filter(
+                Prompt.status == "quoted",
+                Prompt.created_at < cutoff,
+            )
+        ]
+        if not stale_ids:
+            return 0
+        # Guard against TOCTOU: only delete CategorisedPrompt rows whose
+        # parent prompt is still in "quoted" state (webhook may have
+        # transitioned it to "accepted" since we read stale_ids).
+        still_quoted = db.query(Prompt.id).filter(
+            Prompt.id.in_(stale_ids),
+            Prompt.status == "quoted",
+        )
+        db.query(CategorisedPrompt).filter(
+            CategorisedPrompt.prompt_id.in_(still_quoted)
+        ).delete(synchronize_session=False)
+        deleted = db.query(Prompt).filter(
+            Prompt.id.in_(stale_ids),
+            Prompt.status == "quoted",  # re-check to guard against TOCTOU
+        ).delete(synchronize_session=False)
+        db.commit()
+        return deleted
+    finally:
+        db.close()
+
+
+async def _expire_stale_quotes() -> None:
+    """Background task: delete quoted prompts never paid, older than QUOTE_EXPIRY_HOURS."""
+    while True:
+        await asyncio.sleep(300)  # run every 5 minutes
+        try:
+            deleted = await asyncio.to_thread(_do_expire_sync)
+            if deleted:
+                logger.info("Expired %d stale quotes older than %dh", deleted, QUOTE_EXPIRY_HOURS)
+        except Exception:
+            logger.exception("Error in quote expiry job")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application startup and shutdown lifecycle."""
+    global _expiry_task
+    # --- startup ---
     validate_production_config()
     configure_stripe()
     if not STRIPE_SECRET_KEY:
@@ -113,10 +154,34 @@ async def startup_event():
         logger.warning(
             "VERTEX_PROJECT not set — using StubCategoriser; all prompts will be classified as 'geopolitics'"
         )
+    # Store the task reference so the GC cannot collect it before it completes.
+    _expiry_task = asyncio.create_task(_expire_stale_quotes())
     logger.info(
         "Imbryk Ingestion API started",
         extra={"allowed_origins": CORS_ALLOWED_ORIGINS},
     )
+    yield
+    # --- shutdown ---
+    if _expiry_task is not None:
+        _expiry_task.cancel()
+
+
+app = FastAPI(
+    title="Imbryk Ingestion API",
+    version="0.2.0",
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
+    openapi_url=_openapi_url,
+    lifespan=lifespan,
+)
+app.state.limiter = limiter
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -184,6 +249,7 @@ async def health():
 
 @app.post("/prompts/quote", response_model=QuoteResponse)
 @limiter.limit(RATE_LIMIT_QUOTE)
+@limiter.limit(RATE_LIMIT_QUOTE_GLOBAL, key_func=lambda request: "global")
 async def quote(
     request: Request,
     body: QuoteRequest,
