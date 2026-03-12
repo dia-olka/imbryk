@@ -4,6 +4,8 @@
 
 Imbryk ("the teapot") is an AI-powered newspaper generation platform. Users submit world-altering event prompts (paid via Stripe Checkout), and a daily batch job produces news articles written in English by 6 ideologically distinct AI newspaper personas, plus a Curator synthesis. Each newspaper publishes exactly one edition per day. Generated editions are published as static HTML sites — freely accessible to everyone, no registration required.
 
+When user prompts don't cover all 30 categories, a **News Scout** pre-batch job fills editorial gaps with real-world news. The scout uses an LLM — informed by the WorldLedger — to generate search queries reflecting what a journalist in this world would find interesting, then executes those queries via Tavily. News items enter the same distillation pipeline at lower weight than paid prompts, ensuring user voice always dominates while newspapers never publish empty editions.
+
 The 6 newspapers are audience archetypes — inspired by the classic observation about who reads which paper (cf. _Yes Minister_). Each represents a distinct worldview and readership, not a topic silo.
 
 **Zero PII principle:** Imbryk stores no personal user data. Stripe owns identity and payment. The database holds only transaction references, prompt text, weights, and categories.
@@ -31,27 +33,38 @@ User Prompt
 |  - Category classifier  |     |   - WorldLedger            |
 +-------------------------+     |   - taxonomy (categories,  |
                                 |     newspaper subscriptions)|
-                                +------------+--------------+
-                                             |
+                                |   - news_items (real-world) |
++-------------------------+     +------------+--------------+
+|  News Scout             |          |       ^
+|  (Cloud Run Job, ~03:00)|          |       |
+|  - Load WorldLedger     |-----+----+-------+
+|  - LLM query generation |     |
+|  - Tavily search        |     |
+|  - Store news_items     |     |
++-------------------------+     |
            +---------------------------------+
            | GCP Pub/Sub
-           v (morning trigger)
+           v (morning trigger, ~06:00)
 +------------------------------------------------+
 |  Newsroom Director                             |
 |  (Cloud Run Job -- daily batch)                |
 |                                                |
 |  1. Pull categorised prompts from DB           |
-|  2. Route prompts to newspapers via taxonomy   |
+|  1b. Pull today's news_items from DB           |
+|  2. Route prompts + news to newspapers         |
 |  3. Load WorldLedger from DB                   |
-|  4. Validate prompts (world coherence gate)    |
+|  4. Validate user prompts (coherence gate)     |
+|     (news items skip validation)               |
 |  5. Per-newspaper distillation pipeline:       |
-|     a. Embed prompts (local sentence-transformers)|
-|     b. Cluster via HDBSCAN                     |
-|     c. Build weighted cluster digests          |
-|     d. Allocate token budget                   |
-|     e. Single Gemini call per newspaper        |
+|     a. Merge user prompts + news items         |
+|     b. Embed (local sentence-transformers)     |
+|     c. Cluster via HDBSCAN                     |
+|     d. Build weighted cluster digests          |
+|     e. Allocate token budget                   |
+|     f. Single Gemini call per newspaper        |
 |  6. Curator synthesis                          |
 |  7. Update WorldLedger in DB                   |
+|     (user prompts only — news items excluded)  |
 |  8. Generate article images (Imagen)           |
 |     - Top articles with imagePrompt -> Imagen  |
 |     - Front-page hero image per newspaper      |
@@ -232,6 +245,145 @@ After all Gemini calls complete, articles with non-null `imagePrompt` are sent t
 - If Imagen fails for a specific image, the article publishes without it — image failures never block the edition pipeline
 - Estimated 3-4 images per newspaper per day (top articles + hero), ~20-24 images total
 
+## News Scout — Real-World Gap Filling
+
+### Problem
+
+User prompts are the primary fuel for newspaper generation, but on quiet days or during early growth many of the 30 categories may have zero submissions. Without prompts in a category, subscribing newspapers have thin or empty editions. The system needs a way to fill editorial gaps with real-world news — without relying on human-curated trend lists like Google Trends.
+
+### Approach
+
+Instead of following human popularity signals, the system uses its own LLM — informed by the WorldLedger — to decide what real-world developments are editorially interesting. The LLM reasons from the perspective of a journalist living in the world described by the ledger: "Given this geopolitical climate, these economic tensions, and these technological shifts — what real-world stories would I want to cover?" It then generates targeted search queries, which Tavily executes and returns as clean, LLM-ready article summaries.
+
+This inverts the typical "what's trending" approach. The LLM doesn't ask what humans find interesting — it asks what *it* finds interesting given its world context. The result is editorially coherent gap-filling that reinforces rather than dilutes the WorldLedger narrative.
+
+### Architecture
+
+The News Scout is a separate Cloud Run Job entry point within the `newsroom-director` codebase, scheduled to run ~3 hours before the morning batch.
+
+```text
+Cloud Scheduler (~03:00 UTC)
+    |
+    v
+News Scout (Cloud Run Job)
+    |
+    1. Load WorldLedger from DB
+    2. Load taxonomy (30 categories)
+    3. Gemini Flash call: generate search queries
+    |   Input: WorldLedger synopsis + 30 categories
+    |   Output: 2-3 queries per category (~60-90 total)
+    4. Execute Tavily searches (parallel)
+    5. Deduplicate by URL
+    6. Store results in `news_items` table
+    |
+    v
+PostgreSQL (news_items ready for morning batch)
+```
+
+### Query Generation
+
+The Gemini Flash call receives the WorldLedger synopsis and the full 30-category list. The prompt instructs the model to reason about the current world state and generate search queries that would surface real-world news relevant to each category. Categories are not treated equally — the LLM is free to generate more queries for categories where the world state suggests active developments and fewer for quiet domains.
+
+Example output (abbreviated):
+
+```json
+{
+  "geopolitics-and-diplomacy": [
+    "US China trade negotiations March 2026",
+    "NATO eastern flank deployment updates"
+  ],
+  "markets-and-macroeconomics": [
+    "Federal Reserve interest rate decision 2026",
+    "emerging market currency volatility"
+  ],
+  "artificial-intelligence": [
+    "AI regulation EU AI Act enforcement",
+    "autonomous weapons policy debate UN"
+  ]
+}
+```
+
+### Database Table: `news_items`
+
+Stored in the same PostgreSQL database as prompts. One new table:
+
+| Column           | Type     | Purpose                                        |
+| ---------------- | -------- | ---------------------------------------------- |
+| `id`             | INTEGER  | Primary key                                    |
+| `edition_date`   | DATE     | Target edition date                            |
+| `category_id`    | VARCHAR  | Taxonomy category slug                         |
+| `query`          | TEXT     | Search query used                              |
+| `headline`       | TEXT     | Article title from Tavily                      |
+| `snippet`        | TEXT     | Cleaned article text from Tavily               |
+| `source_url`     | TEXT     | Original article URL                           |
+| `relevance_score`| FLOAT    | Tavily relevance score                         |
+| `status`         | VARCHAR  | `pending` → `processed`                        |
+| `created_at`     | DATETIME | Timestamp                                      |
+
+Unique constraint on `(source_url, edition_date)` prevents duplicate URLs per edition.
+
+### Morning Batch Integration
+
+The Newsroom Director pipeline changes minimally:
+
+1. **After pulling user prompts** (existing Step 1), also fetch today's `news_items` with `status='pending'`
+2. **Convert to prompt format** — news items are wrapped in the same `PromptData` structure the pipeline expects:
+   - `text`: headline + snippet (the search result content)
+   - `weight`: a configurable base weight (`NEWS_ITEM_BASE_WEIGHT`, default `0.3`) — always lower than any paid user prompt
+   - `categories`: the single category the item was found under
+   - `source`: `'news_scout'` marker (for metadata tracking, not pipeline logic)
+3. **Merge into newspaper prompt pools** via the existing taxonomy routing (set intersection, unchanged)
+4. **Pipeline proceeds unchanged** — embed, cluster, digest, allocate, generate
+5. **After processing**, mark news items as `status='processed'`
+
+### Weight Hierarchy
+
+The existing weight-based distillation pipeline handles priority naturally — no special gap-filling logic is needed:
+
+| Source                     | Weight Range | Pipeline Effect                                                          |
+| -------------------------- | ------------ | ------------------------------------------------------------------------ |
+| User prompt (high payment) | 1.0+         | Verbatim in digest, drives cluster ranking, front-page priority          |
+| User prompt (base payment) | 0.5–1.0      | Included in digest, influences coverage                                  |
+| News item                  | 0.2–0.3      | Fills gaps; in mixed clusters, falls to long-tail summary                |
+
+**Three scenarios:**
+
+- **Category with many user prompts**: news items cluster into the long tail, appear as background texture or are merged into "Other Topics." User voice dominates.
+- **Category with no user prompts**: news items are the only content. They provide real-world coverage that keeps the newspaper publishing daily.
+- **Mixed category**: user prompts rank higher in digests; news items add breadth and real-world grounding.
+
+### Coherence Gate & Ledger Mutation
+
+- **Coherence validation**: news items **skip** the coherence gate. They are real-world events — the gate exists to prevent nonsensical user-submitted events from corrupting the fictional world state. Real news doesn't need this filter.
+- **WorldLedger mutation**: controlled by the `NEWS_MUTATES_LEDGER` flag (env var, default `true`):
+
+| Flag value | Behaviour | When to use |
+| ---------- | --------- | ----------- |
+| `true` (default) | The mutation step runs on all published articles, including news-derived ones. Since news items have lower weight, they produce less prominent articles; the mutation LLM naturally treats these as smaller world shifts. The world evolves daily even with zero user prompts. | **Launch / early growth** — the world must breathe before users arrive. A frozen ledger means stale newspapers repeating the same context. |
+| `false` | The mutation step only runs if at least one user prompt was processed in this edition. Pure-news editions publish but do not change the world. | **Maturity** — once user prompt volume is sufficient, user agency becomes the sole driver of world evolution. |
+
+**Note on mixed editions:** even with the flag `false`, editions that include user prompts will contain mixed articles (user prompts + news items clustered together). The mutation runs on the full edition — news items still have indirect influence through user-catalysed articles. The user prompt is the catalyst; news adds texture. This is intentional.
+
+### Cost
+
+| Component                        | Per Unit      | Daily (est.)  | Monthly (est.) |
+| -------------------------------- | ------------- | ------------- | -------------- |
+| Gemini Flash (query generation)  | ~$0.01        | $0.01         | ~$0.30         |
+| Tavily Search (~60–90 queries)   | ~$0.005/query | $0.30–0.45    | ~$9–14         |
+| **News Scout total**             |               | **~$0.35–0.50** | **~$10–15**  |
+
+### Failure Behaviour
+
+| Failure Point                         | Behaviour                                                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| News Scout job fails entirely         | Morning batch runs with user prompts only. Newspapers may have thin coverage but still publish. Non-blocking.  |
+| Gemini Flash query generation fails   | No queries to execute. Job exits cleanly with a warning. Morning batch unaffected.                             |
+| Tavily API fails for some queries     | Successfully fetched results are stored. Failed queries are logged and skipped. Partial results are acceptable. |
+| Tavily API fails entirely             | No news items stored. Morning batch runs with user prompts only.                                               |
+| Duplicate URLs across queries         | `UNIQUE(source_url, edition_date)` constraint. Insert-or-skip on conflict.                                     |
+
+The News Scout is strictly additive. Its failure never blocks the morning batch or prevents an edition from publishing.
+
 ## Projects
 
 ### `apps/imbryk` — Prompt Submission UI ("The Orb")
@@ -300,23 +452,35 @@ Handles the payment-gated prompt flow and prompt categorisation.
 | Clustering  | HDBSCAN                                                   |
 | Test        | pytest                                                    |
 
-The core intelligence layer. Runs as a daily batch job:
+The core intelligence layer. Has two entry points: the **News Scout** (pre-batch, ~03:00) and the **Morning Press** (daily batch, ~06:00).
+
+**News Scout** (separate Cloud Run Job, scheduled ~3 hours before the morning batch):
+
+1. **Load WorldLedger** — reads the canonical ledger from PostgreSQL
+2. **Generate search queries (Gemini Flash)** — given the WorldLedger synopsis and 30 taxonomy categories, the LLM generates 2–3 targeted search queries per category based on what it finds editorially interesting in the current world state
+3. **Execute Tavily searches** — queries are run in parallel; results are deduplicated by URL
+4. **Store news items** — results saved to the `news_items` table with category assignment, ready for the morning batch
+
+**Morning Press** (daily batch):
 
 1. **Pull categorised prompts** — reads all unprocessed categorised prompts from PostgreSQL
-2. **Route to newspapers** — for each newspaper, collect prompts whose categories intersect the newspaper's subscription set
-3. **Load WorldLedger** — reads the canonical ledger from PostgreSQL
-4. **Serialize WorldLedger to synopsis** — the synopsis is placed at the start of every prompt so that Vertex AI implicit caching can deduplicate it across calls (90% discount on cached input tokens)
-5. **Validate prompts (Pro model)** — for each prompt, the director decides whether the event is coherent and meaningful in the current world context. Rejected prompts are marked as such; accepted prompts proceed.
-6. **Per-newspaper distillation pipeline** — for each newspaper with accepted prompts:
-   - Embed the newspaper's prompt pool (local sentence-transformers)
+2. **Pull today's news items** — reads `news_items` with `status='pending'` for today's edition date. Converts to the same `PromptData` format with a low base weight (`NEWS_ITEM_BASE_WEIGHT = 0.3`)
+3. **Route to newspapers** — for each newspaper, collect prompts + news items whose categories intersect the newspaper's subscription set
+4. **Load WorldLedger** — reads the canonical ledger from PostgreSQL
+5. **Serialize WorldLedger to synopsis** — the synopsis is placed at the start of every prompt so that Vertex AI implicit caching can deduplicate it across calls (90% discount on cached input tokens)
+6. **Validate user prompts (Pro model)** — for each user prompt, the director decides whether the event is coherent and meaningful in the current world context. Rejected prompts are marked as such; accepted prompts proceed. News items skip this gate.
+7. **Per-newspaper distillation pipeline** — for each newspaper with content (user prompts and/or news items):
+   - Merge user prompts + news items into a single prompt pool
+   - Embed the pool (local sentence-transformers)
    - Cluster via HDBSCAN
    - Build weighted cluster digests (verbatim top prompts + extractive summaries)
    - Allocate token budget proportional to cluster importance
    - Single Gemini call with persona system prompt, ledger context, and allocated digests
-7. **Run Curator synthesis (Pro model)** — The Curator reads all generated articles and produces a meta-analysis
-8. **Generate article images (Imagen)** — for articles with non-null `imagePrompt`, call Vertex AI Imagen. Generate front-page hero images from `frontPageImagePrompt`. Store as WebP. Failures are non-blocking.
-9. **Update WorldLedger (Pro model)** — applies the event consequences to the ledger and writes back to PostgreSQL transactionally
-10. **Write to R2** — stores edition articles as JSON and images as WebP for the Gazette to consume
+8. **Run Curator synthesis (Pro model)** — The Curator reads all generated articles and produces a meta-analysis
+9. **Generate article images (Imagen)** — for articles with non-null `imagePrompt`, call Vertex AI Imagen. Generate front-page hero images from `frontPageImagePrompt`. Store as WebP. Failures are non-blocking.
+10. **Update WorldLedger (Pro model)** — applies the event consequences to the ledger and writes back to PostgreSQL transactionally. Controlled by `NEWS_MUTATES_LEDGER` flag: when `true` (default), mutation runs on all published articles; when `false`, mutation only runs if at least one user prompt was processed.
+11. **Write to R2** — stores edition articles as JSON and images as WebP for the Gazette to consume
+12. **Mark news items processed** — `news_items` rows for today are set to `status='processed'`
 
 ### Per-Newspaper Model Tier Map
 
@@ -428,7 +592,9 @@ Each active newspaper runs exactly one Gemini call per day. Cost scales with act
 | Token budget allocation                 | ~$0         |
 | Gemini call per newspaper               | ~$3         |
 | Imagen per image (~20-24 images/day)    | ~$0.50-1.00 |
-| Daily cost at 6 newspapers              | ~$19-20     |
+| News Scout — Gemini Flash (queries)     | ~$0.01      |
+| News Scout — Tavily (~60-90 searches)   | ~$0.30-0.45 |
+| Daily cost at 6 newspapers              | ~$19.50-20.50 |
 
 The per-newspaper verbatim breakpoint (all prompts included raw without summarisation) is ~22,900 prompts/day per newspaper. Below that, every newspaper runs fully verbatim. Above it, high-volume newspapers start summarising while niche ones may stay verbatim indefinitely.
 
@@ -436,7 +602,7 @@ The per-newspaper verbatim breakpoint (all prompts included raw without summaris
 
 | Component         | Technology                  | Purpose                                                                                                                     |
 | ----------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Database          | PostgreSQL (Cloud SQL)      | Canonical WorldLedger, prompts, categorised prompts, taxonomy, payment refs. Single source of truth.                        |
+| Database          | PostgreSQL (Cloud SQL)      | Canonical WorldLedger, prompts, categorised prompts, news items, taxonomy, payment refs. Single source of truth.            |
 | Event Queue       | Google Cloud Pub/Sub        | Triggers morning batch job, absorbs traffic spikes.                                                                         |
 | Object Storage    | Cloudflare R2               | Edition article JSON (consumed by Gazette for static build).                                                                |
 | AI Inference      | Google Vertex AI / Gemini   | Article generation (Flash + Pro tiers), validation, ledger mutation. Implicit caching provides automatic cost savings.      |
@@ -446,6 +612,7 @@ The per-newspaper verbatim breakpoint (all prompts included raw without summaris
 | Static Hosting    | Cloudflare Pages            | Generated newspaper HTML (public, no auth).                                                                                 |
 | Prompt UI Hosting | Cloudflare Pages            | React SPA for prompt submission.                                                                                            |
 | Image Generation  | Vertex AI Imagen            | Article and front-page images. Called post-Gemini for top articles with non-null `imagePrompt`. Stored as WebP in R2.       |
+| News Search       | Tavily Search API           | Real-world news retrieval for gap filling. LLM-optimised search — returns clean text, relevance scores, no scraping.        |
 | Payments          | Stripe                    | Payment processing via Stripe Checkout. No user data stored on our side.                                                    |
 
 ## Key Design Decisions
@@ -484,6 +651,12 @@ The per-newspaper verbatim breakpoint (all prompts included raw without summaris
 
 17. **Overlap between newspapers is a feature** — When multiple newspapers receive the same prompt via shared category subscriptions, they produce genuinely distinct articles because each sees a different prompt pool composition and has a different editorial lens.
 
+18. **LLM-driven news scouting, not trend following** — The News Scout asks the LLM what *it* finds interesting given the WorldLedger, not what humans find trending. This produces editorially coherent gap-filling that reinforces the world narrative rather than chasing popularity. Tavily handles search execution — purpose-built for LLM consumption, returns clean text with relevance scores, no scraping needed.
+
+19. **News items enter the same pipeline at lower weight** — Rather than building a separate article-generation path for real-world news, news items are converted to the same `PromptData` format and merged into the existing distillation pipeline. The weight system (`NEWS_ITEM_BASE_WEIGHT = 0.3`, always below any paid prompt) ensures user voice dominates in mixed categories while news items fill empty ones. No special gap-detection logic — weight-based priority handles it naturally.
+
+20. **WorldLedger mutation from news is flag-controlled** — `NEWS_MUTATES_LEDGER` (default `true`) controls whether news-derived articles trigger world evolution. At launch, the world must evolve even with zero user prompts — a frozen ledger means dead newspapers. Once user volume is sufficient, the flag is set to `false` and user agency becomes the sole driver. Even then, mixed editions (user prompts + news) still let news influence the world indirectly through user-catalysed articles.
+
 ## Failure Behaviour
 
 This section documents the defined failure behaviour at each stage of the pipeline.
@@ -515,7 +688,9 @@ This section documents the defined failure behaviour at each stage of the pipeli
 - **If some newspapers fail**: The edition is published with the newspapers that succeeded. Partial editions are acceptable.
 - **Failed prompts (coherence rejection)**: Marked `rejected`. Payment is consumed — users paid for the attempt.
 - **Failed prompts (pipeline error)**: Left as `accepted`. Retried on the next morning run.
-- **No prompts for a newspaper**: That newspaper produces no edition for the day. This is normal; not every newspaper covers every topic.
+- **No user prompts for a newspaper but news items exist**: The newspaper generates an edition from news items alone. Coverage is real-world-only but the newspaper still publishes.
+- **No prompts and no news items for a newspaper**: That newspaper produces no edition for the day. This should be rare with the News Scout active.
+- **News Scout failed**: Morning batch proceeds with user prompts only. Behaviour is identical to the pre-News-Scout pipeline — no regression.
 
 ### Frontend
 
