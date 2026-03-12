@@ -151,7 +151,8 @@ class TavilySearcher(SearchStrategy):
         response = client.search(
             query=query,
             max_results=max_results,
-            search_depth="basic",
+            topic="news",
+            search_depth="advanced",
             include_answer=False,
         )
         results: list[SearchResult] = []
