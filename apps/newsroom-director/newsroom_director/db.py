@@ -102,6 +102,21 @@ class EditionArticleRow(Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
 
+class NewsItemRow(Base):
+    __tablename__ = "news_items"
+
+    id = Column(String(36), primary_key=True, default=_new_uuid)
+    edition_date = Column(String(10), nullable=False)
+    category_id = Column(String(64), nullable=False)
+    query = Column(Text, nullable=False)
+    headline = Column(Text, nullable=False)
+    snippet = Column(Text, nullable=False)
+    source_url = Column(Text, nullable=False)
+    relevance_score = Column(Float, nullable=False)
+    status = Column(String(32), nullable=False, default="pending")
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
 # --- Data transfer objects ---
 
 
@@ -111,6 +126,19 @@ class PromptRecord:
     text: str
     payment_amount: float
     category_ids: list[str]
+
+
+@dataclass
+class NewsItemRecord:
+    """A real-world news item fetched by the News Scout."""
+
+    id: str
+    edition_date: str
+    category_id: str
+    headline: str
+    snippet: str
+    source_url: str
+    relevance_score: float
 
 
 @dataclass
@@ -344,3 +372,85 @@ def fetch_editions_needing_image_backfill(
             )
 
     return targets
+
+
+# --- News Scout queries ---
+
+
+def save_news_item(
+    session: Session,
+    edition_date: str,
+    category_id: str,
+    query: str,
+    headline: str,
+    snippet: str,
+    source_url: str,
+    relevance_score: float,
+) -> bool:
+    """Insert a news item, returning True on success.
+
+    Returns False if a row with the same (source_url, edition_date) already
+    exists. Checks for duplicates before inserting to work with both SQLite
+    (which may not enforce named unique constraints from migrations) and
+    PostgreSQL.
+    """
+    existing = (
+        session.query(NewsItemRow.id)
+        .filter(
+            NewsItemRow.source_url == source_url,
+            NewsItemRow.edition_date == edition_date,
+        )
+        .first()
+    )
+    if existing is not None:
+        return False
+
+    row = NewsItemRow(
+        id=_new_uuid(),
+        edition_date=edition_date,
+        category_id=category_id,
+        query=query,
+        headline=headline,
+        snippet=snippet,
+        source_url=source_url,
+        relevance_score=relevance_score,
+    )
+    session.add(row)
+    session.flush()
+    return True
+
+
+def fetch_pending_news_items(
+    session: Session, edition_date: str
+) -> list[NewsItemRecord]:
+    """Fetch news items with status='pending' for the given edition date."""
+    rows = (
+        session.query(NewsItemRow)
+        .filter(
+            NewsItemRow.edition_date == edition_date,
+            NewsItemRow.status == "pending",
+        )
+        .all()
+    )
+    return [
+        NewsItemRecord(
+            id=row.id,
+            edition_date=row.edition_date,
+            category_id=row.category_id,
+            headline=row.headline,
+            snippet=row.snippet,
+            source_url=row.source_url,
+            relevance_score=row.relevance_score,
+        )
+        for row in rows
+    ]
+
+
+def mark_news_items_processed(
+    session: Session, edition_date: str
+) -> None:
+    """Set status='processed' for all news items of the given edition date."""
+    session.query(NewsItemRow).filter(
+        NewsItemRow.edition_date == edition_date,
+        NewsItemRow.status == "pending",
+    ).update({"status": "processed"}, synchronize_session="fetch")

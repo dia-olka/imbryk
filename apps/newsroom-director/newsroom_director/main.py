@@ -57,11 +57,15 @@ if SENTRY_DSN:
         ],
     )
     logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
+from .config import NEWS_ITEM_BASE_WEIGHT, NEWS_MUTATES_LEDGER
 from .db import (
+    NewsItemRecord,
+    fetch_pending_news_items,
     fetch_unprocessed_prompts,
     get_engine,
     get_session_factory,
     load_world_ledger,
+    mark_news_items_processed,
     mark_prompts_processed,
     save_edition,
     save_world_ledger,
@@ -172,11 +176,18 @@ def run_morning_press(
         prompt_records = fetch_unprocessed_prompts(session)
         logger.info(
             "Fetched prompts",
-            extra={"step": "fetch", "cluster_count": len(prompt_records)},
+            extra={"step": "fetch", "prompt_count": len(prompt_records)},
         )
 
-        if not prompt_records:
-            logger.info("No unprocessed prompts found, skipping edition")
+        # Step 2b: Fetch today's news items
+        news_items = fetch_pending_news_items(session, today_date)
+        logger.info(
+            "Fetched news items",
+            extra={"step": "fetch_news", "news_item_count": len(news_items)},
+        )
+
+        if not prompt_records and not news_items:
+            logger.info("No prompts or news items found, skipping edition")
             _run_backfill()
             return {
                 "edition_id": None,
@@ -200,8 +211,8 @@ def run_morning_press(
             extra={"synopsis_length": len(synopsis)},
         )
 
-        # Step 5: Coherence validation — filter prompts against world state
-        if enable_validation:
+        # Step 5: Coherence validation — user prompts only (news items skip)
+        if enable_validation and prompt_records:
             logger.info(
                 "Starting coherence validation",
                 extra={"prompt_count": len(prompt_records)},
@@ -213,24 +224,32 @@ def run_morning_press(
                 "Coherence validation complete",
                 extra={"surviving_prompts": len(prompt_records)},
             )
-            if not prompt_records:
-                logger.info(
-                    "All prompts rejected by coherence validation, "
-                    "skipping edition"
-                )
-                _run_backfill()
-                return {
-                    "edition_id": None,
-                    "newspaper_count": 0,
-                    "article_count": 0,
-                }
 
-        # Step 6: Route prompts to newspapers
+        has_user_prompts = len(prompt_records) > 0
+
+        if not prompt_records and not news_items:
+            logger.info(
+                "All prompts rejected and no news items, skipping edition"
+            )
+            _run_backfill()
+            return {
+                "edition_id": None,
+                "newspaper_count": 0,
+                "article_count": 0,
+            }
+
+        # Step 6: Route prompts + news items to newspapers
         newspaper_prompts: dict[str, list] = defaultdict(list)
         for pr in prompt_records:
             routes = route_prompt(pr.category_ids)
             for route in routes:
                 newspaper_prompts[route.newspaper_id].append(pr)
+
+        # Route news items via the same taxonomy routing
+        for ni in news_items:
+            routes = route_prompt([ni.category_id])
+            for route in routes:
+                newspaper_prompts[route.newspaper_id].append(ni)
 
         logger.info(
             "Prompts routed to newspapers",
@@ -261,15 +280,27 @@ def run_morning_press(
             )
 
             try:
-                # Convert to distillation Prompt objects
-                dist_prompts = [
-                    DistillationPrompt(
-                        text=pr.text,
-                        payment_amount=pr.payment_amount,
-                        prompt_id=pr.prompt_id,
-                    )
-                    for pr in prompts_for_paper
-                ]
+                # Convert to distillation Prompt objects.
+                # NewsItemRecords use a fixed low base weight;
+                # PromptRecords use actual payment amount.
+                dist_prompts = []
+                for item in prompts_for_paper:
+                    if isinstance(item, NewsItemRecord):
+                        dist_prompts.append(
+                            DistillationPrompt(
+                                text=f"{item.headline}\n{item.snippet}",
+                                payment_amount=NEWS_ITEM_BASE_WEIGHT,
+                                prompt_id=item.id,
+                            )
+                        )
+                    else:
+                        dist_prompts.append(
+                            DistillationPrompt(
+                                text=item.text,
+                                payment_amount=item.payment_amount,
+                                prompt_id=item.prompt_id,
+                            )
+                        )
 
                 # Run distillation pipeline
                 dist_start = time.monotonic()
@@ -385,7 +416,10 @@ def run_morning_press(
                 )
 
         # Step 9: WorldLedger mutation via LLM
-        if articles:
+        # Controlled by NEWS_MUTATES_LEDGER: when False, mutation only
+        # runs if at least one user prompt was processed in this edition.
+        should_mutate = articles and (has_user_prompts or NEWS_MUTATES_LEDGER)
+        if should_mutate:
             try:
                 mutation_system, mutation_content = _build_mutation_prompt(synopsis, articles)
                 mutation_response = gen.generate(mutation_system, "pro", mutation_content)
@@ -397,6 +431,11 @@ def run_morning_press(
                 logger.exception(
                     "WorldLedger mutation failed, skipping world state update"
                 )
+        elif articles and not has_user_prompts:
+            logger.info(
+                "Skipping WorldLedger mutation — no user prompts and "
+                "NEWS_MUTATES_LEDGER=false"
+            )
 
         # Step 9b: Image generation — parse article JSON, generate images,
         # embed image URLs back into the content.
@@ -463,9 +502,11 @@ def run_morning_press(
         # Step 11: Write edition to storage
         store.write_edition(edition_id, edition_date, articles)
 
-        # Step 12: Mark prompts as processed
+        # Step 12: Mark prompts and news items as processed
         prompt_ids = [pr.prompt_id for pr in prompt_records]
         mark_prompts_processed(session, prompt_ids)
+        if news_items:
+            mark_news_items_processed(session, today_date)
 
         session.commit()
 
@@ -490,6 +531,7 @@ def run_morning_press(
             "has_curator": "curator" in articles,
             "image_count": image_counts,
             "prompt_count": len(prompt_records),
+            "news_item_count": len(news_items),
             "latency_ms": total_ms,
         }
 
