@@ -45,13 +45,14 @@ You do not need to understand how these work internally. Just follow the steps t
 
 ## 2. Accounts You Need
 
-You will create accounts on three services. All three have free tiers or trial credits.
+You will create accounts on four services. All have free tiers or trial credits.
 
 | Service          | What it's for                           | Cost to start                                                      |
 | ---------------- | --------------------------------------- | ------------------------------------------------------------------ |
 | **Google Cloud** | Runs the backend (API, database, AI)    | **Free — $300 credit for 90 days** (no charge until you use it up) |
 | **Cloudflare**   | Hosts the two websites and stores files | **Free** (the free plan covers everything Imbryk needs)            |
 | **Stripe**       | Processes payments from users           | **Free to set up** — Stripe charges per transaction (2.9% + 30¢)  |
+| **Tavily**       | Searches real-world news for gap filling| **Free tier: 1,000 API calls/month** (the News Scout uses ~60-90/day) |
 
 You will need a credit or debit card for Google Cloud, but you will not be charged right away.
 
@@ -465,6 +466,16 @@ Go to **Secret Manager** in Google Cloud Console and create three secrets:
 | `r2-access-key-id`     | The Access Key ID from Step 3.3     |
 | `r2-secret-access-key` | The Secret Access Key from Step 3.3 |
 
+### 3.5a Store Tavily API Key in Google Cloud
+
+The News Scout uses [Tavily](https://tavily.com/) to search for real-world news. Store the API key in Secret Manager:
+
+1. Sign up at [app.tavily.com](https://app.tavily.com/) and copy your API key
+2. In **Secret Manager**, click **"Create Secret"**
+3. **Name:** `tavily-api-key`
+4. **Secret value:** paste your Tavily API key
+5. Click **"Create Secret"**
+
 ### 3.5 Deploy the Prompt UI Website
 
 1. Go to **Workers & Pages** in the Cloudflare dashboard
@@ -720,12 +731,18 @@ gcloud run jobs create newsroom-director \
   --set-secrets=R2_ACCESS_KEY_ID=r2-access-key-id:latest \
   --set-secrets=R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest \
   --set-secrets=CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest \
+  --set-secrets=TAVILY_API_KEY=tavily-api-key:latest \
   --set-env-vars=VERTEX_AI_PROJECT=$PROJECT_ID \
   --set-env-vars=VERTEX_AI_LOCATION=global \
   --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
   --set-env-vars=R2_PUBLIC_URL=https://editions.yourdomain.com \
   --set-env-vars=ENABLE_IMAGES=true \
   --set-env-vars=ENABLE_VALIDATION=true \
+  --set-env-vars=NEWS_SCOUT_ENABLED=true \
+  --set-env-vars=TAVILY_RPM=99 \
+  --set-env-vars=TAVILY_MONTHLY_LIMIT=999 \
+  --set-env-vars=NEWS_ITEM_BASE_WEIGHT=0.3 \
+  --set-env-vars=NEWS_MUTATES_LEDGER=true \
   --set-env-vars=SENTRY_DSN="" \
   --memory=4Gi \
   --cpu=2 \
@@ -766,7 +783,24 @@ gcloud scheduler jobs create http morning-press \
   --oauth-service-account-email=$SA
 ```
 
-This means: "every day at 6:00 AM UTC, start the newsroom director job."
+This means: "every day at 6:00 AM UTC, start the newsroom director morning press job."
+
+### 6.3 Create the News Scout Schedule
+
+The News Scout runs ~3 hours before the morning press to fill editorial gaps with real-world news:
+
+```sh
+gcloud scheduler jobs create http news-scout \
+  --location=us-central1 \
+  --schedule="0 3 * * *" \
+  --time-zone="UTC" \
+  --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/newsroom-director:run" \
+  --http-method=POST \
+  --headers="X-Entry-Point=news-scout" \
+  --oauth-service-account-email=$SA
+```
+
+This runs at 03:00 UTC — three hours before the morning press — so the news items are ready in the database by the time the newspaper generation starts.
 
 > **Tip:** `0 6 * * *` is a "cron expression." The five parts mean: minute (0), hour (6), any day of month (_), any month (_), any day of week (_). If you want a different time, change the hour number. For example, `0 14 _ \* \*` would be 2:00 PM UTC.
 
@@ -833,11 +867,12 @@ With the Google Cloud free trial, you will not pay anything for the first 90 day
 | Prompt UI website (Cloudflare Pages)        | $0                | Free                                                            |
 | Gazette website (Cloudflare Pages)          | $0                | Free                                                            |
 | Container image storage (Artifact Registry) | ~$0.50            | Storing the two application images                              |
+| News Scout search (Tavily)                  | ~$0-14            | Free tier: 1,000 calls/month; paid plan if more are needed      |
 | Daily schedule (Cloud Scheduler)            | $0                | Free for up to 3 jobs                                           |
 | Secret storage (Secret Manager)             | ~$0.06            | A few secrets, rarely accessed                                  |
-| **Total**                                   | **~$45-65/month** |                                                                 |
+| **Total**                                   | **~$45-79/month** |                                                                 |
 
-The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, proportional to number of active newspapers and images), followed by the database (~$8/month, always on). Everything on Cloudflare is free.
+The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, proportional to number of active newspapers and images), followed by the database (~$8/month, always on). Tavily is free for up to 1,000 API calls/month (the News Scout uses ~60-90 calls/day, well within the free tier). Everything on Cloudflare is free.
 
 > **Saving money:** If $30/month is too much after the free trial ends, the database is the first thing to look at. Services like [Neon](https://neon.tech/) or [Supabase](https://supabase.com/) offer free PostgreSQL tiers that could replace Cloud SQL.
 
@@ -944,6 +979,7 @@ These are all the configuration values used by the backend services. Most are st
 | `R2_ACCESS_KEY_ID`            | Secret  | —                            | R2 API access key ID                                                                                              |
 | `R2_SECRET_ACCESS_KEY`        | Secret  | —                            | R2 API secret key                                                                                                 |
 | `CF_DEPLOY_HOOK_URL`          | Secret  | —                            | Cloudflare Pages deploy hook URL — triggers gazette rebuild after each edition                                    |
+| `TAVILY_API_KEY`              | Secret  | —                            | Tavily API key for News Scout web searches                                                                        |
 | `VERTEX_AI_PROJECT`           | Env var | —                            | Your Google Cloud project ID                                                                                      |
 | `VERTEX_AI_LOCATION`          | Env var | `global`                     | Google Cloud region for Gemini text generation models                                                             |
 | `IMAGE_GENERATION_LOCATION`   | Env var | `us-central1`                | Google Cloud region for Imagen image generation (Imagen does not support `global`)                                |
@@ -957,6 +993,11 @@ These are all the configuration values used by the backend services. Most are st
 | `TOTAL_BUDGET_TOKENS`         | Env var | `800000`                     | Total AI token budget allocated across all topic clusters per newspaper                                           |
 | `MAX_CLUSTERS`                | Env var | `30`                         | Maximum number of topic clusters per newspaper before low-weight ones are merged                                  |
 | `MAX_BACKFILL_IMAGES_PER_RUN` | Env var | `20`                         | Max images to generate during the end-of-run backfill step for previously failed image generations                |
+| `NEWS_SCOUT_ENABLED`          | Env var | `true`                       | Set to `false` to disable the News Scout (no real-world news gap filling)                                         |
+| `TAVILY_RPM`                  | Env var | `99`                         | Maximum Tavily API requests per minute                                                                            |
+| `TAVILY_MONTHLY_LIMIT`        | Env var | `999`                        | Maximum Tavily API requests per month (cost safety net)                                                           |
+| `NEWS_ITEM_BASE_WEIGHT`       | Env var | `0.3`                        | Priority weight for news items in distillation (user prompts are 0.5–1.0+)                                       |
+| `NEWS_MUTATES_LEDGER`         | Env var | `true`                       | Whether news-only editions update the WorldLedger (set `true` at launch so the world evolves even with no users) |
 | `LOG_LEVEL`                   | Env var | `INFO`                       | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                               |
 | `SENTRY_DSN`                  | Env var | _(empty)_                    | Sentry error tracking URL — leave empty to disable                                                                |
 

@@ -249,31 +249,32 @@ When user prompts don't cover all 30 categories, newspapers have thin or empty e
 
 ### Database & Models
 
-- [ ] Add `news_items` table — Alembic migration (`id`, `edition_date`, `category_id`, `query`, `headline`, `snippet`, `source_url`, `relevance_score`, `status`, `created_at`; unique on `(source_url, edition_date)`)
-- [ ] Add SQLAlchemy model in `ingestion-api/models.py`
-- [ ] Mirror model in `newsroom-director/db.py`
+- [x] Add `news_items` table — Alembic migration (`id`, `edition_date`, `category_id`, `query`, `headline`, `snippet`, `source_url`, `relevance_score`, `status`, `created_at`; unique on `(source_url, edition_date)`)
+- [x] Add SQLAlchemy model in `ingestion-api/models.py`
+- [x] Mirror model in `newsroom-director/db.py`
 
 ### News Scout Module (newsroom-director)
 
-- [ ] Add `tavily-python` dependency to newsroom-director
-- [ ] Implement `news_scout/query_generator.py` — Gemini Flash call that takes WorldLedger synopsis + 30 categories and returns a `dict[category_id, list[str]]` of search queries
-- [ ] Design query generation prompt — instruct the LLM to reason from the WorldLedger about what's editorially interesting, not what's popular; output 2–3 queries per category
-- [ ] Implement `news_scout/searcher.py` — Tavily client wrapper; executes queries in parallel, returns structured results (headline, snippet, source_url, relevance_score)
-- [ ] Implement `news_scout/main.py` — entry point: load WorldLedger → generate queries → execute searches → deduplicate by URL → store in `news_items` table
-- [ ] Add `NEWS_SCOUT_ENABLED` env var (default `true`) — allows disabling the scout without redeploying
-- [ ] Add `TAVILY_API_KEY` to env var / secret management
-- [ ] Write tests — query generator (mock Gemini), searcher (mock Tavily), main pipeline (integration)
+- [x] Add `tavily-python` dependency to newsroom-director
+- [x] Implement `news_scout/query_generator.py` — Gemini Flash call that takes WorldLedger synopsis + 30 categories and returns a `dict[category_id, list[str]]` of search queries
+- [x] Design query generation prompt — instruct the LLM to reason from the WorldLedger about what's editorially interesting, not what's popular; output 2–3 queries per category
+- [x] Implement `news_scout/searcher.py` — Tavily client wrapper; executes queries, returns structured results (headline, snippet, source_url, relevance_score). Abstract `SearchStrategy` + `TavilySearcher` + `StubSearcher`.
+- [x] Implement `news_scout/schemas.py` — Gemini structured output schema (`QueryGenerationOutput`), validation (`is_valid_query_output`), parsing (`parse_query_output`)
+- [x] Implement `news_scout/main.py` — entry point: load WorldLedger → generate queries → execute searches → deduplicate by URL → store in `news_items` table
+- [x] Add `NEWS_SCOUT_ENABLED` env var (default `true`) — allows disabling the scout without redeploying
+- [x] Add `TAVILY_API_KEY` to config — env var for secret management
+- [x] Write tests — schema validation (7), query generator (4), searcher (2), DB operations (6), scout pipeline (3) = 22 tests
 
 ### Morning Batch Integration (newsroom-director)
 
-- [ ] Add `fetch_pending_news_items(edition_date)` to `db.py` — reads today's news items with `status='pending'`
-- [ ] Add `news_item_to_prompt_data()` converter — wraps news items in `PromptData` with `weight=NEWS_ITEM_BASE_WEIGHT` (configurable, default `0.3`) and `source='news_scout'`
-- [ ] Update `main.py` Step 1 — after fetching user prompts, also fetch news items and merge into the prompt pool
-- [ ] Update coherence validation — skip news items (only validate user-submitted prompts)
-- [ ] Implement `NEWS_MUTATES_LEDGER` flag (env var, default `true`) — when `true`, mutation runs on all published articles; when `false`, mutation only runs if at least one user prompt was processed in this edition
-- [ ] Update `mark_processed` step — also set `news_items.status='processed'` for today's items
-- [ ] Add `NEWS_ITEM_BASE_WEIGHT` to configuration (env var, default `0.3`)
-- [ ] Write tests — merged pipeline with both user prompts and news items; verify weight priority; verify news items skip coherence gate; verify `NEWS_MUTATES_LEDGER` flag controls ledger evolution correctly in both modes
+- [x] Add `fetch_pending_news_items(edition_date)` to `db.py` — reads today's news items with `status='pending'`
+- [x] Add `NewsItemRecord` → `DistillationPrompt` converter in `main.py` — wraps news items with `weight=NEWS_ITEM_BASE_WEIGHT` (configurable, default `0.3`)
+- [x] Update `main.py` — after fetching user prompts, also fetch news items and merge into the prompt pool via taxonomy routing
+- [x] Update coherence validation — skip news items (only validate user-submitted prompts)
+- [x] Implement `NEWS_MUTATES_LEDGER` flag (env var, default `true`) — when `true`, mutation runs on all published articles; when `false`, mutation only runs if at least one user prompt was processed in this edition
+- [x] Update `mark_processed` step — also set `news_items.status='processed'` for today's items
+- [x] Add `NEWS_ITEM_BASE_WEIGHT` to configuration (env var, default `0.3`)
+- [x] Write tests — news-only edition, mixed sources, weight verification, mutation flag both modes, validation skips news items = 7 tests
 
 ### Infrastructure & Deployment
 
@@ -282,6 +283,7 @@ When user prompts don't cover all 30 categories, newspapers have thin or empty e
 - [ ] Add News Scout entry point to newsroom-director Dockerfile (or reuse existing image with a different command)
 - [ ] Update DEPLOYMENT.md — Tavily API setup, Cloud Scheduler config, new env vars
 - [ ] Add monitoring/alerting for News Scout failures (non-blocking, warning-level)
+- [ ] Run Alembic migration `007` on production PostgreSQL
 
 ### Validation & Tuning
 
