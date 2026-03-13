@@ -121,8 +121,9 @@ def run_morning_press(
     distillation_pipeline: DistillationPipeline | None = None,
     imagen_client: ImageGenerationStrategy | None = None,
     enable_validation: bool = True,
+    edition_date: str | None = None,
 ) -> dict:
-    """Execute the full  Morning Press generation pipeline.    
+    """Execute the full Morning Press generation pipeline.    
 
     Args:
         database_url: Override for the database connection string.
@@ -151,7 +152,7 @@ def run_morning_press(
 
     from .config import EDITION_DATE
 
-    today_date = EDITION_DATE or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_date = edition_date or EDITION_DATE or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     def _run_backfill() -> None:
         try:

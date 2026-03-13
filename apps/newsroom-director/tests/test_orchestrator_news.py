@@ -128,6 +128,7 @@ class TestNewsItemsIntegration:
             storage=storage,
             distillation_pipeline=pipeline,
             enable_validation=False,
+            edition_date="2026-03-12",
         )
 
         assert result["edition_id"] is not None
@@ -146,6 +147,7 @@ class TestNewsItemsIntegration:
             storage=storage,
             distillation_pipeline=pipeline,
             enable_validation=False,
+            edition_date="2026-03-12",
         )
 
         engine = create_engine(db_url_news_only)
@@ -167,6 +169,7 @@ class TestNewsItemsIntegration:
             storage=storage,
             distillation_pipeline=pipeline,
             enable_validation=False,
+            edition_date="2026-03-12",
         )
 
         assert result["edition_id"] is not None
@@ -192,6 +195,7 @@ class TestNewsItemsIntegration:
             storage=storage,
             distillation_pipeline=pipeline,
             enable_validation=False,
+            edition_date="2026-03-12",
         )
 
         # All prompts should have the news item base weight (0.3)
@@ -214,6 +218,7 @@ class TestNewsItemsIntegration:
             storage=storage,
             distillation_pipeline=pipeline,
             enable_validation=False,
+            edition_date="2026-03-12",
         )
 
         # With stub gen, mutation is attempted (gen.calls includes "pro" tier call)
@@ -236,6 +241,7 @@ class TestNewsItemsIntegration:
             storage=storage,
             distillation_pipeline=pipeline,
             enable_validation=False,
+            edition_date="2026-03-12",
         )
 
         assert result["edition_id"] is not None
@@ -258,6 +264,7 @@ class TestNewsItemsIntegration:
             storage=storage,
             distillation_pipeline=pipeline,
             enable_validation=True,
+            edition_date="2026-03-12",
         )
 
         # All user prompts rejected, but news items survive
