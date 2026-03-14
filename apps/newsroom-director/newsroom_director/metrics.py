@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
@@ -95,6 +96,13 @@ query ($zoneTag: string!, $dateStart: Date!, $dateEnd: Date!, $pathPrefix: strin
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 data = json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            logger.exception(
+                "Cloudflare analytics returned HTTP %s: %s",
+                exc.code,
+                exc.reason,
+            )
+            return []
         except Exception:
             logger.exception("Failed to fetch Cloudflare analytics")
             return []

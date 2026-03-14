@@ -366,12 +366,17 @@ def run_morning_press(
                     "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
                 ).replace("{{CLUSTER_DIGESTS}}", "[See user content below]")
 
-                # Inject editorial journal if enabled
-                if ENABLE_EDITORIAL_JOURNAL and persona.id in journal_by_persona:
-                    journal_text = journal_by_persona[persona.id]
-                    system_instruction = system_instruction.replace(
-                        "{{EDITORIAL_JOURNAL}}", journal_text
-                    )
+                # Inject editorial journal if enabled; always replace the
+                # placeholder so it never leaks into the LLM prompt as a
+                # literal string when the feature is disabled.
+                journal_text = (
+                    journal_by_persona.get(persona.id, "")
+                    if ENABLE_EDITORIAL_JOURNAL
+                    else ""
+                )
+                system_instruction = system_instruction.replace(
+                    "{{EDITORIAL_JOURNAL}}", journal_text
+                )
 
                 # User content: cluster digests (may contain verbatim user prompts)
                 user_content = f"CLUSTER DIGESTS:\n{digests_text}\n\nGenerate today's edition."
@@ -472,6 +477,11 @@ def run_morning_press(
             try:
                 from datetime import timedelta as _td
 
+                # Always fetches the previous calendar day. If the pipeline
+                # is down for a day and two editions are generated
+                # back-to-back, the second run will attempt to fetch metrics
+                # for a date that may have no data yet — this will produce
+                # "0 views" feedback rather than last-edition data.
                 prev_date_dt = datetime.strptime(today_date, "%Y-%m-%d") - _td(days=1)
                 prev_date = prev_date_dt.strftime("%Y-%m-%d")
 

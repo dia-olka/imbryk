@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import (
     Column,
@@ -565,8 +565,6 @@ def load_recent_journal(
         current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # Compute cutoff date
-    from datetime import timedelta
-
     cutoff_dt = datetime.strptime(current_date, "%Y-%m-%d") - timedelta(
         days=lookback_days
     )
