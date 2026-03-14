@@ -23,8 +23,16 @@ def _build_persona_reflection_prompt(
     persona_articles_json: str,
     curator_text: str,
     previous_entries: list[JournalEntry],
+    metrics_text: str = "",
 ) -> tuple[str, str]:
     """Build system + user prompt for a persona's self-reflection."""
+
+    metrics_instruction = ""
+    if metrics_text:
+        metrics_instruction = """
+If reader metrics are provided below, factor them into your assessment. \
+What topics resonated with readers? What fell flat? But do not chase clicks \
+mindlessly — stay true to your editorial identity."""
 
     system = f"""\
 You are the editor-in-chief of {persona.paper_name}, reviewing today's edition.
@@ -32,7 +40,7 @@ You are the editor-in-chief of {persona.paper_name}, reviewing today's edition.
 Your task is to write a brief editorial journal entry — an honest \
 self-assessment that your future self will read before producing \
 tomorrow's edition.
-
+{metrics_instruction}
 STRUCTURE YOUR RESPONSE AS:
 
 ## What Worked
@@ -58,12 +66,14 @@ Respond with ONLY the markdown text — no JSON wrapping, no code fences."""
     # Format previous journal entries
     journal_section = _format_journal_entries(previous_entries, persona.id)
 
+    metrics_section = f"\n\n{metrics_text}" if metrics_text else ""
+
     user = f"""\
 TODAY'S EDITION ({edition_date}):
 {persona_articles_json}
 
 {journal_section}
-
+{metrics_section}
 CURATOR'S ANALYSIS OF TODAY:
 {curator_text}"""
 
@@ -74,10 +84,17 @@ def _build_pipeline_observation_prompt(
     edition_date: str,
     all_articles_text: str,
     previous_entries: list[JournalEntry],
+    metrics_text: str = "",
 ) -> tuple[str, str]:
     """Build system + user prompt for pipeline-level observation."""
 
-    system = """\
+    metrics_instruction = ""
+    if metrics_text:
+        metrics_instruction = """
+- Reader engagement: which newspapers and articles attracted the most \
+readers? Are engagement patterns aligned with editorial quality?"""
+
+    system = f"""\
 You are the editorial director overseeing all 6 newspapers in this group.
 Review today's cross-publication output and write observations for the \
 pipeline.
@@ -86,7 +103,7 @@ Focus on:
 - Coverage overlap: did multiple papers tell the same story the same way?
 - Coverage gaps: what categories or angles got no meaningful coverage?
 - Balance: is one ideological perspective dominating the day's output?
-- Quality trends: compare to your previous observations if available.
+- Quality trends: compare to your previous observations if available.{metrics_instruction}
 
 Be concise and specific. Name newspapers and articles.
 
@@ -94,11 +111,13 @@ Respond with ONLY the markdown text — no JSON wrapping, no code fences."""
 
     journal_section = _format_journal_entries(previous_entries, "_pipeline")
 
+    metrics_section = f"\n\n{metrics_text}" if metrics_text else ""
+
     user = f"""\
 TODAY'S EDITIONS ({edition_date}):
 {all_articles_text}
 
-{journal_section}"""
+{journal_section}{metrics_section}"""
 
     return system, user
 
@@ -192,15 +211,17 @@ def run_persona_reflection(
     curator_text: str,
     previous_entries: list[JournalEntry],
     generation_strategy: GenerationStrategy,
+    metrics_text: str = "",
 ) -> str | None:
     """Run self-reflection for a single persona. Returns the reflection text."""
     system, user = _build_persona_reflection_prompt(
         persona, edition_date, persona_articles_json,
         curator_text, previous_entries,
+        metrics_text=metrics_text,
     )
 
     try:
-        response = generation_strategy.generate(system, "flash", user)
+        response = generation_strategy.generate(system, "pro", user)
         if response and len(response.strip()) > 20:
             return response.strip()
         logger.warning(
@@ -219,10 +240,12 @@ def run_pipeline_observation(
     all_articles_text: str,
     previous_entries: list[JournalEntry],
     generation_strategy: GenerationStrategy,
+    metrics_text: str = "",
 ) -> str | None:
     """Run pipeline-level editorial observation. Returns the observation text."""
     system, user = _build_pipeline_observation_prompt(
         edition_date, all_articles_text, previous_entries,
+        metrics_text=metrics_text,
     )
 
     try:

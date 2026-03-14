@@ -57,18 +57,26 @@ if SENTRY_DSN:
         ],
     )
     logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
-from .config import ENABLE_EDITORIAL_JOURNAL, JOURNAL_LOOKBACK_DAYS, NEWS_ITEM_BASE_WEIGHT
+from .config import (
+    ENABLE_EDITORIAL_JOURNAL,
+    ENABLE_READER_METRICS,
+    JOURNAL_LOOKBACK_DAYS,
+    NEWS_ITEM_BASE_WEIGHT,
+)
 from .db import (
+    ArticleMetric,
     NewsItemRecord,
     fetch_pending_news_items,
     fetch_unprocessed_prompts,
     get_engine,
     get_session_factory,
+    load_edition_metrics,
     load_recent_journal,
     load_world_ledger,
     mark_news_items_processed,
     mark_prompts_processed,
     save_edition,
+    save_edition_metrics,
     save_journal_entry,
     save_world_ledger,
 )
@@ -81,6 +89,10 @@ from .image_gen import (
     generate_images_for_newspaper,
 )
 from .logging_config import configure_logging
+from .metrics import (
+    format_metrics_for_pipeline_observation,
+    format_metrics_for_reflection,
+)
 from .output_schemas import (
     CuratorOutput,
     NewspaperOutput,
@@ -453,7 +465,58 @@ def run_morning_press(
                     "Curator synthesis failed, skipping curator article"
                 )
 
-        # Step 8b: Editorial self-reflection — each persona critiques its output.
+        # Step 8b: Fetch reader metrics for the previous edition (if enabled).
+        prev_metrics: list[ArticleMetric] = []
+        prev_newspaper_totals: dict[str, int] = {}
+        if articles and ENABLE_READER_METRICS:
+            try:
+                from datetime import timedelta as _td
+
+                prev_date_dt = datetime.strptime(today_date, "%Y-%m-%d") - _td(days=1)
+                prev_date = prev_date_dt.strftime("%Y-%m-%d")
+
+                from .config import CF_ANALYTICS_API_TOKEN, CF_ANALYTICS_ZONE_ID
+                from .metrics import MetricsClient
+
+                if CF_ANALYTICS_ZONE_ID and CF_ANALYTICS_API_TOKEN:
+                    mclient = MetricsClient(CF_ANALYTICS_ZONE_ID, CF_ANALYTICS_API_TOKEN)
+                    prev_metrics = mclient.fetch_article_views(prev_date)
+
+                    # Try to enrich slug-based headlines from DB
+                    db_prev_metrics = load_edition_metrics(session, prev_date)
+                    if db_prev_metrics:
+                        from .metrics import enrich_metrics_with_headlines
+                        prev_metrics = enrich_metrics_with_headlines(
+                            prev_metrics, db_prev_metrics,
+                        )
+
+                    # Compute per-newspaper totals
+                    for m in prev_metrics:
+                        prev_newspaper_totals[m.newspaper_id] = (
+                            prev_newspaper_totals.get(m.newspaper_id, 0)
+                            + m.page_views
+                        )
+
+                    # Persist fetched metrics
+                    if prev_metrics:
+                        save_edition_metrics(session, prev_metrics, prev_date)
+
+                    logger.info(
+                        "Reader metrics fetched",
+                        extra={
+                            "step": "metrics",
+                            "prev_date": prev_date,
+                            "article_count": len(prev_metrics),
+                            "total_views": sum(prev_newspaper_totals.values()),
+                        },
+                    )
+            except Exception:
+                logger.warning(
+                    "Failed to fetch reader metrics, continuing without",
+                    exc_info=True,
+                )
+
+        # Step 8c: Editorial self-reflection — each persona critiques its output.
         # Runs after curator so reflections can reference the curator's analysis.
         if articles and ENABLE_EDITORIAL_JOURNAL:
             try:
@@ -477,6 +540,13 @@ def run_morning_press(
                         current_date=today_date,
                     )
 
+                    # Build metrics text for this persona
+                    persona_metrics_text = ""
+                    if prev_metrics:
+                        persona_metrics_text = format_metrics_for_reflection(
+                            prev_metrics, persona.id, prev_newspaper_totals,
+                        )
+
                     reflection = run_persona_reflection(
                         persona=persona,
                         edition_date=today_date,
@@ -484,6 +554,7 @@ def run_morning_press(
                         curator_text=curator_text,
                         previous_entries=persona_entries,
                         generation_strategy=gen,
+                        metrics_text=persona_metrics_text,
                     )
                     if reflection:
                         save_journal_entry(
@@ -504,11 +575,19 @@ def run_morning_press(
                     lookback_days=JOURNAL_LOOKBACK_DAYS,
                     current_date=today_date,
                 )
+
+                pipeline_metrics_text = ""
+                if prev_metrics:
+                    pipeline_metrics_text = format_metrics_for_pipeline_observation(
+                        prev_newspaper_totals, prev_metrics,
+                    )
+
                 observation = run_pipeline_observation(
                     edition_date=today_date,
                     all_articles_text=all_articles_text_for_reflection,
                     previous_entries=pipeline_entries,
                     generation_strategy=gen,
+                    metrics_text=pipeline_metrics_text,
                 )
                 if observation:
                     save_journal_entry(

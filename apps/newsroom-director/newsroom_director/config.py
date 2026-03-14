@@ -51,3 +51,8 @@ NEWS_MUTATES_LEDGER = os.getenv("NEWS_MUTATES_LEDGER", "true").lower() == "true"
 # Editorial Journal — persistent per-persona editorial memory
 ENABLE_EDITORIAL_JOURNAL = os.getenv("ENABLE_EDITORIAL_JOURNAL", "true").lower() == "true"
 JOURNAL_LOOKBACK_DAYS = int(os.getenv("JOURNAL_LOOKBACK_DAYS", "7"))
+
+# Reader Metrics — Cloudflare Web Analytics feedback loop
+ENABLE_READER_METRICS = os.getenv("ENABLE_READER_METRICS", "false").lower() == "true"
+CF_ANALYTICS_ZONE_ID = os.getenv("CF_ANALYTICS_ZONE_ID", "")
+CF_ANALYTICS_API_TOKEN = os.getenv("CF_ANALYTICS_API_TOKEN", "")

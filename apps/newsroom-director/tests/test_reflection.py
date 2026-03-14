@@ -1,6 +1,5 @@
 """Tests for editorial self-reflection module."""
 
-import json
 
 import pytest
 from sqlalchemy import create_engine
@@ -13,7 +12,7 @@ from newsroom_director.db import (
     save_journal_entry,
 )
 from newsroom_director.generation import StubGenerationStrategy
-from newsroom_director.personas import SOVEREIGN, ASPIRANT, NEWSPAPER_PERSONAS
+from newsroom_director.personas import SOVEREIGN
 from newsroom_director.reflection import (
     format_journal_for_generation,
     run_persona_reflection,
@@ -229,7 +228,7 @@ class TestRunPersonaReflection:
         assert result is not None
         assert len(result) > 0
 
-    def test_records_call_to_flash_tier(self):
+    def test_records_call_to_pro_tier(self):
         gen = StubGenerationStrategy()
         run_persona_reflection(
             persona=SOVEREIGN,
@@ -239,8 +238,8 @@ class TestRunPersonaReflection:
             previous_entries=[],
             generation_strategy=gen,
         )
-        # Reflection should use flash tier
-        assert any(c["model_tier"] == "flash" for c in gen.calls)
+        # Reflection should use pro tier
+        assert any(c["model_tier"] == "pro" for c in gen.calls)
 
 
 class TestRunPipelineObservation:

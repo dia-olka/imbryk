@@ -158,6 +158,32 @@ class EditorialJournal(Base):
     )
 
 
+class EditionMetric(Base):
+    __tablename__ = "edition_metrics"
+    __table_args__ = (
+        UniqueConstraint(
+            "edition_date",
+            "newspaper_id",
+            "article_slug",
+            name="uq_edition_metrics_date_paper_slug",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid
+    )
+    edition_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    newspaper_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    article_slug: Mapped[str] = mapped_column(String(255), nullable=False)
+    headline: Mapped[str] = mapped_column(Text, nullable=False)
+    page_views: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
 class EditionArticle(Base):
     __tablename__ = "edition_articles"
 

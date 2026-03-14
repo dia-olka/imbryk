@@ -16,6 +16,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Integer,
     String,
     Text,
     create_engine,
@@ -113,6 +114,18 @@ class EditorialJournalRow(Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
 
+class EditionMetricRow(Base):
+    __tablename__ = "edition_metrics"
+
+    id = Column(String(36), primary_key=True, default=_new_uuid)
+    edition_date = Column(String(10), nullable=False)
+    newspaper_id = Column(String(64), nullable=False)
+    article_slug = Column(String(255), nullable=False)
+    headline = Column(Text, nullable=False)
+    page_views = Column(Integer, nullable=False, default=0)
+    fetched_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
 class NewsItemRow(Base):
     __tablename__ = "news_items"
 
@@ -160,6 +173,16 @@ class JournalEntry:
     entry_date: str
     entry_type: str  # 'reflection', 'intention', 'observation'
     content: str
+
+
+@dataclass
+class ArticleMetric:
+    """Page view data for a single article."""
+
+    newspaper_id: str
+    article_slug: str
+    headline: str
+    page_views: int
 
 
 @dataclass
@@ -569,3 +592,77 @@ def load_recent_journal(
         )
         for row in rows
     ]
+
+
+# --- Edition Metrics queries ---
+
+
+def save_edition_metrics(
+    session: Session,
+    metrics: list[ArticleMetric],
+    edition_date: str,
+) -> int:
+    """Upsert article page-view metrics for an edition.
+
+    Returns the number of rows written.
+    """
+    written = 0
+    for m in metrics:
+        existing = (
+            session.query(EditionMetricRow)
+            .filter(
+                EditionMetricRow.edition_date == edition_date,
+                EditionMetricRow.newspaper_id == m.newspaper_id,
+                EditionMetricRow.article_slug == m.article_slug,
+            )
+            .first()
+        )
+        if existing is not None:
+            existing.page_views = m.page_views
+            existing.headline = m.headline
+            existing.fetched_at = _utcnow()
+        else:
+            row = EditionMetricRow(
+                id=_new_uuid(),
+                edition_date=edition_date,
+                newspaper_id=m.newspaper_id,
+                article_slug=m.article_slug,
+                headline=m.headline,
+                page_views=m.page_views,
+                fetched_at=_utcnow(),
+            )
+            session.add(row)
+        written += 1
+    return written
+
+
+def load_edition_metrics(
+    session: Session,
+    edition_date: str,
+) -> dict[str, list[ArticleMetric]]:
+    """Load page-view metrics for a given edition date.
+
+    Returns a dict keyed by newspaper_id, each containing a list of
+    ArticleMetric sorted by page_views descending.
+    """
+    rows = (
+        session.query(EditionMetricRow)
+        .filter(EditionMetricRow.edition_date == edition_date)
+        .order_by(
+            EditionMetricRow.newspaper_id,
+            EditionMetricRow.page_views.desc(),
+        )
+        .all()
+    )
+
+    result: dict[str, list[ArticleMetric]] = {}
+    for row in rows:
+        metric = ArticleMetric(
+            newspaper_id=row.newspaper_id,
+            article_slug=row.article_slug,
+            headline=row.headline,
+            page_views=row.page_views,
+        )
+        result.setdefault(row.newspaper_id, []).append(metric)
+
+    return result

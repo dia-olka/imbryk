@@ -476,6 +476,21 @@ The News Scout uses [Tavily](https://tavily.com/) to search for real-world news.
 4. **Secret value:** paste your Tavily API key
 5. Click **"Create Secret"**
 
+### 3.4b Store Cloudflare Analytics Credentials in Google Cloud (Optional)
+
+If you plan to use the **Reader Metrics** feature (the newsroom director fetches page-view data from Cloudflare to help AI editors learn what resonates with readers), store these credentials in Secret Manager:
+
+1. In the Cloudflare dashboard, go to **My Profile > API Tokens**
+2. Click **"Create Token"** and create a token with **Permissions:** `Analytics:Read` for your gazette zone
+3. Copy the token value
+4. Note your **Zone ID** — visible at the bottom of your zone's Overview page in the Cloudflare dashboard
+5. In Google Cloud **Secret Manager**, click **"Create Secret"**:
+   - **Name:** `cf-analytics-zone-id`
+   - **Secret value:** your Zone ID
+6. Click **"Create Secret"** again:
+   - **Name:** `cf-analytics-api-token`
+   - **Secret value:** the API token from step 3
+
 ### 3.5 Deploy the Prompt UI Website
 
 1. Go to **Workers & Pages** in the Cloudflare dashboard
@@ -503,6 +518,7 @@ Your prompt UI will be live at `https://whisper.imbryk.news` (or whatever projec
    - **Build output directory:** `dist/apps/gazette`
    - `NODE_VERSION` = `20`
    - `R2_PUBLIC_URL` = the custom domain URL from Step 3.2 (e.g. `https://editions.yourdomain.com`)
+   - `CF_WEB_ANALYTICS_TOKEN` = _(optional)_ your Cloudflare Web Analytics token (see Step 3.7)
 2. Click **"Save and Deploy"**
 3. Set up a **Deploy Hook** (for automatic rebuilds after each newspaper edition):
    - Go to the gazette project **Settings > Builds & Deployments**
@@ -511,6 +527,22 @@ Your prompt UI will be live at `https://whisper.imbryk.news` (or whatever projec
    - Copy the hook URL and save it as a secret in Google Cloud Secret Manager with the name `cf-deploy-hook-url`
 
 > **How the deploy hook works:** After the newsroom director generates a new edition, it writes the edition JSON and an index manifest to R2, then automatically POSTs to this hook URL to trigger a gazette rebuild. The gazette build fetches edition data from R2 via the custom domain.
+
+### 3.7 Set Up Cloudflare Web Analytics (Optional)
+
+Cloudflare Web Analytics tracks reader engagement on the gazette — privacy-first, no cookies. The newsroom director can use this data to help AI editors learn what resonates with readers.
+
+1. In the Cloudflare dashboard, go to **Analytics & Logs > Web Analytics**
+2. Click **"Add a site"** and enter your gazette domain (e.g. `imbryk.news`)
+3. Copy the **JS Snippet token** (a UUID that appears in the snippet code)
+4. Go to your gazette Pages project (**Workers & Pages > imbryk-gazette**)
+5. Go to **Settings > Environment Variables**
+6. Add: `CF_WEB_ANALYTICS_TOKEN` = _(paste the token)_
+7. Trigger a new deployment
+
+The gazette already includes the Web Analytics beacon in its HTML — it activates automatically when this token is set.
+
+> **For Reader Metrics backend integration:** If you also want the newsroom director to fetch page-view data and feed it into editorial reflections, see Step 3.4b for storing your Cloudflare API credentials in Secret Manager, and set `ENABLE_READER_METRICS=true` in the newsroom director configuration (Step 5.3).
 
 ---
 
@@ -692,6 +724,8 @@ Also update the `CORS_ALLOWED_ORIGINS` value to match your actual Cloudflare Pag
 
 The database needs its tables set up before it can store anything. Run this manually for the **first deployment**. After that, migrations run automatically as part of the CD workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions)).
 
+> **Recent migrations:** Migration **008** adds the `editorial_journal` table (Editorial Journal feature) and migration **009** adds the `edition_metrics` table (Reader Metrics feature). Both are safe to run — the tables are only populated when the respective features are enabled.
+
 <details>
 <summary>First-time setup / manual fallback</summary>
 
@@ -743,6 +777,11 @@ gcloud run jobs create newsroom-director \
   --set-env-vars=TAVILY_MONTHLY_LIMIT=999 \
   --set-env-vars=NEWS_ITEM_BASE_WEIGHT=0.3 \
   --set-env-vars=NEWS_MUTATES_LEDGER=true \
+  --set-env-vars=ENABLE_EDITORIAL_JOURNAL=true \
+  --set-env-vars=JOURNAL_LOOKBACK_DAYS=7 \
+  --set-env-vars=ENABLE_READER_METRICS=false \
+  --set-secrets=CF_ANALYTICS_ZONE_ID=cf-analytics-zone-id:latest \
+  --set-secrets=CF_ANALYTICS_API_TOKEN=cf-analytics-api-token:latest \
   --set-env-vars=SENTRY_DSN="" \
   --memory=4Gi \
   --cpu=2 \
@@ -872,7 +911,7 @@ With the Google Cloud free trial, you will not pay anything for the first 90 day
 | Secret storage (Secret Manager)             | ~$0.06            | A few secrets, rarely accessed                                  |
 | **Total**                                   | **~$45-79/month** |                                                                 |
 
-The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, proportional to number of active newspapers and images), followed by the database (~$8/month, always on). Tavily is free for up to 1,000 API calls/month (the News Scout uses ~60-90 calls/day, well within the free tier). Everything on Cloudflare is free.
+The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, proportional to number of active newspapers and images), followed by the database (~$8/month, always on). Tavily is free for up to 1,000 API calls/month (the News Scout uses ~60-90 calls/day, well within the free tier). Everything on Cloudflare is free. The Editorial Journal and Reader Metrics features add negligible cost — journal reflections use Gemini Flash (~$0.50/month extra), Cloudflare Web Analytics is free, and the metrics DB table uses minimal storage.
 
 > **Saving money:** If $30/month is too much after the free trial ends, the database is the first thing to look at. Services like [Neon](https://neon.tech/) or [Supabase](https://supabase.com/) offer free PostgreSQL tiers that could replace Cloud SQL.
 
@@ -998,6 +1037,11 @@ These are all the configuration values used by the backend services. Most are st
 | `TAVILY_MONTHLY_LIMIT`        | Env var | `999`                        | Maximum Tavily API requests per month. **Production note:** the counter is stored in `/tmp` and resets on each Cloud Run container start, so this does not enforce a hard monthly cap in production. Use Tavily's own dashboard alerts for billing protection.                                                           |
 | `NEWS_ITEM_BASE_WEIGHT`       | Env var | `0.3`                        | Priority weight for news items in distillation (user prompts are 0.5–1.0+)                                       |
 | `NEWS_MUTATES_LEDGER`         | Env var | `true`                       | Whether news-only editions update the WorldLedger (set `true` at launch so the world evolves even with no users) |
+| `ENABLE_EDITORIAL_JOURNAL`    | Env var | `true`                       | Enable Editorial Journal — each AI editor reflects on its output and writes notes for future runs                 |
+| `JOURNAL_LOOKBACK_DAYS`       | Env var | `7`                          | Number of past days of journal entries to load into the generation prompt                                          |
+| `ENABLE_READER_METRICS`       | Env var | `false`                      | Enable Reader Metrics — fetch Cloudflare page-view data and feed into editorial reflections                       |
+| `CF_ANALYTICS_ZONE_ID`        | Secret  | —                            | Cloudflare Zone ID for the gazette domain (required when `ENABLE_READER_METRICS=true`; see Step 3.4b)            |
+| `CF_ANALYTICS_API_TOKEN`      | Secret  | —                            | Cloudflare API token with `Analytics:Read` permission (required when `ENABLE_READER_METRICS=true`; see Step 3.4b)|
 | `LOG_LEVEL`                   | Env var | `INFO`                       | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                               |
 | `SENTRY_DSN`                  | Env var | _(empty)_                    | Sentry error tracking URL — leave empty to disable                                                                |
 
@@ -1019,4 +1063,5 @@ These are all the configuration values used by the backend services. Most are st
 | `R2_PUBLIC_URL`   | _(empty)_                         | Custom domain URL of the R2 bucket — when set, the gazette fetches live editions from R2 instead of the local fixture     |
 | `GAZETTE_URL`     | `https://imbryk.news`| The gazette's own public URL — used in canonical links and the sitemap                                                    |
 | `IMBRYK_APP_URL`  | `https://whisper.imbryk.news`        | URL of the prompt UI — used in the "Submit a prompt" call-to-action link                                                  |
+| `CF_WEB_ANALYTICS_TOKEN` | _(empty)_                  | Cloudflare Web Analytics beacon token — enables privacy-first reader tracking when set (see Step 3.7)                     |
 | `SENTRY_DSN`      | _(empty)_                         | Sentry error tracking URL — leave empty to disable                                                                        |

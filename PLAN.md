@@ -296,6 +296,52 @@ When user prompts don't cover all 30 categories, newspapers have thin or empty e
 
 ---
 
+## Phase 13: Editorial Memory — Journal & Reader Metrics
+
+Each AI editor develops persistent editorial memory across runs via two complementary systems: an **Editorial Journal** (self-reflection after each edition) and **Reader Metrics** (Cloudflare page-view data feeding back into editorial decisions). Uses the Scratchpad + Reflexion pattern: Generate → Reflect → Record → Improve.
+
+### Phase 13a: Editorial Journal
+
+- [x] Add `editorial_journal` table — Alembic migration 008 (`id`, `persona_id`, `entry_date`, `entry_type`, `content`, `created_at`; unique on `(persona_id, entry_date, entry_type)`)
+- [x] Add SQLAlchemy model in `ingestion-api/models.py` (`EditorialJournal`)
+- [x] Add ORM model + dataclasses in `newsroom-director/db.py` (`EditorialJournalRow`, `JournalEntry`)
+- [x] Implement `save_journal_entry()` — upserts by (persona_id, entry_date, entry_type)
+- [x] Implement `load_recent_journal()` — loads entries within configurable lookback window
+- [x] Implement `reflection.py` — per-persona self-reflection (`run_persona_reflection`, Flash tier) and pipeline-level observation (`run_pipeline_observation`, Pro tier)
+- [x] Implement `format_journal_for_generation()` — condensed view for `{{EDITORIAL_JOURNAL}}` placeholder (latest intention + last 3 reflections + latest pipeline observation)
+- [x] Add `{{EDITORIAL_JOURNAL}}` placeholder to all 6 newspaper persona prompts in `data/personas.json`
+- [x] Wire journal loading + injection into `main.py` (Step 6b: load entries, Step 7: inject into system prompt)
+- [x] Wire reflection into `main.py` (Step 8c: run per-persona reflections + pipeline observation after generation)
+- [x] Add config: `ENABLE_EDITORIAL_JOURNAL` (default: true), `JOURNAL_LOOKBACK_DAYS` (default: 7)
+- [x] Write tests — 17 tests (DB operations, formatting, reflection execution)
+
+### Phase 13b: Reader Metrics
+
+- [x] Add `edition_metrics` table — Alembic migration 009 (`id`, `edition_date`, `newspaper_id`, `article_slug`, `headline`, `page_views`, `fetched_at`; unique on `(edition_date, newspaper_id, article_slug)`)
+- [x] Add SQLAlchemy model in `ingestion-api/models.py` (`EditionMetric`)
+- [x] Add ORM model + dataclasses in `newsroom-director/db.py` (`EditionMetricRow`, `ArticleMetric`)
+- [x] Implement `save_edition_metrics()` and `load_edition_metrics()` — upsert and load by edition date
+- [x] Implement `metrics.py` — `MetricsClient` (Cloudflare GraphQL Analytics API), `StubMetricsClient`, `enrich_metrics_with_headlines()`, `format_metrics_for_reflection()`, `format_metrics_for_pipeline_observation()`
+- [x] Wire metrics fetching into `main.py` (Step 8b: fetch previous day's metrics from Cloudflare, enrich headlines, persist to DB)
+- [x] Wire metrics text into reflection prompts (Step 8c: per-persona and pipeline metrics injected into reflection)
+- [x] Add Cloudflare Web Analytics beacon to gazette `base.njk` (conditional on `CF_WEB_ANALYTICS_TOKEN`)
+- [x] Add `cfWebAnalyticsToken` to gazette `site.js`
+- [x] Add config: `ENABLE_READER_METRICS` (default: false), `CF_ANALYTICS_ZONE_ID`, `CF_ANALYTICS_API_TOKEN`
+- [x] Write tests — 22 tests (DB operations, client parsing, enrichment, formatting)
+- [x] Update DEPLOYMENT.md — new env vars, Cloudflare Web Analytics setup (Step 3.7), Secret Manager (Step 3.4b), CD workflow
+- [x] Update `cd.yml` — add new env vars and secrets to newsroom-director deploy step
+
+### Infrastructure & Deployment
+
+- [ ] Create Cloudflare API token with `Analytics:Read` permission
+- [ ] Store `cf-analytics-zone-id` and `cf-analytics-api-token` in GCP Secret Manager
+- [ ] Set `CF_WEB_ANALYTICS_TOKEN` on gazette Cloudflare Pages project
+- [ ] Set GitHub Actions vars: `ENABLE_EDITORIAL_JOURNAL`, `JOURNAL_LOOKBACK_DAYS`, `ENABLE_READER_METRICS`
+- [ ] Run Alembic migrations 008 + 009 on production PostgreSQL
+- [ ] Enable `ENABLE_READER_METRICS=true` once Cloudflare Web Analytics has collected data (~1 week after gazette launch)
+
+---
+
 ## Resolved Decisions
 
 1. **Trigger model** — daily batch ("morning press"). Strictly once daily.
@@ -317,6 +363,7 @@ When user prompts don't cover all 30 categories, newspapers have thin or empty e
 17. **Article images** — Vertex AI Imagen generates images for top articles and a front-page hero per newspaper. The Gemini output includes a nullable `imagePrompt` per article and a `frontPageImagePrompt` per edition. Images stored as WebP in R2. Failures are non-blocking — articles publish without images if Imagen fails.
 18. **Gap filling via LLM-driven news scouting** — instead of Google Trends or human curation, the system uses its own LLM (informed by the WorldLedger) to decide what real-world news is editorially interesting. Queries are executed via Tavily. News items enter the same distillation pipeline at lower weight than any paid prompt, so user voice always dominates. WorldLedger mutation from news is controlled by `NEWS_MUTATES_LEDGER` flag (default `true` at launch so the world evolves even with zero users; set to `false` once user volume is sufficient).
 19. **News Scout is strictly additive** — the scout runs as a separate pre-batch job. Its failure never blocks the morning batch. The system degrades gracefully to user-prompts-only mode if the scout fails or is disabled.
+20. **Editorial memory via Reflexion pattern** — after each edition, every persona reflects on its output (what worked, what fell short, tomorrow's intentions) and saves a journal entry. These entries are loaded into the next day's generation prompt via `{{EDITORIAL_JOURNAL}}`. A pipeline-level observation by an "editorial director" provides cross-publication feedback. Reader metrics from Cloudflare Web Analytics optionally inform reflections. Both features are independently toggleable and fail gracefully.
 
 ## Open Questions
 

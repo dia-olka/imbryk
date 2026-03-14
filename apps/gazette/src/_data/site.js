@@ -14,5 +14,6 @@ export default function () {
       'AI-powered perspectives on how world events ripple through society, politics, and culture — six ideologically distinct newspapers, each driven by advanced AI systems.',
     locale: 'en_US',
     ogImageFallback: '/og-gazette.png',
+    cfWebAnalyticsToken: process.env.CF_WEB_ANALYTICS_TOKEN ?? '',
   };
 }
