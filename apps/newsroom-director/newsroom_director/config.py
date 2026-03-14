@@ -47,3 +47,7 @@ TAVILY_MONTHLY_LIMIT = int(os.getenv("TAVILY_MONTHLY_LIMIT", "999"))  # max requ
 TAVILY_MAX_RESULTS_PER_QUERY = int(os.getenv("TAVILY_MAX_RESULTS_PER_QUERY", "5"))  # Tavily max is 20
 NEWS_ITEM_BASE_WEIGHT = float(os.getenv("NEWS_ITEM_BASE_WEIGHT", "0.3"))
 NEWS_MUTATES_LEDGER = os.getenv("NEWS_MUTATES_LEDGER", "true").lower() == "true"
+
+# Editorial Journal — persistent per-persona editorial memory
+ENABLE_EDITORIAL_JOURNAL = os.getenv("ENABLE_EDITORIAL_JOURNAL", "true").lower() == "true"
+JOURNAL_LOOKBACK_DAYS = int(os.getenv("JOURNAL_LOOKBACK_DAYS", "7"))

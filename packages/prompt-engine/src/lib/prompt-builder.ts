@@ -5,6 +5,7 @@ export interface PromptBuildInput {
   persona: NewsroomPersona;
   worldSynopsis: string;
   clusterDigests: string;
+  editorialJournal?: string;
 }
 
 export interface CuratorBuildInput {
@@ -15,6 +16,7 @@ export interface CuratorBuildInput {
 export function buildNewspaperPrompt(input: PromptBuildInput): string {
   return interpolateTemplate(input.persona.systemPromptTemplate, {
     WORLD_LEDGER_SYNOPSIS: input.worldSynopsis,
+    EDITORIAL_JOURNAL: input.editorialJournal ?? '(No editorial journal entries yet.)',
     CLUSTER_DIGESTS: input.clusterDigests,
   });
 }

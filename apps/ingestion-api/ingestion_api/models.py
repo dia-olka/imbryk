@@ -135,6 +135,29 @@ class NewsItem(Base):
     )
 
 
+class EditorialJournal(Base):
+    __tablename__ = "editorial_journal"
+    __table_args__ = (
+        UniqueConstraint(
+            "persona_id",
+            "entry_date",
+            "entry_type",
+            name="uq_editorial_journal_persona_date_type",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid
+    )
+    persona_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    entry_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    entry_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
 class EditionArticle(Base):
     __tablename__ = "edition_articles"
 

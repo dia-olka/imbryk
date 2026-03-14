@@ -102,6 +102,17 @@ class EditionArticleRow(Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
 
+class EditorialJournalRow(Base):
+    __tablename__ = "editorial_journal"
+
+    id = Column(String(36), primary_key=True, default=_new_uuid)
+    persona_id = Column(String(64), nullable=False)
+    entry_date = Column(String(10), nullable=False)
+    entry_type = Column(String(32), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
 class NewsItemRow(Base):
     __tablename__ = "news_items"
 
@@ -139,6 +150,16 @@ class NewsItemRecord:
     snippet: str
     source_url: str
     relevance_score: float
+
+
+@dataclass
+class JournalEntry:
+    """A single editorial journal entry."""
+
+    persona_id: str
+    entry_date: str
+    entry_type: str  # 'reflection', 'intention', 'observation'
+    content: str
 
 
 @dataclass
@@ -454,3 +475,97 @@ def mark_news_items_processed(
         NewsItemRow.edition_date == edition_date,
         NewsItemRow.status == "pending",
     ).update({"status": "processed"}, synchronize_session="fetch")
+
+
+# --- Editorial Journal queries ---
+
+
+def save_journal_entry(
+    session: Session,
+    persona_id: str,
+    entry_date: str,
+    entry_type: str,
+    content: str,
+) -> None:
+    """Upsert an editorial journal entry.
+
+    If an entry for (persona_id, entry_date, entry_type) already exists,
+    its content is replaced.
+    """
+    existing = (
+        session.query(EditorialJournalRow)
+        .filter(
+            EditorialJournalRow.persona_id == persona_id,
+            EditorialJournalRow.entry_date == entry_date,
+            EditorialJournalRow.entry_type == entry_type,
+        )
+        .first()
+    )
+    if existing is not None:
+        existing.content = content
+        existing.created_at = _utcnow()
+    else:
+        row = EditorialJournalRow(
+            id=_new_uuid(),
+            persona_id=persona_id,
+            entry_date=entry_date,
+            entry_type=entry_type,
+            content=content,
+            created_at=_utcnow(),
+        )
+        session.add(row)
+
+
+def load_recent_journal(
+    session: Session,
+    persona_id: str,
+    lookback_days: int = 7,
+    current_date: str = "",
+) -> list[JournalEntry]:
+    """Load recent editorial journal entries for a persona.
+
+    Returns entries from the last *lookback_days* days, ordered by date
+    ascending (oldest first). Also includes pipeline-level observations
+    (persona_id='_pipeline') from the same window.
+
+    Args:
+        session: Active DB session.
+        persona_id: The persona to load entries for.
+        lookback_days: How many days back to look.
+        current_date: The current edition date (YYYY-MM-DD). Used to
+            compute the lookback window.
+
+    Returns:
+        List of JournalEntry, ordered by date ascending.
+    """
+    if not current_date:
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # Compute cutoff date
+    from datetime import timedelta
+
+    cutoff_dt = datetime.strptime(current_date, "%Y-%m-%d") - timedelta(
+        days=lookback_days
+    )
+    cutoff_date = cutoff_dt.strftime("%Y-%m-%d")
+
+    rows = (
+        session.query(EditorialJournalRow)
+        .filter(
+            EditorialJournalRow.persona_id.in_([persona_id, "_pipeline"]),
+            EditorialJournalRow.entry_date > cutoff_date,
+            EditorialJournalRow.entry_date < current_date,
+        )
+        .order_by(EditorialJournalRow.entry_date.asc())
+        .all()
+    )
+
+    return [
+        JournalEntry(
+            persona_id=row.persona_id,
+            entry_date=row.entry_date,
+            entry_type=row.entry_type,
+            content=row.content,
+        )
+        for row in rows
+    ]
