@@ -103,7 +103,7 @@ class TestQueryOutputSchemas:
 
 class TestQueryGenerator:
     def _make_stub_gen(self, response: str) -> StubGenerationStrategy:
-        return StubGenerationStrategy(responses={"flash": response})
+        return StubGenerationStrategy(responses={"pro": response})
 
     def test_generates_queries_from_valid_response(self):
         response = json.dumps({
@@ -137,7 +137,7 @@ class TestQueryGenerator:
         assert result == {}
         assert call_count[0] == 3  # MAX_RETRIES
 
-    def test_uses_flash_model_tier(self):
+    def test_uses_pro_model_tier(self):
         response = json.dumps({
             "categories": [
                 {"category_id": "ai", "queries": ["test query"]},
@@ -145,7 +145,7 @@ class TestQueryGenerator:
         })
         gen = self._make_stub_gen(response)
         generate_queries("synopsis", ["ai"], gen)
-        assert gen.calls[0]["model_tier"] == "flash"
+        assert gen.calls[0]["model_tier"] == "pro"
 
 
 # --- Searcher tests ---
@@ -216,7 +216,7 @@ class TestRateLimitInScout:
                 {"category_id": "climate", "queries": ["q4", "q5"]},
             ]
         })
-        gen = StubGenerationStrategy(responses={"flash": query_response})
+        gen = StubGenerationStrategy(responses={"pro": query_response})
 
         call_count = [0]
 
@@ -415,7 +415,7 @@ class TestRunNewsScout:
                 },
             ]
         })
-        gen = StubGenerationStrategy(responses={"flash": query_response})
+        gen = StubGenerationStrategy(responses={"pro": query_response})
 
         search_results = [
             SearchResult(
@@ -457,7 +457,7 @@ class TestRunNewsScout:
         engine = create_engine(url)
         Base.metadata.create_all(bind=engine)
 
-        gen = StubGenerationStrategy(responses={"flash": "bad json"})
+        gen = StubGenerationStrategy(responses={"pro": "bad json"})
         searcher = StubSearcher()
 
         result = run_news_scout(
@@ -484,7 +484,7 @@ class TestRunNewsScout:
                 },
             ]
         })
-        gen = StubGenerationStrategy(responses={"flash": query_response})
+        gen = StubGenerationStrategy(responses={"pro": query_response})
 
         # Same URL returned by both queries
         search_results = [

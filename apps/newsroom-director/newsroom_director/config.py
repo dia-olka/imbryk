@@ -44,5 +44,6 @@ NEWS_SCOUT_ENABLED = os.getenv("NEWS_SCOUT_ENABLED", "true").lower() == "true"
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 TAVILY_RPM = int(os.getenv("TAVILY_RPM", "99"))  # max requests per minute
 TAVILY_MONTHLY_LIMIT = int(os.getenv("TAVILY_MONTHLY_LIMIT", "999"))  # max requests per calendar month
+TAVILY_MAX_RESULTS_PER_QUERY = int(os.getenv("TAVILY_MAX_RESULTS_PER_QUERY", "5"))  # Tavily max is 20
 NEWS_ITEM_BASE_WEIGHT = float(os.getenv("NEWS_ITEM_BASE_WEIGHT", "0.3"))
 NEWS_MUTATES_LEDGER = os.getenv("NEWS_MUTATES_LEDGER", "true").lower() == "true"

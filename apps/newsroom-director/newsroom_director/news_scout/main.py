@@ -16,6 +16,7 @@ from ..config import (
     DATABASE_URL,
     NEWS_SCOUT_ENABLED,
     TAVILY_API_KEY,
+    TAVILY_MAX_RESULTS_PER_QUERY,
     TAVILY_MONTHLY_LIMIT,
     TAVILY_RPM,
     VERTEX_AI_LOCATION,
@@ -108,7 +109,7 @@ def run_news_scout(
                     break
                 total_queries += 1
                 try:
-                    results = search.search(query_text, max_results=5)
+                    results = search.search(query_text, max_results=TAVILY_MAX_RESULTS_PER_QUERY)
                 except RateLimitExceeded:
                     logger.warning(
                         "Tavily monthly limit reached, stopping searches"

@@ -203,11 +203,8 @@ class TestNewsItemsIntegration:
         for p in captured_prompts:
             assert p.payment_amount == 0.3
 
-    def test_news_only_mutation_flag_true(self, db_url_news_only, monkeypatch):
-        """With NEWS_MUTATES_LEDGER=true, mutation runs even without user prompts."""
-        import newsroom_director.main as main_mod
-        monkeypatch.setattr(main_mod, "NEWS_MUTATES_LEDGER", True)
-
+    def test_news_only_always_mutates(self, db_url_news_only):
+        """Mutation always runs when articles are generated, even with news-only editions."""
         gen = StubGenerationStrategy()
         storage = StubEditionStorage()
         pipeline = StubDistillationPipeline()
@@ -221,16 +218,12 @@ class TestNewsItemsIntegration:
             edition_date="2026-03-12",
         )
 
-        # With stub gen, mutation is attempted (gen.calls includes "pro" tier call)
+        # Mutation always runs — expect pro calls for newspaper gen, curator, and mutation
         pro_calls = [c for c in gen.calls if c["model_tier"] == "pro"]
-        # At least curator + mutation
         assert len(pro_calls) >= 1
 
-    def test_news_only_mutation_flag_false(self, db_url_news_only, monkeypatch):
-        """With NEWS_MUTATES_LEDGER=false and no user prompts, mutation is skipped."""
-        import newsroom_director.main as main_mod
-        monkeypatch.setattr(main_mod, "NEWS_MUTATES_LEDGER", False)
-
+    def test_news_only_produces_edition_and_mutation(self, db_url_news_only):
+        """News-only edition is produced and mutation runs unconditionally."""
         gen = StubGenerationStrategy()
         storage = StubEditionStorage()
         pipeline = StubDistillationPipeline()
@@ -245,10 +238,6 @@ class TestNewsItemsIntegration:
         )
 
         assert result["edition_id"] is not None
-        # Mutation call should not happen — only newspaper gen + curator
-        # (no "pro" tier mutation call when flag is false and no user prompts)
-        # The stub gen returns canned responses; we check that mutation-related
-        # pro call is absent. Curator is also pro, so we just verify edition works.
 
     def test_validation_skips_news_items(self, db_url_mixed):
         """Coherence validation should not reject news items."""

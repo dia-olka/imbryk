@@ -1,6 +1,8 @@
 # Imbryk
 
-Imbryk ("the teapot") is an AI-powered newspaper generation platform. Users submit world-altering event prompts (paid via Stripe), and a daily batch job produces news articles written by 6 ideologically distinct AI newspaper personas, plus a Curator synthesis. Generated editions are published as free static HTML — no registration required.
+Imbryk ("the teapot") is an AI-powered newspaper generation platform. Every morning, a batch pipeline automatically gathers real-world news via web search and hands it to 6 ideologically distinct AI newspaper personas. Each persona writes a full edition — same world, same day, six completely different front pages — plus a Curator synthesis. Editions are published as free static HTML, no registration required.
+
+**Paid human prompts are optional steering, not the source of content.** Without any submissions the newspapers still publish, driven entirely by AI-sourced news. When a reader pays to submit a world-altering event, that prompt is folded into the day's content alongside the AI-gathered news, weighted by payment amount — pushing a story to a front-page feature rather than an in-brief mention.
 
 The 6 newspapers are audience archetypes inspired by the *Yes Minister* observation about who reads which paper: The Sovereign (establishment), The Aspirant (idealist), The Owner (financial), The Moralist (traditionalist), The Radical (anti-establishment), and The Hedonist (entertainment).
 
