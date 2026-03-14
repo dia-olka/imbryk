@@ -55,7 +55,6 @@ def run_news_scout(
     Returns:
         Summary dict with counts of queries executed and items stored.
     """
-    configure_logging()
     start_time = time.monotonic()
 
     db_url = database_url or DATABASE_URL

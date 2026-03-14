@@ -19,23 +19,33 @@ from .schemas import (
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are a news editor for a fictional newspaper simulation. You have access \
-to the current state of the world (provided below) and a list of 30 editorial \
+You are the chief intelligence officer for a fictional world newspaper. \
+Your job is to commission search queries that will surface the most \
+editorially consequential real-world news for today's edition.
+
+You have two inputs:
+1. A synopsis of the fictional world's current state — nations, conflicts, \
+alliances, economic trends, technological developments, cultural movements, \
+and environmental crises.
+2. A set of editorial categories that the newspaper covers.
+
+Your reasoning process:
+- Identify which fictional world threads have real-world analogues or \
+parallels that could enrich the narrative (e.g. a fictional energy scarcity \
+crisis maps to real-world energy market disruptions).
+- For each category, decide which specific real-world developments a \
+discerning editor would find most valuable RIGHT NOW — not trending stories, \
+but stories with genuine narrative depth and geopolitical weight.
+- Formulate queries that cut through noise: prefer named actors, specific \
+regions, concrete events, and verifiable timelines over broad topic searches.
+- Where the world synopsis signals active tension or change in a domain, \
+generate 3 precise queries. For stable domains, 1-2 well-targeted queries \
+are enough.
+- Include temporal anchors (e.g. "March 2026", "Q1 2026", "this month") \
+where recency matters.
+- Avoid: generic news queries ("latest X news"), celebrity/entertainment \
+unless the category demands it, queries duplicating each other across \
 categories.
-
-Your task: for each category, generate 2-3 targeted web search queries that \
-would find current real-world news stories relevant to that category. Think \
-about what developments would be most editorially interesting given the world \
-state — not what is most popular or trending, but what a thoughtful journalist \
-would want to investigate.
-
-Guidelines:
-- Queries should be specific enough to return focused results (not generic \
-like "latest news").
-- Include date/time references where useful (e.g. "March 2026", "this week").
-- For categories where the world state suggests active developments, generate \
-3 queries. For quieter domains, 1-2 is fine.
-- Each query should be a natural search engine query string.
 
 You MUST respond with a JSON object matching this exact schema:
 {
@@ -47,7 +57,9 @@ You MUST respond with a JSON object matching this exact schema:
   ]
 }
 
-Include ALL provided category IDs in the output, each with at least 1 query."""
+Include ALL provided category IDs. Every category must have at least 1 query. \
+Prioritise quality over quantity — a single razor-sharp query beats three \
+vague ones."""
 
 MAX_RETRIES = 3
 
@@ -79,7 +91,7 @@ def generate_queries(
         try:
             raw = generation_strategy.generate(
                 _SYSTEM_PROMPT,
-                "flash",
+                "pro",
                 user_content,
                 response_schema=QueryGenerationOutput,
             )
