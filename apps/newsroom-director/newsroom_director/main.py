@@ -57,17 +57,27 @@ if SENTRY_DSN:
         ],
     )
     logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
-from .config import NEWS_ITEM_BASE_WEIGHT
+from .config import (
+    ENABLE_EDITORIAL_JOURNAL,
+    ENABLE_READER_METRICS,
+    JOURNAL_LOOKBACK_DAYS,
+    NEWS_ITEM_BASE_WEIGHT,
+)
 from .db import (
+    ArticleMetric,
     NewsItemRecord,
     fetch_pending_news_items,
     fetch_unprocessed_prompts,
     get_engine,
     get_session_factory,
+    load_edition_metrics,
+    load_recent_journal,
     load_world_ledger,
     mark_news_items_processed,
     mark_prompts_processed,
     save_edition,
+    save_edition_metrics,
+    save_journal_entry,
     save_world_ledger,
 )
 from .distillation.pipeline import DistillationPipeline
@@ -79,6 +89,10 @@ from .image_gen import (
     generate_images_for_newspaper,
 )
 from .logging_config import configure_logging
+from .metrics import (
+    format_metrics_for_pipeline_observation,
+    format_metrics_for_reflection,
+)
 from .output_schemas import (
     CuratorOutput,
     NewspaperOutput,
@@ -88,6 +102,11 @@ from .output_schemas import (
 from .personas import (
     CURATOR_PERSONA,
     NEWSPAPER_PERSONAS,
+)
+from .reflection import (
+    format_journal_for_generation,
+    run_persona_reflection,
+    run_pipeline_observation,
 )
 from .storage import EditionStorage, StubEditionStorage
 from .taxonomy import route_prompt
@@ -262,6 +281,29 @@ def run_morning_press(
             },
         )
 
+        # Step 6b: Load editorial journal entries for generation prompts
+        journal_by_persona: dict[str, str] = {}
+        if ENABLE_EDITORIAL_JOURNAL:
+            for persona in NEWSPAPER_PERSONAS:
+                entries = load_recent_journal(
+                    session, persona.id,
+                    lookback_days=JOURNAL_LOOKBACK_DAYS,
+                    current_date=today_date,
+                )
+                journal_by_persona[persona.id] = format_journal_for_generation(
+                    entries, persona.id,
+                )
+            logger.info(
+                "Editorial journal loaded",
+                extra={
+                    "step": "journal_load",
+                    "personas_with_entries": sum(
+                        1 for v in journal_by_persona.values()
+                        if "No editorial journal" not in v
+                    ),
+                },
+            )
+
         # Step 7: For each newspaper, distill and generate.
         # Failures for individual newspapers are isolated — a single Gemini error
         # skips that paper but allows the remaining newspapers to proceed.
@@ -319,10 +361,22 @@ def run_morning_press(
                     },
                 )
 
-                # System instruction: persona identity + world context
+                # System instruction: persona identity + world context + journal
                 system_instruction = persona.system_prompt_template.replace(
                     "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
                 ).replace("{{CLUSTER_DIGESTS}}", "[See user content below]")
+
+                # Inject editorial journal if enabled; always replace the
+                # placeholder so it never leaks into the LLM prompt as a
+                # literal string when the feature is disabled.
+                journal_text = (
+                    journal_by_persona.get(persona.id, "")
+                    if ENABLE_EDITORIAL_JOURNAL
+                    else ""
+                )
+                system_instruction = system_instruction.replace(
+                    "{{EDITORIAL_JOURNAL}}", journal_text
+                )
 
                 # User content: cluster digests (may contain verbatim user prompts)
                 user_content = f"CLUSTER DIGESTS:\n{digests_text}\n\nGenerate today's edition."
@@ -414,6 +468,150 @@ def run_morning_press(
             except Exception:
                 logger.exception(
                     "Curator synthesis failed, skipping curator article"
+                )
+
+        # Step 8b: Fetch reader metrics for the previous edition (if enabled).
+        prev_metrics: list[ArticleMetric] = []
+        prev_newspaper_totals: dict[str, int] = {}
+        if articles and ENABLE_READER_METRICS:
+            try:
+                from datetime import timedelta as _td
+
+                # Always fetches the previous calendar day. If the pipeline
+                # is down for a day and two editions are generated
+                # back-to-back, the second run will attempt to fetch metrics
+                # for a date that may have no data yet — this will produce
+                # "0 views" feedback rather than last-edition data.
+                prev_date_dt = datetime.strptime(today_date, "%Y-%m-%d") - _td(days=1)
+                prev_date = prev_date_dt.strftime("%Y-%m-%d")
+
+                from .config import CF_ANALYTICS_API_TOKEN, CF_ANALYTICS_ZONE_ID
+                from .metrics import MetricsClient
+
+                if CF_ANALYTICS_ZONE_ID and CF_ANALYTICS_API_TOKEN:
+                    mclient = MetricsClient(CF_ANALYTICS_ZONE_ID, CF_ANALYTICS_API_TOKEN)
+                    prev_metrics = mclient.fetch_article_views(prev_date)
+
+                    # Try to enrich slug-based headlines from DB
+                    db_prev_metrics = load_edition_metrics(session, prev_date)
+                    if db_prev_metrics:
+                        from .metrics import enrich_metrics_with_headlines
+                        prev_metrics = enrich_metrics_with_headlines(
+                            prev_metrics, db_prev_metrics,
+                        )
+
+                    # Compute per-newspaper totals
+                    for m in prev_metrics:
+                        prev_newspaper_totals[m.newspaper_id] = (
+                            prev_newspaper_totals.get(m.newspaper_id, 0)
+                            + m.page_views
+                        )
+
+                    # Persist fetched metrics
+                    if prev_metrics:
+                        save_edition_metrics(session, prev_metrics, prev_date)
+
+                    logger.info(
+                        "Reader metrics fetched",
+                        extra={
+                            "step": "metrics",
+                            "prev_date": prev_date,
+                            "article_count": len(prev_metrics),
+                            "total_views": sum(prev_newspaper_totals.values()),
+                        },
+                    )
+            except Exception:
+                logger.warning(
+                    "Failed to fetch reader metrics, continuing without",
+                    exc_info=True,
+                )
+
+        # Step 8c: Editorial self-reflection — each persona critiques its output.
+        # Runs after curator so reflections can reference the curator's analysis.
+        if articles and ENABLE_EDITORIAL_JOURNAL:
+            try:
+                curator_text = ""
+                if "curator" in articles:
+                    import json as _json
+                    try:
+                        curator_text = _json.loads(articles["curator"]).get("text", "")
+                    except (ValueError, TypeError, AttributeError):
+                        curator_text = articles.get("curator", "")
+
+                all_articles_text_for_reflection = _format_all_articles(articles)
+
+                for persona in NEWSPAPER_PERSONAS:
+                    if persona.id not in articles:
+                        continue
+
+                    persona_entries = load_recent_journal(
+                        session, persona.id,
+                        lookback_days=JOURNAL_LOOKBACK_DAYS,
+                        current_date=today_date,
+                    )
+
+                    # Build metrics text for this persona
+                    persona_metrics_text = ""
+                    if prev_metrics:
+                        persona_metrics_text = format_metrics_for_reflection(
+                            prev_metrics, persona.id, prev_newspaper_totals,
+                        )
+
+                    reflection = run_persona_reflection(
+                        persona=persona,
+                        edition_date=today_date,
+                        persona_articles_json=articles[persona.id],
+                        curator_text=curator_text,
+                        previous_entries=persona_entries,
+                        generation_strategy=gen,
+                        metrics_text=persona_metrics_text,
+                    )
+                    if reflection:
+                        save_journal_entry(
+                            session, persona.id, today_date,
+                            "reflection", reflection,
+                        )
+                        logger.info(
+                            "Journal entry saved for %s", persona.id,
+                            extra={
+                                "step": "reflection",
+                                "persona_id": persona.id,
+                            },
+                        )
+
+                # Pipeline-level observation
+                pipeline_entries = load_recent_journal(
+                    session, "_pipeline",
+                    lookback_days=JOURNAL_LOOKBACK_DAYS,
+                    current_date=today_date,
+                )
+
+                pipeline_metrics_text = ""
+                if prev_metrics:
+                    pipeline_metrics_text = format_metrics_for_pipeline_observation(
+                        prev_newspaper_totals, prev_metrics,
+                    )
+
+                observation = run_pipeline_observation(
+                    edition_date=today_date,
+                    all_articles_text=all_articles_text_for_reflection,
+                    previous_entries=pipeline_entries,
+                    generation_strategy=gen,
+                    metrics_text=pipeline_metrics_text,
+                )
+                if observation:
+                    save_journal_entry(
+                        session, "_pipeline", today_date,
+                        "observation", observation,
+                    )
+                    logger.info(
+                        "Pipeline observation saved",
+                        extra={"step": "reflection"},
+                    )
+
+            except Exception:
+                logger.exception(
+                    "Editorial reflection step failed, continuing without journal updates"
                 )
 
         # Step 9: WorldLedger mutation via LLM
