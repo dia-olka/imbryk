@@ -29,6 +29,7 @@ from ..db import (
 )
 from ..generation import GenerationStrategy, StubGenerationStrategy, VertexAIStrategy
 from ..logging_config import configure_logging
+from ..personas import NEWSPAPER_PERSONAS
 from ..taxonomy import CATEGORY_IDS
 from ..world_ledger import INITIAL_WORLD_LEDGER, serialize_ledger_to_synopsis
 from ..world_ledger.serialise_dict import ledger_from_dict
@@ -87,7 +88,7 @@ def run_news_scout(
             "Generating search queries",
             extra={"step": "news_scout_generate", "category_count": len(CATEGORY_IDS)},
         )
-        queries_by_category = generate_queries(synopsis, CATEGORY_IDS, gen)
+        queries_by_category = generate_queries(synopsis, CATEGORY_IDS, gen, NEWSPAPER_PERSONAS)
 
         if not queries_by_category:
             logger.warning("No queries generated, exiting News Scout")
