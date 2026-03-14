@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ingestion_api.database import Base
@@ -105,6 +105,9 @@ class Edition(Base):
 
 class NewsItem(Base):
     __tablename__ = "news_items"
+    __table_args__ = (
+        UniqueConstraint("source_url", "edition_date", name="uq_news_items_url_date"),
+    )
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=_new_uuid

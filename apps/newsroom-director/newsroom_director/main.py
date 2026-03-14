@@ -57,7 +57,7 @@ if SENTRY_DSN:
         ],
     )
     logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
-from .config import NEWS_ITEM_BASE_WEIGHT, NEWS_MUTATES_LEDGER
+from .config import NEWS_ITEM_BASE_WEIGHT
 from .db import (
     NewsItemRecord,
     fetch_pending_news_items,
@@ -226,11 +226,11 @@ def run_morning_press(
                 extra={"surviving_prompts": len(prompt_records)},
             )
 
-        has_user_prompts = len(prompt_records) > 0
-
+        # Only reachable here when coherence validation rejected all prompts;
+        # the pre-validation check already handled the case with no prompts at all.
         if not prompt_records and not news_items:
             logger.info(
-                "All prompts rejected and no news items, skipping edition"
+                "All prompts rejected by coherence validation and no news items, skipping edition"
             )
             _run_backfill()
             return {
@@ -417,10 +417,9 @@ def run_morning_press(
                 )
 
         # Step 9: WorldLedger mutation via LLM
-        # Controlled by NEWS_MUTATES_LEDGER: when False, mutation only
-        # runs if at least one user prompt was processed in this edition.
-        should_mutate = articles and (has_user_prompts or NEWS_MUTATES_LEDGER)
-        if should_mutate:
+        # Always run when articles were generated — world news drives world state
+        # regardless of whether any user prompts were processed in this edition.
+        if articles:
             try:
                 mutation_system, mutation_content = _build_mutation_prompt(synopsis, articles)
                 mutation_response = gen.generate(mutation_system, "pro", mutation_content)
@@ -432,11 +431,6 @@ def run_morning_press(
                 logger.exception(
                     "WorldLedger mutation failed, skipping world state update"
                 )
-        elif articles and not has_user_prompts:
-            logger.info(
-                "Skipping WorldLedger mutation — no user prompts and "
-                "NEWS_MUTATES_LEDGER=false"
-            )
 
         # Step 9b: Image generation — parse article JSON, generate images,
         # embed image URLs back into the content.

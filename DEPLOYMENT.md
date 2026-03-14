@@ -466,7 +466,7 @@ Go to **Secret Manager** in Google Cloud Console and create three secrets:
 | `r2-access-key-id`     | The Access Key ID from Step 3.3     |
 | `r2-secret-access-key` | The Secret Access Key from Step 3.3 |
 
-### 3.5a Store Tavily API Key in Google Cloud
+### 3.4a Store Tavily API Key in Google Cloud
 
 The News Scout uses [Tavily](https://tavily.com/) to search for real-world news. Store the API key in Secret Manager:
 
@@ -995,7 +995,7 @@ These are all the configuration values used by the backend services. Most are st
 | `MAX_BACKFILL_IMAGES_PER_RUN` | Env var | `20`                         | Max images to generate during the end-of-run backfill step for previously failed image generations                |
 | `NEWS_SCOUT_ENABLED`          | Env var | `true`                       | Set to `false` to disable the News Scout (no real-world news gap filling)                                         |
 | `TAVILY_RPM`                  | Env var | `99`                         | Maximum Tavily API requests per minute                                                                            |
-| `TAVILY_MONTHLY_LIMIT`        | Env var | `999`                        | Maximum Tavily API requests per month (cost safety net)                                                           |
+| `TAVILY_MONTHLY_LIMIT`        | Env var | `999`                        | Maximum Tavily API requests per month. **Production note:** the counter is stored in `/tmp` and resets on each Cloud Run container start, so this does not enforce a hard monthly cap in production. Use Tavily's own dashboard alerts for billing protection.                                                           |
 | `NEWS_ITEM_BASE_WEIGHT`       | Env var | `0.3`                        | Priority weight for news items in distillation (user prompts are 0.5–1.0+)                                       |
 | `NEWS_MUTATES_LEDGER`         | Env var | `true`                       | Whether news-only editions update the WorldLedger (set `true` at launch so the world evolves even with no users) |
 | `LOG_LEVEL`                   | Env var | `INFO`                       | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                               |
