@@ -83,7 +83,6 @@ class BlueskyChannel(ChannelStrategy):
 
                 response = client.send_post(text=text, reply_to=reply_to)
                 post_uri = response.uri
-                post_cid = response.cid
 
                 rkey = post_uri.rsplit("/", 1)[-1] if post_uri else ""
                 post_url = f"https://bsky.app/profile/{self._handle}/post/{rkey}"
