@@ -17,6 +17,7 @@ from ..config import (
     CF_ANALYTICS_API_TOKEN,
     CF_ANALYTICS_ZONE_ID,
     DATABASE_URL,
+    GAZETTE_FALLBACK_URL,
     MARKETING_ENABLED,
     R2_PUBLIC_URL,
     VERTEX_AI_LOCATION,
@@ -69,7 +70,7 @@ def run_marketing_agent(
     today = edition_date or EDITION_DATE or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     yesterday = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    gazette_url = R2_PUBLIC_URL.rstrip("/") if R2_PUBLIC_URL else "https://gazette.imbryk.news"
+    gazette_url = R2_PUBLIC_URL.rstrip("/") if R2_PUBLIC_URL else GAZETTE_FALLBACK_URL
 
     engine = get_engine(db_url)
     session_factory = get_session_factory(engine)
@@ -98,6 +99,18 @@ def run_marketing_agent(
 
         # Load past marketing posts for context
         past_posts = load_recent_marketing_posts(session, lookback_days=7, current_date=today)
+
+        # Idempotency: skip if posts for today's edition already exist.
+        # Prevents duplicate publishing if the Cloud Run job is retried.
+        today_posts = [p for p in past_posts if p.edition_date == today]
+        if today_posts:
+            logger.info(
+                "Posts already published for edition %s (%d posts), skipping to prevent duplicates",
+                today,
+                len(today_posts),
+            )
+            return {"edition_date": today, "posts_created": 0, "reason": "already_posted"}
+
         if past_posts:
             posts_text = "\n".join(
                 f"  [{p.edition_date}] {p.channel}/{p.post_type}: {p.content[:100]}... "

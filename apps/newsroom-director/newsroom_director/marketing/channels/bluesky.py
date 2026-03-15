@@ -112,7 +112,10 @@ class BlueskyChannel(ChannelStrategy):
                 exc,
                 exc_info=True,
             )
-            # Mark remaining posts as failed
+            # The AT Protocol has no concept of transactions: posts 0..N-1 are
+            # already live on Bluesky and cannot be rolled back. We mark the
+            # remaining posts as failed so the DB accurately reflects what was
+            # actually published.
             for _ in range(len(texts) - len(results)):
                 results.append(PostResult(success=False, error=str(exc)))
 

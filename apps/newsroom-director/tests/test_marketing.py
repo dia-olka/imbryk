@@ -421,6 +421,35 @@ class TestRunMarketingAgent:
         assert result["posts_created"] == 0
         assert len(ch.posts) == 0
 
+    def test_idempotency_skips_if_already_posted(self, db_url_with_edition):
+        plan_json = json.dumps({
+            "reasoning": "First run",
+            "posts": [
+                {"channel": "stub", "post_type": "edition_teaser", "text": "Today's edition"},
+            ],
+        })
+        gen = StubGenerationStrategy(responses={"flash": plan_json})
+        ch = StubChannel()
+
+        # First run: should publish
+        result1 = run_marketing_agent(
+            database_url=db_url_with_edition,
+            generation_strategy=gen,
+            channel=ch,
+            edition_date="2026-03-15",
+        )
+        assert result1["posts_created"] == 1
+
+        # Second run (simulating a job retry): should be skipped
+        result2 = run_marketing_agent(
+            database_url=db_url_with_edition,
+            generation_strategy=StubGenerationStrategy(responses={"flash": plan_json}),
+            channel=StubChannel(),
+            edition_date="2026-03-15",
+        )
+        assert result2["posts_created"] == 0
+        assert result2["reason"] == "already_posted"
+
     def test_failed_post_still_saved(self, db_url_with_edition):
         plan_json = json.dumps({
             "reasoning": "Will fail",
@@ -439,3 +468,20 @@ class TestRunMarketingAgent:
         )
 
         assert result["posts_created"] == 0
+
+        # Verify the failed post was persisted to the DB with status=failed.
+        # Open a fresh session to avoid reading from the same transaction.
+        from sqlalchemy import create_engine as _ce
+        from sqlalchemy.orm import sessionmaker as _sm
+        verify_engine = _ce(db_url_with_edition)
+        VerifySession = _sm(bind=verify_engine)
+        verify_session = VerifySession()
+        try:
+            saved = load_recent_marketing_posts(
+                verify_session, lookback_days=1, current_date="2026-03-15",
+            )
+            assert len(saved) == 1
+            assert saved[0].status == "failed"
+            assert saved[0].post_type == "teaser"
+        finally:
+            verify_session.close()
