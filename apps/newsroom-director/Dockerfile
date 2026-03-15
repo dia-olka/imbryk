@@ -25,4 +25,4 @@ COPY newsroom_director/ newsroom_director/
 ENV HF_HOME=/app/.hf_cache
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
-CMD ["python", "-m", "newsroom_director.main"]
+CMD ["python", "-m", "newsroom_director"]

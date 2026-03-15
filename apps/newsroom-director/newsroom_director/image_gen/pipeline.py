@@ -63,22 +63,36 @@ def generate_images_for_newspaper(
 
     # Generate article images
     for idx, article in candidates:
+        headline = article.get("headline", "<no headline>")
         image_prompt = sanitize_prompt_text(article["imagePrompt"])
         logger.info(
-            "Generating article image",
+            "Generating article image for %s article %d: %s",
+            newspaper_id,
+            idx,
+            headline,
             extra={
                 "newspaper_id": newspaper_id,
                 "article_index": idx,
-                "prompt": image_prompt[:80],
+                "headline": headline,
+                "prompt": image_prompt,
             },
         )
 
         image_bytes = imagen_client.generate(image_prompt)
         if image_bytes is None:
             logger.warning(
-                "Image generation failed for article %d of %s, skipping",
-                idx,
+                "Image generation returned None for %s article %d (%s) "
+                "| prompt: %s",
                 newspaper_id,
+                idx,
+                headline,
+                image_prompt,
+                extra={
+                    "newspaper_id": newspaper_id,
+                    "article_index": idx,
+                    "headline": headline,
+                    "prompt": image_prompt,
+                },
             )
             continue
 
@@ -89,31 +103,39 @@ def generate_images_for_newspaper(
         article_image_urls[idx] = url
 
         logger.info(
-            "Article image uploaded",
+            "Article image uploaded: %s article %d -> %s",
+            newspaper_id,
+            idx,
+            url,
             extra={
                 "newspaper_id": newspaper_id,
                 "article_index": idx,
+                "headline": headline,
                 "url": url,
             },
         )
 
     # Generate hero image
     if front_page_image_prompt:
+        sanitized_hero_prompt = sanitize_prompt_text(front_page_image_prompt)
         logger.info(
-            "Generating hero image",
+            "Generating hero image for %s",
+            newspaper_id,
             extra={
                 "newspaper_id": newspaper_id,
-                "prompt": front_page_image_prompt[:80],
+                "prompt": sanitized_hero_prompt,
             },
         )
 
-        hero_bytes = imagen_client.generate(sanitize_prompt_text(front_page_image_prompt))
+        hero_bytes = imagen_client.generate(sanitized_hero_prompt)
         if hero_bytes is not None:
             hero_image_url = storage.write_image(
                 edition_id, newspaper_id, "hero.png", hero_bytes
             )
             logger.info(
-                "Hero image uploaded",
+                "Hero image uploaded: %s -> %s",
+                newspaper_id,
+                hero_image_url,
                 extra={
                     "newspaper_id": newspaper_id,
                     "url": hero_image_url,
@@ -121,8 +143,13 @@ def generate_images_for_newspaper(
             )
         else:
             logger.warning(
-                "Hero image generation failed for %s, skipping",
+                "Hero image generation returned None for %s | prompt: %s",
                 newspaper_id,
+                sanitized_hero_prompt,
+                extra={
+                    "newspaper_id": newspaper_id,
+                    "prompt": sanitized_hero_prompt,
+                },
             )
 
     return ImageResult(

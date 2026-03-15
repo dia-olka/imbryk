@@ -29,39 +29,19 @@ import time
 from collections import defaultdict
 from datetime import datetime, timezone
 
-import sentry_sdk
 from sentry_sdk.crons import monitor
-from sentry_sdk.integrations.logging import LoggingIntegration
 
 from .config import (
     CF_DEPLOY_HOOK_URL,
     DATABASE_URL,
-    IMAGE_GENERATION_LOCATION,
-    LOG_LEVEL_INT,
-    R2_ACCOUNT_ID,
-    SENTRY_DSN,
-    VERTEX_AI_LOCATION,
-    VERTEX_AI_PROJECT,
-)
-
-if SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=1.0,  # Capture 100% of transactions for performance monitoring
-        send_default_pii=False,
-        integrations=[
-            LoggingIntegration(
-                level=LOG_LEVEL_INT,  # Capture logs at configured level or higher
-                event_level=logging.ERROR,  # Send only ERROR logs as Sentry events
-            ),
-        ],
-    )
-    logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
-from .config import (
     ENABLE_EDITORIAL_JOURNAL,
     ENABLE_READER_METRICS,
+    IMAGE_GENERATION_LOCATION,
     JOURNAL_LOOKBACK_DAYS,
     NEWS_ITEM_BASE_WEIGHT,
+    R2_ACCOUNT_ID,
+    VERTEX_AI_LOCATION,
+    VERTEX_AI_PROJECT,
 )
 from .db import (
     ArticleMetric,
@@ -406,17 +386,32 @@ def run_morning_press(
                         article = candidate
                         break
                     logger.warning(
-                        "Invalid newspaper output for %s (attempt %d/3), retrying",
-                        persona.id, attempt,
-                        extra={"step": "generate_retry", "newspaper_id": persona.id},
+                        "Invalid newspaper output for %s (attempt %d/3), "
+                        "retrying | model_tier=%s | response_length=%d | "
+                        "preview: %.300s",
+                        persona.id, attempt, persona.model_tier,
+                        len(candidate) if candidate else 0,
+                        candidate[:300] if candidate else "<empty>",
+                        extra={
+                            "step": "generate_retry",
+                            "newspaper_id": persona.id,
+                            "model_tier": persona.model_tier,
+                            "response_length": len(candidate) if candidate else 0,
+                        },
                     )
                 gen_ms = int((time.monotonic() - gen_start) * 1000)
 
                 if article is None:
                     logger.error(
-                        "All 3 attempts produced invalid output for %s, skipping",
-                        persona.id,
-                        extra={"step": "generate_failed", "newspaper_id": persona.id},
+                        "All 3 attempts produced invalid output for %s, "
+                        "skipping | model_tier=%s | last response preview: %.500s",
+                        persona.id, persona.model_tier,
+                        candidate[:500] if candidate else "<empty>",
+                        extra={
+                            "step": "generate_failed",
+                            "newspaper_id": persona.id,
+                            "model_tier": persona.model_tier,
+                        },
                     )
                 else:
                     logger.info(
@@ -454,13 +449,22 @@ def run_morning_press(
                         curator_article = candidate
                         break
                     logger.warning(
-                        "Invalid curator output (attempt %d/3), retrying",
-                        attempt,
-                        extra={"step": "curator_retry"},
+                        "Invalid curator output (attempt %d/3), retrying "
+                        "| model_tier=%s | response_length=%d | preview: %.300s",
+                        attempt, CURATOR_PERSONA.model_tier,
+                        len(candidate) if candidate else 0,
+                        candidate[:300] if candidate else "<empty>",
+                        extra={
+                            "step": "curator_retry",
+                            "model_tier": CURATOR_PERSONA.model_tier,
+                            "response_length": len(candidate) if candidate else 0,
+                        },
                     )
                 if curator_article is None:
                     logger.error(
-                        "All 3 attempts produced invalid curator output, skipping",
+                        "All 3 attempts produced invalid curator output, "
+                        "skipping | last response preview: %.500s",
+                        candidate[:500] if candidate else "<empty>",
                         extra={"step": "curator_failed"},
                     )
                 else:
@@ -674,9 +678,12 @@ def run_morning_press(
                 articles[newspaper_id] = json.dumps(parsed, ensure_ascii=False)
             except Exception:
                 logger.exception(
-                    "Image generation failed for newspaper %s, "
+                    "Image generation failed for newspaper %s "
+                    "| article_count=%d | front_page_prompt=%s, "
                     "continuing without images",
                     newspaper_id,
+                    len(article_list),
+                    front_page_prompt[:80] if front_page_prompt else None,
                 )
 
         logger.info(
@@ -974,7 +981,9 @@ def _parse_mutation(response: str) -> LedgerMutation | None:
         return _dict_to_mutation(data)
     except (json.JSONDecodeError, KeyError, TypeError):
         logger.warning(
-            "Failed to parse WorldLedger mutation from LLM response"
+            "Failed to parse WorldLedger mutation from LLM response: %.500s",
+            text,
+            exc_info=True,
         )
         return None
 

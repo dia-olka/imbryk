@@ -39,21 +39,49 @@ class JSONFormatter(logging.Formatter):
 
 
 def configure_logging(level: int | None = None) -> None:
-    """Set up JSON-formatted structured logging.
-    
+    """Set up JSON-formatted structured logging and Sentry integration.
+
+    Initialises Sentry when ``SENTRY_DSN`` is set.  Safe to call from both
+    the Morning Press and News Scout entry points — ``sentry_sdk.init`` is
+    idempotent so duplicate calls are harmless.
+
     Args:
         level: Logging level (defaults to LOG_LEVEL_INT from config, or INFO if not specified).
     """
     if level is None:
         from .config import LOG_LEVEL_INT
         level = LOG_LEVEL_INT
-    
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(JSONFormatter())
 
+    # --- Sentry ----------------------------------------------------------
+    from .config import SENTRY_DSN
+
+    if SENTRY_DSN:
+        import sentry_sdk
+        from sentry_sdk.integrations.logging import LoggingIntegration
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            traces_sample_rate=1.0,
+            send_default_pii=False,
+            integrations=[
+                LoggingIntegration(
+                    level=level,  # Capture logs at configured level as breadcrumbs
+                    event_level=logging.WARNING,  # Send WARNING+ as Sentry events
+                ),
+            ],
+        )
+        logging.captureWarnings(True)  # Route warnings.warn() through logging
+
+    # --- Structured JSON logging -----------------------------------------
     root = logging.getLogger("newsroom_director")
     root.setLevel(level)
-    root.addHandler(handler)
+
+    # Guard against duplicate handlers when called more than once
+    # (e.g. __main__.py + cli_main both call configure_logging).
+    if not root.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(JSONFormatter())
+        root.addHandler(handler)
     # Keep propagate=True (the default) so Sentry's LoggingIntegration,
     # which attaches to the Python root logger, receives all newsroom_director
     # records. The JSONFormatter handler above still emits structured JSON to

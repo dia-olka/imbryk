@@ -77,13 +77,28 @@ class ImagenClient(ImageGenerationStrategy):
                         person_generation="ALLOW_ALL",
                     ),
                 )
-                return response.generated_images[0].image.image_bytes
+                if not response.generated_images:
+                    logger.warning(
+                        "Imagen returned 0 images (safety filter / content "
+                        "policy?) for prompt: %s | model=%s",
+                        prompt,
+                        self._model,
+                    )
+                    return None
+                image_bytes = response.generated_images[0].image.image_bytes
+                logger.debug(
+                    "Imagen returned %d bytes for prompt: %.80s",
+                    len(image_bytes),
+                    prompt,
+                )
+                return image_bytes
 
             return with_retry(_call)
         except Exception:
             logger.warning(
-                "Image generation failed for prompt: %.80s",
+                "Imagen API error for prompt: %s | model=%s",
                 prompt,
+                self._model,
                 exc_info=True,
             )
             return None

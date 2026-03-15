@@ -68,13 +68,20 @@ def _backfill_newspaper(
             )
             break
 
+        headline = article.get("headline", "<no headline>")
         prompt = sanitize_prompt_text(article["imagePrompt"])
         logger.info(
-            "Backfilling article image",
+            "Backfilling article image for %s/%s article %d: %s",
+            edition_date,
+            newspaper_id,
+            idx,
+            headline,
             extra={
+                "edition_date": edition_date,
                 "newspaper_id": newspaper_id,
                 "article_index": idx,
-                "prompt": prompt[:80],
+                "headline": headline,
+                "prompt": prompt,
             },
         )
 
@@ -83,9 +90,20 @@ def _backfill_newspaper(
 
         if image_bytes is None:
             logger.warning(
-                "Backfill image generation failed for article %d of %s",
-                idx,
+                "Backfill image generation returned None for %s/%s "
+                "article %d (%s) | prompt: %s",
+                edition_date,
                 newspaper_id,
+                idx,
+                headline,
+                prompt,
+                extra={
+                    "edition_date": edition_date,
+                    "newspaper_id": newspaper_id,
+                    "article_index": idx,
+                    "headline": headline,
+                    "prompt": prompt,
+                },
             )
             failed += 1
             continue
@@ -96,8 +114,18 @@ def _backfill_newspaper(
         article["image_url"] = url
         generated += 1
         logger.info(
-            "Backfill image uploaded",
-            extra={"newspaper_id": newspaper_id, "article_index": idx, "url": url},
+            "Backfill image uploaded: %s/%s article %d -> %s",
+            edition_date,
+            newspaper_id,
+            idx,
+            url,
+            extra={
+                "edition_date": edition_date,
+                "newspaper_id": newspaper_id,
+                "article_index": idx,
+                "headline": headline,
+                "url": url,
+            },
         )
 
     return generated, failed
