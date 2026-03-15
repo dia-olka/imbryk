@@ -349,27 +349,29 @@ An agentic marketing loop that reads each day's edition, plans a promotion strat
 
 ### Phase 14a: Foundation & Bluesky
 
-- [ ] Add `marketing_posts` table — Alembic migration (`id`, `edition_date`, `channel`, `post_type`, `content`, `post_url`, `post_id`, `status`, `created_at`)
-- [ ] Add SQLAlchemy model in `ingestion-api/models.py`, mirror in `newsroom-director/db.py`
-- [ ] Implement `marketing/main.py` — CLI entry point (`run_marketing_agent`): observe → plan → act → reflect
-- [ ] Implement `marketing/planner.py` — LLM strategy call (Gemini Flash): receives edition summary + marketing journal + referrer metrics, outputs structured `MarketingPlan`
-- [ ] Implement `marketing/channels/base.py` — abstract `ChannelStrategy` (post, fetch_engagement)
-- [ ] Implement `marketing/channels/bluesky.py` — AT Protocol client (`atproto` package): create post, create thread, fetch post engagement stats
-- [ ] Implement `marketing/referrers.py` — extend Cloudflare Analytics client to fetch referrer breakdown (bluesky.app, twitter.com, reddit.com, direct)
-- [ ] Reuse editorial journal table with `persona_id='_marketing'` for strategy reflections
-- [ ] Add `JOB_MODE=marketing` dispatch in `__main__.py`
-- [ ] Add `atproto` dependency to `pyproject.toml`
-- [ ] Add config: `MARKETING_ENABLED` (default: false), `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD`
-- [ ] Write tests — planner (structured output validation), Bluesky client (mock AT Protocol), referrer parsing, journal integration
-- [ ] Create Bluesky account (@imbryk.bsky.social)
+- [x] Add `marketing_posts` table — Alembic migration (`id`, `edition_date`, `channel`, `post_type`, `content`, `post_url`, `post_id`, `status`, `created_at`)
+- [x] Add SQLAlchemy model in `ingestion-api/models.py`, mirror in `newsroom-director/db.py`
+- [x] Implement `marketing/main.py` — CLI entry point (`run_marketing_agent`): observe → plan → act → reflect
+- [x] Implement `marketing/planner.py` — LLM strategy call (Gemini Flash): receives edition summary + marketing journal + referrer metrics, outputs structured `MarketingPlan`
+- [x] Implement `marketing/channels/base.py` — abstract `ChannelStrategy` (post, fetch_engagement)
+- [x] Implement `marketing/channels/bluesky.py` — AT Protocol client (`atproto` package): create post, create thread, fetch post engagement stats
+- [x] Implement `marketing/referrers.py` — extend Cloudflare Analytics client to fetch referrer breakdown (bluesky.app, twitter.com, reddit.com, direct)
+- [x] Reuse editorial journal table with `persona_id='_marketing'` for strategy reflections
+- [x] Add `JOB_MODE=marketing` dispatch in `__main__.py`
+- [x] Add `atproto` dependency to `pyproject.toml`
+- [x] Add config: `MARKETING_ENABLED` (default: false), `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD`
+- [x] Write tests — planner (structured output validation), Bluesky client (mock AT Protocol), referrer parsing, journal integration — 28 tests
 
 ### Phase 14b: Infrastructure & Deployment
 
-- [ ] Create `newsroom-director-marketing` Cloud Run Job (same image, `JOB_MODE=marketing`)
-- [ ] Create Cloud Scheduler trigger (~08:00 UTC, 2h after morning press)
-- [ ] Add `BLUESKY_HANDLE` + `BLUESKY_APP_PASSWORD` to GCP Secret Manager
-- [ ] Update `cd.yml` — add third Cloud Run Job update step for `newsroom-director-marketing`
-- [ ] Run Alembic migration on production PostgreSQL
+- [x] Create `newsroom-director-marketing` Cloud Run Job — via `scripts/create-marketing-job.sh`
+- [x] Create Cloud Scheduler trigger (08:00 UTC, 2h after morning press) — `marketing-agent`
+- [x] Add `BLUESKY_APP_PASSWORD` to GCP Secret Manager
+- [x] Update `cd.yml` — add third Cloud Run Job update step for `newsroom-director-marketing`
+- [x] Update `DEPLOYMENT.md` — marketing job creation (Step 5.3), scheduler (Step 6.4), env vars reference
+- [x] Set GitHub Actions vars: `MARKETING_ENABLED=true`, `BLUESKY_HANDLE=imbryk-gazette.bsky.social`
+- [x] Run Alembic migration 010 on production PostgreSQL
+- [ ] Create Bluesky account (@imbryk-gazette.bsky.social) and generate App Password
 
 ### Phase 14c: Twitter/X (when budget allows)
 

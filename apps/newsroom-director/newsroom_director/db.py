@@ -141,6 +141,20 @@ class NewsItemRow(Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
 
+class MarketingPostRow(Base):
+    __tablename__ = "marketing_posts"
+
+    id = Column(String(36), primary_key=True, default=_new_uuid)
+    edition_date = Column(String(10), nullable=False)
+    channel = Column(String(32), nullable=False)
+    post_type = Column(String(32), nullable=False)
+    content = Column(Text, nullable=False)
+    post_url = Column(Text, nullable=True)
+    post_id = Column(String(255), nullable=True)
+    status = Column(String(32), nullable=False, default="posted")
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
 # --- Data transfer objects ---
 
 
@@ -183,6 +197,19 @@ class ArticleMetric:
     article_slug: str
     headline: str
     page_views: int
+
+
+@dataclass
+class MarketingPost:
+    """A social media post created by the marketing agent."""
+
+    edition_date: str
+    channel: str
+    post_type: str
+    content: str
+    post_url: str | None = None
+    post_id: str | None = None
+    status: str = "posted"
 
 
 @dataclass
@@ -664,3 +691,91 @@ def load_edition_metrics(
         result.setdefault(row.newspaper_id, []).append(metric)
 
     return result
+
+
+# --- Marketing posts ---
+
+
+def save_marketing_post(
+    session: Session,
+    post: MarketingPost,
+) -> None:
+    """Save a marketing post record."""
+    row = MarketingPostRow(
+        id=_new_uuid(),
+        edition_date=post.edition_date,
+        channel=post.channel,
+        post_type=post.post_type,
+        content=post.content,
+        post_url=post.post_url,
+        post_id=post.post_id,
+        status=post.status,
+        created_at=_utcnow(),
+    )
+    session.add(row)
+
+
+def load_recent_marketing_posts(
+    session: Session,
+    lookback_days: int = 7,
+    current_date: str = "",
+) -> list[MarketingPost]:
+    """Load marketing posts from the last N days."""
+    if not current_date:
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    cutoff_dt = datetime.strptime(current_date, "%Y-%m-%d") - timedelta(
+        days=lookback_days
+    )
+    cutoff_date = cutoff_dt.strftime("%Y-%m-%d")
+
+    rows = (
+        session.query(MarketingPostRow)
+        .filter(
+            MarketingPostRow.edition_date > cutoff_date,
+            MarketingPostRow.edition_date <= current_date,
+        )
+        .order_by(MarketingPostRow.created_at.desc())
+        .all()
+    )
+
+    return [
+        MarketingPost(
+            edition_date=row.edition_date,
+            channel=row.channel,
+            post_type=row.post_type,
+            content=row.content,
+            post_url=row.post_url,
+            post_id=row.post_id,
+            status=row.status,
+        )
+        for row in rows
+    ]
+
+
+# --- Edition loading (used by marketing agent) ---
+
+
+def load_edition_by_date(
+    session: Session,
+    edition_date: str,
+) -> dict[str, str] | None:
+    """Load edition articles for a given date.
+
+    Returns dict of {newspaper_id: content_json} or None if not found.
+    """
+    edition_row = (
+        session.query(EditionRow)
+        .filter(EditionRow.date == edition_date)
+        .first()
+    )
+    if edition_row is None:
+        return None
+
+    article_rows = (
+        session.query(EditionArticleRow)
+        .filter(EditionArticleRow.edition_id == edition_row.id)
+        .all()
+    )
+
+    return {row.newspaper_id: row.content_json for row in article_rows}

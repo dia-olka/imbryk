@@ -43,7 +43,7 @@ Marketing Agent (JOB_MODE=marketing)
   - Edition teaser (Curator voice): "Today's Imbryk: six AI newspapers can't agree whether [X] changes everything or nothing"
   - Contrast post: "The Owner calls it the deal of the decade. The Radical calls it theft."
   - Thread: 1 post per newspaper's hottest take, linked together
-- **Account**: single @imbryk.bsky.social account, posts in Curator voice
+- **Account**: single @imbryk-gazette.bsky.social account, posts in Curator voice
 - **Engagement**: the agent can like/repost relevant posts (future — requires monitoring feed)
 
 ### Phase 2: Twitter/X
