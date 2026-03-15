@@ -766,6 +766,7 @@ gcloud run jobs create newsroom-director \
   --set-secrets=R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest \
   --set-secrets=CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest \
   --set-secrets=TAVILY_API_KEY=tavily-api-key:latest \
+  --set-env-vars=JOB_MODE=morning-press \
   --set-env-vars=VERTEX_AI_PROJECT=$PROJECT_ID \
   --set-env-vars=VERTEX_AI_LOCATION=global \
   --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
@@ -789,9 +790,34 @@ gcloud run jobs create newsroom-director \
   --max-retries=1
 ```
 
+Then create the **News Scout** job (same image, different `JOB_MODE`):
+
+```sh
+gcloud run jobs create newsroom-director-scout \
+  --image=$REPO/newsroom-director:latest \
+  --region=us-central1 \
+  --service-account=$SA \
+  --set-cloudsql-instances="${PROJECT_ID}:us-central1:imbryk-db" \
+  --set-secrets=DATABASE_URL=database-url:latest \
+  --set-secrets=TAVILY_API_KEY=tavily-api-key:latest \
+  --set-env-vars=JOB_MODE=news-scout \
+  --set-env-vars=VERTEX_AI_PROJECT=$PROJECT_ID \
+  --set-env-vars=VERTEX_AI_LOCATION=global \
+  --set-env-vars=NEWS_SCOUT_ENABLED=true \
+  --set-env-vars=TAVILY_RPM=99 \
+  --set-env-vars=TAVILY_MONTHLY_LIMIT=999 \
+  --set-env-vars=SENTRY_DSN="" \
+  --memory=4Gi \
+  --cpu=2 \
+  --task-timeout=30m \
+  --max-retries=1
+```
+
+> **Two jobs, one image.** Both Cloud Run Jobs use the same Docker image. The `JOB_MODE` env var selects the entry point via `newsroom_director/__main__.py`: `morning-press` (default) runs the full newspaper generation pipeline, `news-scout` runs the Tavily collection pre-batch job.
+
 > **Why 4 GB memory?** The newsroom director loads an AI text-processing model into memory. This needs more memory than the API.
 
-> **Subsequent updates are automatic.** After setting up the CD workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions)), pushing changes to `main` will automatically build a new image and update this Cloud Run job.
+> **Subsequent updates are automatic.** After setting up the CD workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions)), pushing changes to `main` will automatically build a new image and update both Cloud Run jobs.
 
 ---
 
@@ -826,16 +852,15 @@ This means: "every day at 6:00 AM UTC, start the newsroom director morning press
 
 ### 6.3 Create the News Scout Schedule
 
-The News Scout runs ~3 hours before the morning press to fill editorial gaps with real-world news:
+The News Scout runs ~3 hours before the morning press to fill editorial gaps with real-world news. It targets the **separate** `newsroom-director-scout` Cloud Run Job:
 
 ```sh
 gcloud scheduler jobs create http news-scout \
   --location=us-central1 \
   --schedule="0 3 * * *" \
   --time-zone="UTC" \
-  --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/newsroom-director:run" \
+  --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/newsroom-director-scout:run" \
   --http-method=POST \
-  --headers="X-Entry-Point=news-scout" \
   --oauth-service-account-email=$SA
 ```
 

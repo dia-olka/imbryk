@@ -2,6 +2,7 @@
 
 - **ARCHITECTURE.md** — full system design, data flow, project descriptions, infrastructure, and key design decisions. Read this first to understand how Imbryk works.
 - **PLAN.md** — phased production release plan with task checklists and open questions. Check this for current progress and next steps.
+- **MARKETING.md** — autonomous marketing agent design: agentic loop, channel strategy (Bluesky → Twitter → Reddit), data model, and implementation plan.
 
 # Local Development
 
