@@ -252,6 +252,7 @@ jobs:
           ENABLE_READER_METRICS=${{ vars.ENABLE_READER_METRICS || 'false' }} \
             --update-secrets=\
           BLUESKY_APP_PASSWORD=bluesky-app-password:latest,\
+          DATABASE_URL=database-url:latest,\
           CF_ANALYTICS_ZONE_ID=cf-analytics-zone-id:latest,\
           CF_ANALYTICS_API_TOKEN=cf-analytics-api-token:latest
 
