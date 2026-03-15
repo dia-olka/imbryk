@@ -52,6 +52,11 @@ NEWS_MUTATES_LEDGER = os.getenv("NEWS_MUTATES_LEDGER", "true").lower() == "true"
 ENABLE_EDITORIAL_JOURNAL = os.getenv("ENABLE_EDITORIAL_JOURNAL", "true").lower() == "true"
 JOURNAL_LOOKBACK_DAYS = int(os.getenv("JOURNAL_LOOKBACK_DAYS", "7"))
 
+# Marketing Agent — autonomous social media promotion
+MARKETING_ENABLED = os.getenv("MARKETING_ENABLED", "false").lower() == "true"
+BLUESKY_HANDLE = os.getenv("BLUESKY_HANDLE", "")
+BLUESKY_APP_PASSWORD = os.getenv("BLUESKY_APP_PASSWORD", "")
+
 # Reader Metrics — Cloudflare Web Analytics feedback loop
 ENABLE_READER_METRICS = os.getenv("ENABLE_READER_METRICS", "false").lower() == "true"
 CF_ANALYTICS_ZONE_ID = os.getenv("CF_ANALYTICS_ZONE_ID", "")

@@ -36,6 +36,7 @@ dependencies = [
     "sentry-sdk>=2.0.0",
     "pg8000>=1.31.0",
     "tavily-python>=0.5.0",
+    "atproto>=0.0.55",
 ]
 
 [tool.hatch.build.targets.wheel]

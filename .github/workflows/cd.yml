@@ -236,3 +236,22 @@ jobs:
             --update-secrets=\
           TAVILY_API_KEY=tavily-api-key:latest
 
+      - name: Update Marketing Agent Cloud Run job
+        run: |
+          gcloud run jobs update newsroom-director-marketing \
+            --image=${{ env.IMAGE_REGISTRY }}/newsroom-director:${{ env.DEPLOY_SHA }} \
+            --region=${{ env.GCP_REGION }} \
+            --update-env-vars=\
+          JOB_MODE=marketing,\
+          SENTRY_DSN=${{ vars.SENTRY_DSN }},\
+          VERTEX_AI_PROJECT=${{ vars.GCP_PROJECT_ID }},\
+          VERTEX_AI_LOCATION=${{ env.VERTEX_AI_LOCATION }},\
+          R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }},\
+          MARKETING_ENABLED=${{ vars.MARKETING_ENABLED || 'true' }},\
+          BLUESKY_HANDLE=${{ vars.BLUESKY_HANDLE || 'imbryk-gazette.bsky.social' }},\
+          ENABLE_READER_METRICS=${{ vars.ENABLE_READER_METRICS || 'false' }} \
+            --update-secrets=\
+          BLUESKY_APP_PASSWORD=bluesky-app-password:latest,\
+          CF_ANALYTICS_ZONE_ID=cf-analytics-zone-id:latest,\
+          CF_ANALYTICS_API_TOKEN=cf-analytics-api-token:latest
+

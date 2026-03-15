@@ -184,6 +184,28 @@ class EditionMetric(Base):
     )
 
 
+class MarketingPost(Base):
+    __tablename__ = "marketing_posts"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid
+    )
+    edition_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    channel: Mapped[str] = mapped_column(String(32), nullable=False)
+    post_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    post_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    post_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="posted"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
 class EditionArticle(Base):
     __tablename__ = "edition_articles"
 

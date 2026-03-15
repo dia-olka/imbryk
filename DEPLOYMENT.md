@@ -813,7 +813,32 @@ gcloud run jobs create newsroom-director-scout \
   --max-retries=1
 ```
 
-> **Two jobs, one image.** Both Cloud Run Jobs use the same Docker image. The `JOB_MODE` env var selects the entry point via `newsroom_director/__main__.py`: `morning-press` (default) runs the full newspaper generation pipeline, `news-scout` runs the Tavily collection pre-batch job.
+Then create the **Marketing Agent** job (same image, `JOB_MODE=marketing`):
+
+```sh
+gcloud run jobs create newsroom-director-marketing \
+  --image=$REPO/newsroom-director:latest \
+  --region=us-central1 \
+  --service-account=$SA \
+  --set-cloudsql-instances="${PROJECT_ID}:us-central1:imbryk-db" \
+  --set-secrets=DATABASE_URL=database-url:latest \
+  --set-secrets=BLUESKY_APP_PASSWORD=bluesky-app-password:latest \
+  --set-secrets=CF_ANALYTICS_ZONE_ID=cf-analytics-zone-id:latest \
+  --set-secrets=CF_ANALYTICS_API_TOKEN=cf-analytics-api-token:latest \
+  --set-env-vars=JOB_MODE=marketing \
+  --set-env-vars=VERTEX_AI_PROJECT=$PROJECT_ID \
+  --set-env-vars=VERTEX_AI_LOCATION=global \
+  --set-env-vars=R2_PUBLIC_URL=https://editions.yourdomain.com \
+  --set-env-vars=MARKETING_ENABLED=true \
+  --set-env-vars=BLUESKY_HANDLE=imbryk-gazette.bsky.social \
+  --set-env-vars=SENTRY_DSN="" \
+  --memory=2Gi \
+  --cpu=1 \
+  --task-timeout=10m \
+  --max-retries=1
+```
+
+> **Three jobs, one image.** All Cloud Run Jobs use the same Docker image. The `JOB_MODE` env var selects the entry point via `newsroom_director/__main__.py`: `morning-press` (default) runs the full newspaper generation pipeline, `news-scout` runs the Tavily collection pre-batch job, and `marketing` runs the autonomous social media promotion agent.
 
 > **Why 4 GB memory?** The newsroom director loads an AI text-processing model into memory. This needs more memory than the API.
 
@@ -865,6 +890,22 @@ gcloud scheduler jobs create http news-scout \
 ```
 
 This runs at 03:00 UTC — three hours before the morning press — so the news items are ready in the database by the time the newspaper generation starts.
+
+### 6.4 Create the Marketing Agent Schedule
+
+The Marketing Agent runs ~2 hours after the morning press to promote the freshly published edition on social media:
+
+```sh
+gcloud scheduler jobs create http marketing-agent \
+  --location=us-central1 \
+  --schedule="0 8 * * *" \
+  --time-zone="UTC" \
+  --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/newsroom-director-marketing:run" \
+  --http-method=POST \
+  --oauth-service-account-email=$SA
+```
+
+This runs at 08:00 UTC — two hours after the morning press — so the edition is published and available before the marketing agent promotes it.
 
 > **Tip:** `0 6 * * *` is a "cron expression." The five parts mean: minute (0), hour (6), any day of month (_), any month (_), any day of week (_). If you want a different time, change the hour number. For example, `0 14 _ \* \*` would be 2:00 PM UTC.
 
@@ -1067,6 +1108,9 @@ These are all the configuration values used by the backend services. Most are st
 | `ENABLE_READER_METRICS`       | Env var | `false`                      | Enable Reader Metrics — fetch Cloudflare page-view data and feed into editorial reflections                       |
 | `CF_ANALYTICS_ZONE_ID`        | Secret  | —                            | Cloudflare Zone ID for the gazette domain (required when `ENABLE_READER_METRICS=true`; see Step 3.4b)            |
 | `CF_ANALYTICS_API_TOKEN`      | Secret  | —                            | Cloudflare API token with `Analytics:Read` permission (required when `ENABLE_READER_METRICS=true`; see Step 3.4b)|
+| `MARKETING_ENABLED`           | Env var | `false`                      | Enable the Marketing Agent — set to `true` on the `newsroom-director-marketing` job                              |
+| `BLUESKY_HANDLE`              | Env var | _(empty)_                    | Bluesky account handle (e.g. `imbryk-gazette.bsky.social`) for the marketing agent                                       |
+| `BLUESKY_APP_PASSWORD`        | Secret  | —                            | Bluesky App Password for the marketing agent (generate at bsky.app Settings > App Passwords)                     |
 | `LOG_LEVEL`                   | Env var | `INFO`                       | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                               |
 | `SENTRY_DSN`                  | Env var | _(empty)_                    | Sentry error tracking URL — leave empty to disable                                                                |
 

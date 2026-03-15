@@ -3,6 +3,7 @@
 JOB_MODE values:
   morning-press  (default) — run the daily newspaper generation pipeline
   news-scout               — run Tavily collection pre-batch job
+  marketing                — run the autonomous marketing agent
 """
 
 import os
@@ -20,8 +21,10 @@ if mode == "news-scout":
     from .news_scout.main import cli_main
 elif mode == "morning-press":
     from .main import cli_main
+elif mode == "marketing":
+    from .marketing.main import cli_main
 else:
-    print(f"Unknown JOB_MODE={mode!r}. Expected 'morning-press' or 'news-scout'.", file=sys.stderr)
+    print(f"Unknown JOB_MODE={mode!r}. Expected 'morning-press', 'news-scout', or 'marketing'.", file=sys.stderr)
     sys.exit(1)
 
 cli_main()
