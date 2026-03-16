@@ -70,5 +70,22 @@ export default async function () {
       });
     }
   }
+  // Compute prev/next edition dates per newspaper
+  // Group pages by newspaperId, sort by date, and link neighbours
+  const byNewspaper = {};
+  for (const page of pages) {
+    if (!byNewspaper[page.newspaperId]) byNewspaper[page.newspaperId] = [];
+    byNewspaper[page.newspaperId].push(page);
+  }
+
+  for (const group of Object.values(byNewspaper)) {
+    group.sort((a, b) => a.editionDate.localeCompare(b.editionDate));
+    for (let i = 0; i < group.length; i++) {
+      group[i].prevEditionDate = i > 0 ? group[i - 1].editionDate : null;
+      group[i].nextEditionDate =
+        i < group.length - 1 ? group[i + 1].editionDate : null;
+    }
+  }
+
   return pages;
 }

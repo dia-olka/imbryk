@@ -1,0 +1,44 @@
+{# Edition date navigation (prev/next)
+   Usage: {% include "edition-nav.njk" %}
+   Expects:
+     - editionNavPrev: previous edition date string or null
+     - editionNavNext: next edition date string or null
+     - editionNavNewspaperId: newspaper ID for building URLs
+     - editionNavNewspaperName: display name for the newspaper
+#}
+
+<nav class="edition-nav" aria-label="Edition date navigation">
+  <div class="edition-nav__inner">
+
+    <div class="edition-nav__prev">
+      {% if editionNavPrev %}
+        <a href="/edition/{{ editionNavPrev }}/{{ editionNavNewspaperId }}/"
+           class="edition-nav__link">
+          <span class="edition-nav__arrow" aria-hidden="true">←</span>
+          <span class="edition-nav__info">
+            <span class="edition-nav__label">Previous edition</span>
+            <span class="edition-nav__date">{{ editionNavPrev | dateDisplay }}</span>
+          </span>
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="edition-nav__center">
+      <a href="/archive/" class="edition-nav__all">All editions</a>
+    </div>
+
+    <div class="edition-nav__next">
+      {% if editionNavNext %}
+        <a href="/edition/{{ editionNavNext }}/{{ editionNavNewspaperId }}/"
+           class="edition-nav__link edition-nav__link--next">
+          <span class="edition-nav__info">
+            <span class="edition-nav__label">Next edition</span>
+            <span class="edition-nav__date">{{ editionNavNext | dateDisplay }}</span>
+          </span>
+          <span class="edition-nav__arrow" aria-hidden="true">→</span>
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+</nav>
