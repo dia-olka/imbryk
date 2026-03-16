@@ -8,7 +8,7 @@ Orchestrates the daily newspaper generation pipeline:
 5. Run coherence validation on prompts
 6. Run distillation pipeline per newspaper
 7. Generate articles via Gemini (per persona)
-8. Run Curator synthesis
+8. Run Curator synthe sis
 9. Apply WorldLedger mutation
 10. Save edition and mark prompts processed
 
