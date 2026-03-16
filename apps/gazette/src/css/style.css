@@ -1293,6 +1293,7 @@ main:has(.newspaper) {
 /* === Curator Synthesis === */
 .synthesis-section {
   margin-bottom: var(--space-xl);
+  max-width: var(--measure);
 }
 
 .synthesis-section h2 {
@@ -1412,6 +1413,7 @@ main:has(.newspaper) {
   aspect-ratio: 4 / 3;
   overflow: hidden;
   border: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border));
+  border-top: 5px solid var(--np-accent, var(--np-primary, var(--color-border)));
   border-radius: var(--radius);
   background: var(--np-secondary, var(--color-surface));
   color: var(--color-text);
@@ -1459,8 +1461,8 @@ main:has(.newspaper) {
   background:
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--np-primary, #000) 40%, rgba(0, 0, 0, 0.72)) 0%,
-      rgba(0, 0, 0, 0.35) 60%,
+      color-mix(in srgb, var(--np-primary, #000) 60%, rgba(0, 0, 0, 0.72)) 0%,
+      color-mix(in srgb, var(--np-primary, #000) 20%, rgba(0, 0, 0, 0.3)) 60%,
       transparent 100%
     );
   color: #fff;
@@ -1508,7 +1510,7 @@ main:has(.newspaper) {
   padding: var(--space-xl) var(--space-md) var(--space-md);
   background: linear-gradient(
     to top,
-    rgba(0, 0, 0, 0.78) 0%,
+    color-mix(in srgb, var(--np-primary, #000) 30%, rgba(0, 0, 0, 0.78)) 0%,
     rgba(0, 0, 0, 0.4) 55%,
     transparent 100%
   );
@@ -1522,6 +1524,10 @@ main:has(.newspaper) {
 .front-page-card:not(:has(.front-page-card__image)) .front-page-card__footer {
   background: transparent;
   color: var(--color-text);
+}
+
+.front-page-card:not(:has(.front-page-card__image)) .front-page-card__count {
+  color: var(--np-primary, var(--color-text-muted));
 }
 
 .front-page-card__headline {
@@ -1551,7 +1557,7 @@ main:has(.newspaper) {
   font-size: var(--type-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  opacity: 0.75;
+  color: color-mix(in srgb, var(--np-accent, #fff) 70%, #fff);
   margin: 0;
 }
 
@@ -1574,6 +1580,106 @@ main:has(.newspaper) {
   }
   .front-page-card:not(:has(.front-page-card__image)) .front-page-card__headline {
     font-size: var(--type-2xl);
+  }
+}
+
+/* === Front-Page Card — Persona Differentiation === */
+
+/* --- Sovereign → The Economist ---
+   Red top stripe, double border, restrained serif elegance */
+.front-page-card[data-persona="sovereign"] {
+  border-top: 5px solid #e3120b;
+  border-radius: 0;
+}
+
+.front-page-card[data-persona="sovereign"] .front-page-card__name {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.front-page-card[data-persona="sovereign"] .front-page-card__headline {
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* --- Aspirant → The Guardian ---
+   Bold teal, geometric (no radius), heavy sans-serif weight */
+.front-page-card[data-persona="aspirant"] {
+  border-radius: 0;
+  border-top-width: 6px;
+}
+
+.front-page-card[data-persona="aspirant"] .front-page-card__name {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* --- Owner → WSJ / Financial Times ---
+   Hairline rules, restrained, italic headline */
+.front-page-card[data-persona="owner"] {
+  border-radius: 0;
+  border-top-width: 3px;
+}
+
+.front-page-card[data-persona="owner"] .front-page-card__name {
+  font-style: italic;
+}
+
+.front-page-card[data-persona="owner"] .front-page-card__headline {
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* --- Moralist → The Daily Telegraph ---
+   Traditional broadsheet, formal, maroon top rule */
+.front-page-card[data-persona="moralist"] {
+  border-radius: 0;
+}
+
+.front-page-card[data-persona="moralist"] .front-page-card__tagline {
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: calc(var(--type-xs) * 0.9);
+}
+
+/* --- Radical → Underground Press ---
+   Brutalist, heavy border, uppercase everything */
+.front-page-card[data-persona="radical"] {
+  border-radius: 0;
+  border-top-width: 6px;
+}
+
+.front-page-card[data-persona="radical"] .front-page-card__name {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.front-page-card[data-persona="radical"] .front-page-card__headline {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+}
+
+/* --- Hedonist → Daily Mail / Vanity Fair ---
+   Tabloid-magazine, rounded corners, splashy headline */
+.front-page-card[data-persona="hedonist"] {
+  border-radius: 8px;
+}
+
+.front-page-card[data-persona="hedonist"] .front-page-card__name {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.front-page-card[data-persona="hedonist"] .front-page-card__headline {
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+@media (min-width: 52rem) {
+  .front-page-card[data-persona="hedonist"] .front-page-card__headline {
+    font-size: var(--type-xl);
   }
 }
 
@@ -1986,6 +2092,42 @@ main:has(.newspaper) {
   padding: var(--space-md);
 }
 
+/* Aspirant layout: Guardian-style — left-aligned masthead, generous spacing,
+   geometric (no rounded corners), bold accent bars */
+
+.newspaper[data-persona="aspirant"] .newspaper-masthead {
+  text-align: left;
+}
+
+.newspaper[data-persona="aspirant"] .section-label {
+  font-weight: 700;
+  border-bottom: 3px solid var(--np-accent);
+}
+
+.newspaper[data-persona="aspirant"] .article-preview {
+  padding: var(--space-xl) 0;
+}
+
+.newspaper[data-persona="aspirant"] .article-preview--lead {
+  border-left: 5px solid var(--np-primary);
+  padding-left: var(--space-lg);
+}
+
+.newspaper[data-persona="aspirant"] .article-preview__image,
+.newspaper[data-persona="aspirant"] .newspaper__hero-img,
+.newspaper[data-persona="aspirant"] .article-full__image img {
+  border-radius: 0;
+}
+
+.newspaper[data-persona="aspirant"] .editors-note {
+  border-left: 5px solid var(--np-accent);
+  background: rgba(41, 128, 185, 0.06);
+}
+
+.newspaper[data-persona="aspirant"] .article-preview__read-more {
+  color: var(--np-accent);
+}
+
 /* --- Owner → Financial Times ---
    Salmon-tinted page, refined Playfair serif headlines,
    thin hairline rules, understated elegance. */
@@ -2040,6 +2182,62 @@ main:has(.newspaper) {
   background: #fff;
 }
 
+/* Owner layout: WSJ/FT-style — data-dense 3-column grid, compact spacing,
+   hairline rules, restrained elegance */
+
+@media (min-width: 48rem) {
+  .newspaper[data-persona="owner"] .newspaper-articles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Reset shared 2-column nth-child rules */
+  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(odd) {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(even) {
+    padding-left: 0;
+  }
+
+  /* 3-column vertical dividers */
+  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(3n+1),
+  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(3n+2) {
+    border-right: 1px solid var(--np-accent);
+    padding-right: var(--space-md);
+  }
+
+  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(3n+2),
+  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(3n) {
+    padding-left: var(--space-md);
+  }
+}
+
+.newspaper[data-persona="owner"] .article-preview {
+  padding: var(--space-md) 0;
+}
+
+.newspaper[data-persona="owner"] .section-label {
+  font-size: var(--type-xs);
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--np-accent);
+}
+
+.newspaper[data-persona="owner"] .article-preview--lead .article-preview__title {
+  font-style: italic;
+}
+
+.newspaper[data-persona="owner"] .article-preview__image,
+.newspaper[data-persona="owner"] .newspaper__hero-img,
+.newspaper[data-persona="owner"] .article-full__image img {
+  border-radius: 0;
+}
+
+.newspaper[data-persona="owner"] .editors-note {
+  border-left: 2px solid var(--np-accent);
+  font-style: normal;
+}
+
 /* --- Moralist → The Daily Telegraph ---
    Traditional serif masthead with dark blue/purple bar,
    classic broadsheet layout, authoritative rules. */
@@ -2089,6 +2287,35 @@ main:has(.newspaper) {
   border-left: 3px solid var(--np-accent);
   background: var(--np-secondary);
   padding: var(--space-md);
+}
+
+/* Moralist layout: Daily Telegraph-style — traditional broadsheet,
+   ornamental, serif-heavy, formal spacing */
+
+.newspaper[data-persona="moralist"] .newspaper-masthead {
+  border-top: 4px solid var(--np-accent);
+}
+
+.newspaper[data-persona="moralist"] .section-label {
+  font-variant: small-caps;
+  text-transform: none;
+  letter-spacing: 0.1em;
+}
+
+.newspaper[data-persona="moralist"] .in-brief {
+  border: 2px solid var(--np-primary);
+  background: var(--np-secondary);
+  border-radius: 0;
+}
+
+.newspaper[data-persona="moralist"] .article-preview__read-more {
+  color: var(--np-accent);
+}
+
+.newspaper[data-persona="moralist"] .article-preview__image,
+.newspaper[data-persona="moralist"] .newspaper__hero-img,
+.newspaper[data-persona="moralist"] .article-full__image img {
+  border-radius: 0;
 }
 
 /* --- Radical → New York Post / The Sun ---
@@ -2161,6 +2388,45 @@ main:has(.newspaper) {
   font-weight: 600;
 }
 
+/* Radical layout: Underground Press / The Intercept-style — brutalist,
+   stark, high-contrast, zero decoration, urgent pacing */
+
+.newspaper[data-persona="radical"] .article-preview__image,
+.newspaper[data-persona="radical"] .newspaper__hero-img,
+.newspaper[data-persona="radical"] .article-full__image img {
+  border-radius: 0;
+}
+
+.newspaper[data-persona="radical"] .in-brief {
+  border-radius: 0;
+}
+
+.newspaper[data-persona="radical"] .section-label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 4px solid var(--np-primary);
+}
+
+.newspaper[data-persona="radical"] .article-preview {
+  padding: var(--space-md) 0;
+}
+
+.newspaper[data-persona="radical"] .article-preview__title {
+  text-transform: uppercase;
+}
+
+.newspaper[data-persona="radical"] .editors-note {
+  border-left: none;
+  border-top: 4px solid var(--np-primary);
+  padding-top: var(--space-md);
+}
+
+.newspaper[data-persona="radical"] .article-preview__read-more {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 /* --- Hedonist → Daily Mail / OK! Magazine ---
    Bold tabloid-magazine energy. Dark masthead, punchy
    headlines, rounded images, hot-pink accent pops. */
@@ -2224,6 +2490,61 @@ main:has(.newspaper) {
   border-radius: 0 6px 6px 0;
   background: var(--np-secondary);
   padding: var(--space-md);
+}
+
+/* Hedonist layout: Daily Mail / Vanity Fair-style — tabloid-magazine hybrid,
+   splashy headlines, image-dominant, playful */
+
+.newspaper[data-persona="hedonist"] .newspaper-masthead {
+  padding: var(--space-xl) var(--space-md);
+}
+
+@media (min-width: 48rem) {
+  .newspaper[data-persona="hedonist"] .article-preview--lead .article-preview__title {
+    font-size: var(--type-3xl);
+    letter-spacing: -0.02em;
+  }
+
+  .newspaper[data-persona="hedonist"] .article-preview--lead .article-preview__image {
+    width: 55%;
+  }
+}
+
+.newspaper[data-persona="hedonist"] .section-label {
+  border-bottom: 2px dotted var(--np-accent);
+}
+
+.newspaper[data-persona="hedonist"] .editors-note {
+  border-left: 4px solid var(--np-accent);
+  border-radius: 6px;
+}
+
+.newspaper[data-persona="hedonist"] .article-preview__read-more {
+  background: #c9407a;
+  color: #fff;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.newspaper[data-persona="hedonist"] .article-preview__read-more:hover {
+  background: #a83565;
+  text-decoration: none;
+}
+
+.newspaper[data-persona="hedonist"] .in-brief h2 {
+  color: var(--np-accent);
+}
+
+.newspaper[data-persona="hedonist"] .article-full__title {
+  text-transform: uppercase;
+  font-size: var(--type-2xl);
+}
+
+@media (min-width: 48rem) {
+  .newspaper[data-persona="hedonist"] .article-full__title {
+    font-size: var(--type-3xl);
+  }
 }
 
 /* --- Curator (meta-journalistic synthesis) ---
