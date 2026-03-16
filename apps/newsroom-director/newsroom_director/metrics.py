@@ -118,7 +118,8 @@ query ($zoneTag: string!, $dateStart: Date!, $dateEnd: Date!, $pathPrefix: strin
         metrics: list[ArticleMetric] = []
 
         try:
-            zones = data.get("data", {}).get("viewer", {}).get("zones", [])
+            zones = (data.get("data") or {}).get("viewer") or {}
+            zones = zones.get("zones", [])
             if not zones:
                 return []
 
@@ -149,7 +150,7 @@ query ($zoneTag: string!, $dateStart: Date!, $dateEnd: Date!, $pathPrefix: strin
                         page_views=count,
                     )
                 )
-        except (KeyError, TypeError, IndexError):
+        except (KeyError, TypeError, IndexError, AttributeError):
             logger.warning("Unexpected Cloudflare analytics response structure")
 
         return metrics

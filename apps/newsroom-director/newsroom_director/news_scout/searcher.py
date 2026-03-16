@@ -128,9 +128,11 @@ class TavilySearcher(SearchStrategy):
         api_key: str,
         rpm: int = 99,
         monthly_limit: int = 999,
+        search_depth: str = "basic",
     ) -> None:
         self._api_key = api_key
         self._client = None
+        self._search_depth = search_depth
         self._limiter = _RateLimiter(rpm=rpm, monthly_limit=monthly_limit)
 
     def _get_client(self):
@@ -152,7 +154,7 @@ class TavilySearcher(SearchStrategy):
             query=query,
             max_results=max_results,
             topic="news",
-            search_depth="advanced",
+            search_depth=self._search_depth,
             include_answer=False,
         )
         results: list[SearchResult] = []

@@ -478,10 +478,8 @@ class TestRunNewsScout:
 
         query_response = json.dumps({
             "categories": [
-                {
-                    "category_id": "ai",
-                    "queries": ["query 1", "query 2"],
-                },
+                {"category_id": "ai", "queries": ["query 1"]},
+                {"category_id": "climate", "queries": ["query 2"]},
             ]
         })
         gen = StubGenerationStrategy(responses={"pro": query_response})

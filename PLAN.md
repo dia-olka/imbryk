@@ -257,7 +257,7 @@ When user prompts don't cover all 30 categories, newspapers have thin or empty e
 
 - [x] Add `tavily-python` dependency to newsroom-director
 - [x] Implement `news_scout/query_generator.py` — Gemini Flash call that takes WorldLedger synopsis + 30 categories and returns a `dict[category_id, list[str]]` of search queries
-- [x] Design query generation prompt — instruct the LLM to reason from the WorldLedger about what's editorially interesting, not what's popular; output 2–3 queries per category
+- [x] Design query generation prompt — instruct the LLM to reason from the WorldLedger about what's editorially interesting, not what's popular; output up to `TAVILY_MAX_QUERIES_PER_CATEGORY` queries per category (default 1)
 - [x] Implement `news_scout/searcher.py` — Tavily client wrapper; executes queries, returns structured results (headline, snippet, source_url, relevance_score). Abstract `SearchStrategy` + `TavilySearcher` + `StubSearcher`.
 - [x] Implement `news_scout/schemas.py` — Gemini structured output schema (`QueryGenerationOutput`), validation (`is_valid_query_output`), parsing (`parse_query_output`)
 - [x] Implement `news_scout/main.py` — entry point: load WorldLedger → generate queries → execute searches → deduplicate by URL → store in `news_items` table
@@ -292,7 +292,7 @@ When user prompts don't cover all 30 categories, newspapers have thin or empty e
 - [ ] Verify weight hierarchy: in a category with both user prompts and news items, user prompts dominate digests
 - [ ] Verify gap filling: in a category with only news items, the newspaper still generates meaningful articles
 - [ ] Tune `NEWS_ITEM_BASE_WEIGHT` — too high and news drowns user voice; too low and news items cluster as noise
-- [ ] Tune query count per category — balance coverage breadth vs Tavily cost
+- [x] Tune query count per category — balance coverage breadth vs Tavily cost (default: 1 query/category, `search_depth=basic` → 30 credits/day, ~930/month within free-tier 1,000)
 - [ ] Verify News Scout failure is non-blocking — disable Tavily API and confirm morning batch runs cleanly with user prompts only
 
 ---

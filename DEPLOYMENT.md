@@ -806,6 +806,8 @@ gcloud run jobs create newsroom-director-scout \
   --set-env-vars=NEWS_SCOUT_ENABLED=true \
   --set-env-vars=TAVILY_RPM=99 \
   --set-env-vars=TAVILY_MONTHLY_LIMIT=999 \
+  --set-env-vars=TAVILY_SEARCH_DEPTH=basic \
+  --set-env-vars=TAVILY_MAX_QUERIES_PER_CATEGORY=1 \
   --set-env-vars=SENTRY_DSN="" \
   --memory=4Gi \
   --cpu=2 \
@@ -1101,6 +1103,8 @@ These are all the configuration values used by the backend services. Most are st
 | `NEWS_SCOUT_ENABLED`          | Env var | `true`                       | Set to `false` to disable the News Scout (no real-world news gap filling)                                         |
 | `TAVILY_RPM`                  | Env var | `99`                         | Maximum Tavily API requests per minute                                                                            |
 | `TAVILY_MONTHLY_LIMIT`        | Env var | `999`                        | Maximum Tavily API requests per month. **Production note:** the counter is stored in `/tmp` and resets on each Cloud Run container start, so this does not enforce a hard monthly cap in production. Use Tavily's own dashboard alerts for billing protection.                                                           |
+| `TAVILY_SEARCH_DEPTH`         | Env var | `basic`                      | Tavily search depth: `basic` (1 credit/query) or `advanced` (2 credits/query). Use `basic` to stay within the free-tier 1,000 credits/month budget. |
+| `TAVILY_MAX_QUERIES_PER_CATEGORY` | Env var | `1`                     | Maximum search queries per taxonomy category per News Scout run. Default `1` yields 30 queries/day (30 categories × 1). Set to `2` or `3` if your Tavily plan allows more credits. |
 | `NEWS_ITEM_BASE_WEIGHT`       | Env var | `0.3`                        | Priority weight for news items in distillation (user prompts are 0.5–1.0+)                                       |
 | `NEWS_MUTATES_LEDGER`         | Env var | `true`                       | Whether news-only editions update the WorldLedger (set `true` at launch so the world evolves even with no users) |
 | `ENABLE_EDITORIAL_JOURNAL`    | Env var | `true`                       | Enable Editorial Journal — each AI editor reflects on its output and writes notes for future runs                 |

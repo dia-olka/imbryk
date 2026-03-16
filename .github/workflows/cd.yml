@@ -234,7 +234,9 @@ jobs:
           VERTEX_AI_LOCATION=${{ env.VERTEX_AI_LOCATION }},\
           NEWS_SCOUT_ENABLED=${{ vars.NEWS_SCOUT_ENABLED || 'true' }},\
           TAVILY_RPM=${{ vars.TAVILY_RPM || '99' }},\
-          TAVILY_MONTHLY_LIMIT=${{ vars.TAVILY_MONTHLY_LIMIT || '999' }} \
+          TAVILY_MONTHLY_LIMIT=${{ vars.TAVILY_MONTHLY_LIMIT || '999' }},\
+          TAVILY_SEARCH_DEPTH=${{ vars.TAVILY_SEARCH_DEPTH || 'basic' }},\
+          TAVILY_MAX_QUERIES_PER_CATEGORY=${{ vars.TAVILY_MAX_QUERIES_PER_CATEGORY || '1' }} \
             --update-secrets=\
           DATABASE_URL=database-url:latest,\
           TAVILY_API_KEY=tavily-api-key:latest

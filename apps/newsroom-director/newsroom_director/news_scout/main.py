@@ -19,6 +19,7 @@ from ..config import (
     TAVILY_MAX_RESULTS_PER_QUERY,
     TAVILY_MONTHLY_LIMIT,
     TAVILY_RPM,
+    TAVILY_SEARCH_DEPTH,
     VERTEX_AI_LOCATION,
     VERTEX_AI_PROJECT,
 )
@@ -200,6 +201,7 @@ def cli_main() -> None:
             api_key=TAVILY_API_KEY,
             rpm=TAVILY_RPM,
             monthly_limit=TAVILY_MONTHLY_LIMIT,
+            search_depth=TAVILY_SEARCH_DEPTH,
         )
     else:
         logger.warning("TAVILY_API_KEY not set, using StubSearcher")

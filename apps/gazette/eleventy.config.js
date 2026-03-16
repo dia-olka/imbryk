@@ -29,9 +29,15 @@ export default function (eleventyConfig) {
 
   eleventyConfig.addFilter('markdown', (value) => {
     if (!value) return '';
+    // Strip HTML paragraph tags the LLM occasionally produces instead of
+    // plain markdown. Convert <p>...</p> to double-newline-separated text
+    // so markdown-it can create proper paragraphs.
+    const stripped = value
+      .replace(/<p>/gi, '')
+      .replace(/<\/p>/gi, '\n\n');
     // Ensure known curator section headers have ## prefix even when the LLM
     // omits the markdown formatting on the first header.
-    const normalized = value.replace(
+    const normalized = stripped.replace(
       /^(CONSENSUS|FAULT LINES|UNCOVERED ANGLES|WHAT TO WATCH)\b/gm,
       '## $1',
     );

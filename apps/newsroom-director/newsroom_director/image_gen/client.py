@@ -86,6 +86,14 @@ class ImagenClient(ImageGenerationStrategy):
                     )
                     return None
                 image_bytes = response.generated_images[0].image.image_bytes
+                if not image_bytes:
+                    logger.warning(
+                        "Imagen returned empty image bytes (content policy?) "
+                        "for prompt: %s | model=%s",
+                        prompt,
+                        self._model,
+                    )
+                    return None
                 logger.debug(
                     "Imagen returned %d bytes for prompt: %.80s",
                     len(image_bytes),

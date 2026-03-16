@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from ..config import TAVILY_MAX_QUERIES_PER_CATEGORY
 from ..generation import GenerationStrategy
 from .schemas import (
     QueryGenerationOutput,
@@ -50,9 +51,8 @@ find most valuable RIGHT NOW — not trending stories, but stories with \
 genuine narrative depth and geopolitical weight.
 - Formulate queries that cut through noise: prefer named actors, specific \
 regions, concrete events, and verifiable timelines over broad topic searches.
-- Where the world synopsis signals active tension or change in a domain, \
-generate 3 precise queries. For stable domains, 1-2 well-targeted queries \
-are enough.
+- Generate at most {max_queries} query per category. Make each one count — \
+choose the single most editorially valuable angle.
 - Include temporal anchors (e.g. "March 2026", "Q1 2026", "this month") \
 where recency matters.
 - Avoid: generic news queries ("latest X news"), celebrity/entertainment \
@@ -119,10 +119,13 @@ def generate_queries(
         "Generate search queries for each category."
     )
 
+    max_q = TAVILY_MAX_QUERIES_PER_CATEGORY
+    system_prompt = _SYSTEM_PROMPT.replace("{max_queries}", str(max_q))
+
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             raw = generation_strategy.generate(
-                _SYSTEM_PROMPT,
+                system_prompt,
                 "pro",
                 user_content,
                 response_schema=QueryGenerationOutput,
@@ -137,6 +140,11 @@ def generate_queries(
                 continue
 
             queries = parse_query_output(raw)
+            # Enforce hard cap in case LLM exceeds the requested limit
+            if max_q:
+                queries = {
+                    cat: qs[:max_q] for cat, qs in queries.items()
+                }
             total = sum(len(qs) for qs in queries.values())
             logger.info(
                 "Query generation complete",

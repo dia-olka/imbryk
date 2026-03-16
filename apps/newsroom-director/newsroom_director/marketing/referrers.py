@@ -73,7 +73,8 @@ def _parse_referrer_response(data: dict) -> dict[str, int]:
     """Parse Cloudflare GraphQL response into {host: views} dict."""
     result: dict[str, int] = defaultdict(int)
     try:
-        zones = data.get("data", {}).get("viewer", {}).get("zones", [])
+        zones = (data.get("data") or {}).get("viewer") or {}
+        zones = zones.get("zones", [])
         if not zones:
             return dict(result)
 
@@ -82,7 +83,7 @@ def _parse_referrer_response(data: dict) -> dict[str, int]:
             host = group.get("dimensions", {}).get("refererHost", "") or "(direct)"
             count = group.get("count", 0)
             result[host] += count
-    except (KeyError, TypeError, IndexError):
+    except (KeyError, TypeError, IndexError, AttributeError):
         logger.warning("Unexpected referrer response structure", exc_info=True)
 
     return dict(result)
