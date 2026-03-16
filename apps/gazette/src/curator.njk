@@ -61,7 +61,10 @@ eleventyComputed:
   {% include "newspaper-masthead.njk" %}
 
   {% if synthesis %}
-    <section class="synthesis-section">
+    <div class="curator-intro">
+      <p>Six AI editorial perspectives analysed. Here is where they converge, clash, and leave gaps.</p>
+    </div>
+    <section class="synthesis-section" aria-label="Curator synthesis">
       {{ (synthesis.text or synthesis.analysis or "") | markdown | safe }}
     </section>
   {% else %}

@@ -1488,31 +1488,53 @@ main:has(.newspaper) {
 
 /* === Curator Synthesis === */
 /* === Curator Synthesis === */
+/* === Synthesis Section — Curator Briefing Layout === */
+
 .synthesis-section {
-  margin-bottom: var(--space-xl);
-  max-width: var(--measure);
+  margin: 0 auto var(--space-xl);
+  max-width: 70ch;
+  font-family: 'Inter', sans-serif;
+  font-size: var(--type-base);
+  line-height: 1.8;
+  color: var(--color-text);
 }
 
+/* Lead paragraph — executive summary before first h2 */
 .synthesis-section > p:first-child {
   font-size: var(--type-lg);
-  line-height: 1.5;
+  line-height: 1.65;
   color: var(--color-text);
-  border-left: 4px solid var(--np-accent, var(--color-accent));
-  padding-left: var(--space-md);
-  margin-bottom: var(--space-xl);
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%);
+  padding: var(--space-lg);
+  border-radius: 6px;
+  border-left: 4px solid var(--curator-accent, #3498db);
+  margin-bottom: var(--space-2xl);
 }
 
+/* Section headers: CONSENSUS, FAULT LINES, UNCOVERED ANGLES, WHAT TO WATCH */
 .synthesis-section h2 {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: var(--type-xs);
+  font-family: 'Inter', sans-serif;
+  font-size: var(--type-sm);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--np-primary, var(--color-accent));
-  margin-top: var(--space-2xl);
-  margin-bottom: var(--space-md);
-  padding-bottom: var(--space-sm);
-  border-bottom: 2px solid var(--np-primary, var(--color-border));
+  letter-spacing: 0.14em;
+  color: var(--curator-dark, #2c3e50);
+  margin: var(--space-2xl) 0 var(--space-lg);
+  padding: var(--space-md) 0 var(--space-sm);
+  border-bottom: 2px solid var(--curator-accent, #3498db);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.synthesis-section h2::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--curator-accent, #3498db);
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .synthesis-section h2:first-of-type {
@@ -1521,51 +1543,72 @@ main:has(.newspaper) {
 
 .synthesis-section p {
   margin-bottom: var(--space-md);
-  line-height: 1.7;
 }
 
 .synthesis-section ul,
 .synthesis-section ol {
-  padding-left: var(--space-lg);
-  margin-bottom: var(--space-md);
+  padding-left: 0;
+  margin-bottom: var(--space-lg);
+  list-style: none;
 }
 
 .synthesis-section li {
-  margin-bottom: var(--space-sm);
-  line-height: 1.6;
+  margin-bottom: var(--space-md);
+  line-height: 1.7;
+  padding: var(--space-sm) var(--space-md);
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid var(--curator-accent, #3498db);
 }
 
 .synthesis-section li::marker {
-  color: var(--np-accent, var(--color-accent));
+  display: none;
 }
 
 .synthesis-section strong {
-  color: var(--color-text);
+  color: var(--curator-dark, #2c3e50);
+  font-weight: 700;
 }
 
-/* Newspaper name mentions — make them stand out */
-.synthesis-section em {
-  font-style: normal;
-  font-weight: 600;
-  color: var(--np-primary, var(--color-text));
+/* Numbered list items within the synthesis get a subtle counter */
+.synthesis-section ol {
+  counter-reset: synthesis-counter;
 }
 
-.disagreement-topic {
-  margin-bottom: var(--space-lg);
+.synthesis-section ol li {
+  counter-increment: synthesis-counter;
 }
 
-.disagreement-topic h3 {
-  font-size: var(--type-base);
-  margin-bottom: var(--space-sm);
+.synthesis-section ol li::before {
+  content: counter(synthesis-counter);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
+  background: var(--curator-accent, #3498db);
+  color: #fff;
+  border-radius: 50%;
+  font-size: var(--type-xs);
+  font-weight: 700;
+  margin-right: var(--space-sm);
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 
-.watch-topic {
-  margin-bottom: var(--space-lg);
-}
+@media (min-width: 48rem) {
+  .synthesis-section > p:first-child {
+    font-size: var(--type-xl);
+    padding: var(--space-xl);
+  }
 
-.watch-topic h3 {
-  font-size: var(--type-base);
-  margin-bottom: var(--space-sm);
+  .synthesis-section h2 {
+    font-size: var(--type-base);
+  }
+
+  .synthesis-section li {
+    padding: var(--space-sm) var(--space-lg);
+  }
 }
 
 /* === Timeline === */
@@ -2787,16 +2830,91 @@ main:has(.newspaper) {
   }
 }
 
-/* --- Curator (meta-journalistic synthesis) ---
-   Clean, neutral, analytical. No editorial personality —
-   lets the analysis speak for itself. */
+/* === Curator — Premium Intelligence Briefing === */
+
+.newspaper[data-persona="curator"] {
+  --curator-dark: #2c3e50;
+  --curator-mid: #34495e;
+  --curator-accent: #3498db;
+  --curator-bg: #f8f9fa;
+}
 
 .newspaper[data-persona="curator"] .newspaper-masthead {
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--curator-dark);
+  color: #fff;
+  border-bottom: none;
+  padding: var(--space-2xl) var(--space-lg);
+  margin-left: calc(-1 * var(--space-md));
+  margin-right: calc(-1 * var(--space-md));
+  text-align: center;
 }
 
 .newspaper[data-persona="curator"] .newspaper-masthead__name {
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  font-size: var(--type-xl);
+}
+
+.newspaper[data-persona="curator"] .newspaper-masthead__tagline {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: normal;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  margin-top: var(--space-xs);
+}
+
+.newspaper[data-persona="curator"] .newspaper-masthead__date {
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: var(--space-sm);
+}
+
+@media (min-width: 48rem) {
+  .newspaper[data-persona="curator"] .newspaper-masthead {
+    padding: var(--space-2xl) var(--space-lg);
+  }
+
+  .newspaper[data-persona="curator"] .newspaper-masthead__name {
+    font-size: var(--type-2xl);
+    letter-spacing: 0.1em;
+  }
+}
+
+/* Curator intro line */
+.curator-intro {
+  max-width: 70ch;
+  margin: 0 auto var(--space-2xl);
+  text-align: center;
+}
+
+.curator-intro p {
+  font-family: 'Inter', sans-serif;
+  font-size: var(--type-lg);
+  font-weight: 300;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+/* Tighten main layout for curator — wider than articles, centered */
+.newspaper[data-persona="curator"] .synthesis-section {
+  max-width: 70ch;
+  margin: 0 auto var(--space-xl);
+}
+
+/* Curator sibling-nav + edition-nav styling */
+.newspaper[data-persona="curator"] .sibling-nav {
+  max-width: 70ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.newspaper[data-persona="curator"] .edition-nav {
+  max-width: 70ch;
+  margin-left: auto;
+  margin-right: auto;
+  border-top-color: var(--color-border-light);
 }

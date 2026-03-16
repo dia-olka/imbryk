@@ -48,8 +48,14 @@ export default function (eleventyConfig) {
 
   eleventyConfig.addFilter('truncateWords', (value, count) => {
     if (!value) return '';
-    const words = value.split(/\s+/);
-    if (words.length <= count) return value;
+    // Strip HTML tags and markdown formatting for clean excerpts
+    const plain = value
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[#*_~`>]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const words = plain.split(/\s+/);
+    if (words.length <= count) return plain;
     return words.slice(0, count).join(' ') + '…';
   });
   eleventyConfig.addFilter('truncateChars', (value, count) => {
