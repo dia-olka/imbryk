@@ -19,7 +19,6 @@ from ..config import (
     DATABASE_URL,
     GAZETTE_FALLBACK_URL,
     MARKETING_ENABLED,
-    R2_PUBLIC_URL,
     VERTEX_AI_LOCATION,
     VERTEX_AI_PROJECT,
 )
@@ -70,7 +69,7 @@ def run_marketing_agent(
     today = edition_date or EDITION_DATE or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     yesterday = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    gazette_url = R2_PUBLIC_URL.rstrip("/") if R2_PUBLIC_URL else GAZETTE_FALLBACK_URL
+    gazette_url = GAZETTE_FALLBACK_URL.rstrip("/")
 
     engine = get_engine(db_url)
     session_factory = get_session_factory(engine)
@@ -156,6 +155,14 @@ def run_marketing_agent(
         logger.info("Marketing agent: ACT phase", extra={"step": "act"})
         posts_created = 0
 
+        edition_link = f"{gazette_url}/edition/{today}/"
+
+        def _ensure_link(text: str) -> str:
+            """Append the edition link if the post doesn't already contain a gazette URL."""
+            if gazette_url in text:
+                return text
+            return f"{text}\n{edition_link}"
+
         for planned in plan.posts:
             if planned.channel != ch.channel_name:
                 logger.info(
@@ -172,6 +179,9 @@ def run_marketing_agent(
                 ]
                 if not thread_texts:
                     continue
+
+                # Ensure the last thread post has the edition link
+                thread_texts[-1] = _ensure_link(thread_texts[-1])
 
                 results = ch.post_thread(thread_texts)
                 for i, result in enumerate(results):
@@ -194,12 +204,13 @@ def run_marketing_agent(
                             result.error,
                         )
             else:
-                result = ch.post(planned.text)
+                planned_text = _ensure_link(planned.text)
+                result = ch.post(planned_text)
                 post = MarketingPost(
                     edition_date=today,
                     channel=ch.channel_name,
                     post_type=planned.post_type,
-                    content=planned.text,
+                    content=planned_text,
                     post_url=result.post_url,
                     post_id=result.post_id,
                     status="posted" if result.success else "failed",

@@ -49,8 +49,8 @@ Name the newspapers. Quote or paraphrase their positions.
 Use the newspaper name as a label. End with a link to the full edition.
 
 RULES:
-- Maximum 300 characters per post (Bluesky limit).
-- End at least one post with the gazette URL.
+- Maximum 255 characters per post (a gazette link is appended automatically).
+- Do NOT include the gazette URL in post text — it is added for you.
 - Never be generic ("check out today's edition!"). Always name specific \
 articles, newspapers, or tensions.
 - Learn from the marketing journal — if contrast posts got more engagement, \
