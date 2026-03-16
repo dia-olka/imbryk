@@ -29,7 +29,7 @@ Your job is to commission search queries that will surface the most \
 editorially consequential real-world news for today's editions across \
 all newspapers in the group.
 
-You have three inputs:
+You have up to six inputs:
 1. A synopsis of the fictional world's current state — nations, conflicts, \
 alliances, economic trends, technological developments, cultural movements, \
 and environmental crises.
@@ -37,6 +37,13 @@ and environmental crises.
 3. The editorial identities of the newspapers — their ideologies, political \
 leanings, and areas of focus — so you can tailor queries to what each \
 readership finds most compelling.
+4. (Optional) The editorial director's observations and each newspaper's \
+editorial intentions — what the team noticed about coverage quality and \
+what they plan to focus on next.
+5. (Optional) Headlines from the previous edition — so you avoid \
+commissioning duplicate stories and instead advance the narrative.
+6. (Optional) Reader engagement data — which articles readers actually \
+engaged with, so you can prioritise topics that resonate.
 
 Your reasoning process:
 - Identify which fictional world threads have real-world analogues or \
@@ -46,6 +53,10 @@ crisis maps to real-world energy market disruptions).
 angle their readership would find most valuable — a geopolitical category \
 read by a conservative-leaning paper demands different query framing than \
 the same category read by a progressive one.
+- If editorial context is provided, use it to steer your queries: address \
+coverage gaps the editorial director flagged, support newspapers' stated \
+intentions, avoid re-scouting stories that were already published, and \
+lean into topics that readers engaged with.
 - Decide which specific real-world developments a discerning editor would \
 find most valuable RIGHT NOW — not trending stories, but stories with \
 genuine narrative depth and geopolitical weight.
@@ -57,7 +68,8 @@ choose the single most editorially valuable angle.
 where recency matters.
 - Avoid: generic news queries ("latest X news"), celebrity/entertainment \
 unless the category demands it, queries duplicating each other across \
-categories.
+categories, and queries that would retrieve stories already covered in \
+the previous edition.
 
 You MUST respond with a JSON object matching this exact schema:
 {
@@ -92,6 +104,7 @@ def generate_queries(
     category_ids: list[str],
     generation_strategy: GenerationStrategy,
     personas: list[PersonaConfig] | None = None,
+    editorial_context: str = "",
 ) -> dict[str, list[str]]:
     """Generate search queries for each category based on the WorldLedger.
 
@@ -101,6 +114,8 @@ def generate_queries(
         generation_strategy: LLM backend (Gemini Flash).
         personas: Newspaper persona configs so the model knows which
             editorial identities will consume each category's articles.
+        editorial_context: Formatted editorial context — journal entries,
+            previous headlines, and reader metrics from prior editions.
 
     Returns:
         Dict mapping category_id to list of search query strings.
@@ -112,9 +127,15 @@ def generate_queries(
         if personas
         else ""
     )
+    context_section = (
+        f"\nEDITORIAL CONTEXT:\n{editorial_context}\n"
+        if editorial_context
+        else ""
+    )
     user_content = (
         f"WORLD STATE SYNOPSIS:\n{synopsis}\n"
-        f"{personas_section}\n"
+        f"{personas_section}"
+        f"{context_section}\n"
         f"CATEGORIES:\n{category_list}\n\n"
         "Generate search queries for each category."
     )

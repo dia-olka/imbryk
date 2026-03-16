@@ -7,13 +7,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from newsroom_director.db import (
+    ArticleMetric,
     Base,
+    JournalEntry,
     NewsItemRow,
     fetch_pending_news_items,
     mark_news_items_processed,
     save_news_item,
 )
 from newsroom_director.generation import StubGenerationStrategy
+from newsroom_director.news_scout.context import format_scout_context
 from newsroom_director.news_scout.main import run_news_scout
 from newsroom_director.news_scout.query_generator import generate_queries
 from newsroom_director.news_scout.schemas import (
@@ -504,3 +507,129 @@ class TestRunNewsScout:
 
         assert result["queries_executed"] == 2
         assert result["items_stored"] == 1  # Deduplicated
+
+
+# --- Scout context formatter tests ---
+
+
+class TestFormatScoutContext:
+    def test_empty_inputs(self):
+        result = format_scout_context([], None, {})
+        assert result == ""
+
+    def test_journal_context_pipeline_observation(self):
+        entries = [
+            JournalEntry(
+                persona_id="_pipeline",
+                entry_date="2026-03-15",
+                entry_type="observation",
+                content="Over-covering Middle East, neglecting Africa.",
+            ),
+        ]
+        result = format_scout_context(entries, None, {})
+        assert "EDITORIAL DIRECTOR'S OBSERVATION" in result
+        assert "Over-covering Middle East" in result
+
+    def test_journal_context_persona_intentions(self):
+        entries = [
+            JournalEntry(
+                persona_id="the-herald",
+                entry_date="2026-03-15",
+                entry_type="intention",
+                content="Focus on climate policy tomorrow.",
+            ),
+            JournalEntry(
+                persona_id="the-vanguard",
+                entry_date="2026-03-15",
+                entry_type="intention",
+                content="Cover tech regulation.",
+            ),
+        ]
+        result = format_scout_context(entries, None, {})
+        assert "NEWSPAPER EDITORIAL INTENTIONS" in result
+        assert "the-herald" in result
+        assert "the-vanguard" in result
+
+    def test_previous_headlines(self):
+        edition_data = {
+            "the-herald": json.dumps([
+                {"headline": "Iran crisis deepens", "body": "..."},
+                {"headline": "AI regulation passes", "body": "..."},
+            ]),
+        }
+        result = format_scout_context([], edition_data, {})
+        assert "PREVIOUS EDITION HEADLINES" in result
+        assert "Iran crisis deepens" in result
+        assert "AI regulation passes" in result
+
+    def test_previous_headlines_dict_format(self):
+        edition_data = {
+            "the-herald": json.dumps({
+                "articles": [
+                    {"headline": "Test headline", "body": "..."},
+                ]
+            }),
+        }
+        result = format_scout_context([], edition_data, {})
+        assert "Test headline" in result
+
+    def test_reader_metrics(self):
+        metrics = {
+            "the-herald": [
+                ArticleMetric(
+                    newspaper_id="the-herald",
+                    article_slug="iran-crisis",
+                    headline="Iran crisis deepens",
+                    page_views=342,
+                ),
+                ArticleMetric(
+                    newspaper_id="the-herald",
+                    article_slug="ai-regulation",
+                    headline="AI regulation passes",
+                    page_views=891,
+                ),
+            ],
+        }
+        result = format_scout_context([], None, metrics)
+        assert "READER ENGAGEMENT" in result
+        assert "342 views" in result
+        assert "891 views" in result
+
+    def test_all_sections_combined(self):
+        entries = [
+            JournalEntry(
+                persona_id="_pipeline",
+                entry_date="2026-03-15",
+                entry_type="observation",
+                content="Good coverage balance today.",
+            ),
+        ]
+        edition_data = {
+            "the-herald": json.dumps([
+                {"headline": "Test headline", "body": "..."},
+            ]),
+        }
+        metrics = {
+            "the-herald": [
+                ArticleMetric(
+                    newspaper_id="the-herald",
+                    article_slug="test",
+                    headline="Test headline",
+                    page_views=100,
+                ),
+            ],
+        }
+        result = format_scout_context(entries, edition_data, metrics)
+        assert "EDITORIAL DIRECTOR'S OBSERVATION" in result
+        assert "PREVIOUS EDITION HEADLINES" in result
+        assert "READER ENGAGEMENT" in result
+
+    def test_malformed_json_skipped(self):
+        edition_data = {
+            "the-herald": "not valid json",
+            "the-vanguard": json.dumps([
+                {"headline": "Valid headline", "body": "..."},
+            ]),
+        }
+        result = format_scout_context([], edition_data, {})
+        assert "Valid headline" in result

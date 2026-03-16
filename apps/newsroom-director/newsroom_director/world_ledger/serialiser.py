@@ -21,6 +21,7 @@ def serialize_ledger_to_synopsis(ledger: WorldLedger) -> str:
     sections.append(_serialize_culture(ledger))
     sections.append(_serialize_military(ledger))
     sections.append(_serialize_environment(ledger))
+    sections.append(_serialize_story_threads(ledger))
     sections.append(_serialize_history(ledger))
 
     return "\n\n".join(s for s in sections if s)
@@ -171,6 +172,24 @@ def _serialize_environment(ledger: WorldLedger) -> str:
         lines.append("Mitigation Efforts:")
         for e in env.mitigation_efforts:
             lines.append(f"- {e}")
+
+    return "\n".join(lines)
+
+
+def _serialize_story_threads(ledger: WorldLedger) -> str:
+    threads = [t for t in ledger.story_threads if t.status != "resolved"]
+    if not threads:
+        return ""
+
+    lines: list[str] = ["--- STORY THREADS ---"]
+    for t in threads:
+        nations = (
+            f" [{', '.join(t.related_nations)}]" if t.related_nations else ""
+        )
+        lines.append(
+            f"- {t.name} ({t.status}, since {t.started}){nations}: "
+            f"{t.summary}"
+        )
 
     return "\n".join(lines)
 

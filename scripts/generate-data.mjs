@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Generates data modules from data/taxonomy.json and data/personas.json.
+ * Generates data modules from data/taxonomy.json, data/personas.json,
+ * and data/world-state.json.
  *
  * Targets:
  *   - Python:     apps/<app>/<pkg>/_generated_data.py
@@ -10,6 +11,7 @@
  *   node scripts/generate-data.mjs                          # all targets
  *   node scripts/generate-data.mjs --target ingestion-api   # single target
  *   node scripts/generate-data.mjs --target taxonomy        # TS package
+ *   node scripts/generate-data.mjs --target world-state     # TS world-state
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -26,6 +28,27 @@ const taxonomy = JSON.parse(
 const personas = JSON.parse(
   readFileSync(join(ROOT, 'data', 'personas.json'), 'utf-8'),
 );
+const worldState = JSON.parse(
+  readFileSync(join(ROOT, 'data', 'world-state.json'), 'utf-8'),
+);
+
+// ── Key convention helpers ────────────────────────────────────────────
+
+/** Convert a snake_case string to camelCase. */
+function snakeToCamel(s) {
+  return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+/** Recursively convert all object keys from snake_case to camelCase. */
+function keysToCamel(obj) {
+  if (Array.isArray(obj)) return obj.map(keysToCamel);
+  if (obj !== null && typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => [snakeToCamel(k), keysToCamel(v)]),
+    );
+  }
+  return obj;
+}
 
 // ── Python generation ───────────────────────────────────────────────
 
@@ -104,6 +127,38 @@ function generateTsPersonas() {
   ].join('\n');
 }
 
+// ── World-state generation ───────────────────────────────────────────
+
+function generateWorldStatePython() {
+  return [
+    '"""Auto-generated from data/world-state.json.',
+    '',
+    'DO NOT EDIT — run `npx nx run newsroom-director:generate-data` to regenerate.',
+    '"""',
+    '',
+    '# ruff: noqa: E501',
+    '',
+    `WORLD_STATE_DATA: dict = ${toPython(worldState)}`,
+    '',
+  ].join('\n');
+}
+
+function generateWorldStateTs() {
+  const camelData = keysToCamel(worldState);
+
+  return [
+    '/* Auto-generated from data/world-state.json',
+    ' * DO NOT EDIT — run `npx nx run world-state:generate-data` to regenerate. */',
+    '',
+    '/* eslint-disable */',
+    '',
+    `import type { WorldLedger } from './world-ledger.types.js';`,
+    '',
+    `export const INITIAL_WORLD_LEDGER: WorldLedger = ${JSON.stringify(camelData, null, 2)};`,
+    '',
+  ].join('\n');
+}
+
 // ── Target registry ─────────────────────────────────────────────────
 
 const ALL_TARGETS = [
@@ -129,6 +184,22 @@ const ALL_TARGETS = [
     name: 'ai-personas',
     outPath: join(ROOT, 'packages/ai-personas/src/lib/_generated_data.ts'),
     generate: generateTsPersonas,
+  },
+  {
+    name: 'world-state',
+    outPath: join(
+      ROOT,
+      'packages/world-state/src/lib/world-ledger.initial.ts',
+    ),
+    generate: generateWorldStateTs,
+  },
+  {
+    name: 'world-state-py',
+    outPath: join(
+      ROOT,
+      'apps/newsroom-director/newsroom_director/world_ledger/_generated_world_state.py',
+    ),
+    generate: generateWorldStatePython,
   },
 ];
 

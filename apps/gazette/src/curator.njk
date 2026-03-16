@@ -68,13 +68,16 @@ eleventyComputed:
     <p>No curator synthesis available for this edition.</p>
   {% endif %}
 
+  {% set siblingNewspaperIds = allNewspaperIds %}
+  {% set currentNewspaperId = "curator" %}
+  {% set siblingEditionDate = edition.date %}
+  {% include "sibling-nav.njk" %}
+
   {# Editions are sorted newest-first; prev = newer, next = older #}
   {% set editionNavNext = pagination.pages[pagination.pageNumber + 1].date if pagination.pageNumber + 1 < pagination.pages.length else null %}
   {% set editionNavPrev = pagination.pages[pagination.pageNumber - 1].date if pagination.pageNumber > 0 else null %}
   {% set editionNavNewspaperId = "curator" %}
   {% set editionNavNewspaperName = "The Curator" %}
   {% include "edition-nav.njk" %}
-
-  <a href="/edition/{{ edition.date }}/" class="back-link">← Back to edition overview</a>
 
 </div>

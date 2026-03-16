@@ -3,12 +3,28 @@ import { WORLD_LEDGER_TEMPLATE } from './world-ledger.template.js';
 import { INITIAL_WORLD_LEDGER } from './world-ledger.initial.js';
 import { serializeLedgerToSynopsis } from './world-ledger.serialiser.js';
 import { applyMutation } from './world-ledger.mutator.js';
+import { WorldLedgerSchema } from './world-ledger.schemas.js';
 import type { WorldLedger } from './world-ledger.types.js';
 
 describe('WorldLedger template', () => {
   it('should have an empty template', () => {
     expect(WORLD_LEDGER_TEMPLATE.epoch).toBe('');
     expect(WORLD_LEDGER_TEMPLATE.history).toEqual([]);
+  });
+});
+
+describe('Zod schema validation', () => {
+  it('should validate INITIAL_WORLD_LEDGER against the schema', () => {
+    const result = WorldLedgerSchema.safeParse(INITIAL_WORLD_LEDGER);
+    if (!result.success) {
+      console.error('Zod validation errors:', JSON.stringify(result.error.issues, null, 2));
+    }
+    expect(result.success).toBe(true);
+  });
+
+  it('should validate the empty template against the schema', () => {
+    const result = WorldLedgerSchema.safeParse(WORLD_LEDGER_TEMPLATE);
+    expect(result.success).toBe(true);
   });
 });
 
@@ -21,8 +37,8 @@ describe('INITIAL_WORLD_LEDGER', () => {
     expect(INITIAL_WORLD_LEDGER.synopsis.length).toBeGreaterThan(100);
   });
 
-  it('should have 15 nations', () => {
-    expect(INITIAL_WORLD_LEDGER.geopolitics.nations).toHaveLength(15);
+  it('should have all nations', () => {
+    expect(INITIAL_WORLD_LEDGER.geopolitics.nations.length).toBeGreaterThanOrEqual(193);
   });
 
   it('should include the United States', () => {
@@ -44,6 +60,15 @@ describe('INITIAL_WORLD_LEDGER', () => {
 
   it('should have currencies', () => {
     expect(INITIAL_WORLD_LEDGER.economics.currencies.length).toBeGreaterThan(0);
+  });
+
+  it('should have story threads', () => {
+    expect(INITIAL_WORLD_LEDGER.storyThreads.length).toBeGreaterThan(0);
+    const thread = INITIAL_WORLD_LEDGER.storyThreads[0];
+    expect(thread.name).toBeTruthy();
+    expect(['developing', 'ongoing', 'resolved']).toContain(thread.status);
+    expect(thread.started).toBeTruthy();
+    expect(thread.relatedNations.length).toBeGreaterThan(0);
   });
 
   it('should have seed history events', () => {
@@ -79,6 +104,7 @@ describe('serializeLedgerToSynopsis', () => {
     expect(result).toContain('--- CULTURE ---');
     expect(result).toContain('--- MILITARY ---');
     expect(result).toContain('--- ENVIRONMENT ---');
+    expect(result).toContain('--- STORY THREADS ---');
     expect(result).toContain('--- RECENT HISTORY ---');
   });
 
@@ -178,6 +204,43 @@ describe('applyMutation', () => {
       updateGlobalGdpTrend: 'Recession imminent.',
     });
     expect(mutated.economics.globalGdpTrend).toBe('Recession imminent.');
+  });
+
+  it('should add new story threads', () => {
+    const original = structuredClone(INITIAL_WORLD_LEDGER);
+    const originalCount = original.storyThreads.length;
+    const mutated = applyMutation(original, {
+      addStoryThreads: [
+        {
+          name: 'Test Thread',
+          status: 'developing',
+          started: '2026-03-16',
+          lastCovered: '2026-03-16',
+          summary: 'A test thread.',
+          relatedNations: ['United States'],
+          sectors: ['geopolitics'],
+        },
+      ],
+    });
+    expect(mutated.storyThreads).toHaveLength(originalCount + 1);
+    expect(original.storyThreads).toHaveLength(originalCount);
+  });
+
+  it('should update existing story threads by name', () => {
+    const mutated = applyMutation(INITIAL_WORLD_LEDGER, {
+      updateStoryThreads: [
+        {
+          name: 'Iran succession crisis',
+          status: 'ongoing',
+          summary: 'Updated summary.',
+        },
+      ],
+    });
+    const updated = mutated.storyThreads.find(
+      (t: { name: string }) => t.name === 'Iran succession crisis'
+    );
+    expect(updated?.status).toBe('ongoing');
+    expect(updated?.summary).toBe('Updated summary.');
   });
 
   it('should not modify the original ledger', () => {

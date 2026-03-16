@@ -15,6 +15,7 @@ from newsroom_director.world_ledger.types import (
     CulturalMovement,
     HistoricalEvent,
     Nation,
+    StoryThread,
     WorldLedger,
 )
 
@@ -34,6 +35,7 @@ class TestSerializer:
         assert "--- CULTURE ---" in text
         assert "--- MILITARY ---" in text
         assert "--- ENVIRONMENT ---" in text
+        assert "--- STORY THREADS ---" in text
         assert "--- RECENT HISTORY ---" in text
 
     def test_contains_nation_data(self):
@@ -162,6 +164,39 @@ class TestMutator:
         result = apply_mutation(INITIAL_WORLD_LEDGER, mutation)
         assert result.environment.global_temperature_anomaly == 2.1
 
+    def test_add_story_thread(self):
+        mutation = LedgerMutation(
+            add_story_threads=[
+                StoryThread(
+                    name="Test Thread",
+                    status="developing",
+                    started="2026-03-16",
+                    last_covered="2026-03-16",
+                    summary="A test story thread.",
+                    related_nations=["United States"],
+                    sectors=["geopolitics"],
+                )
+            ]
+        )
+        result = apply_mutation(INITIAL_WORLD_LEDGER, mutation)
+        names = [t.name for t in result.story_threads]
+        assert "Test Thread" in names
+        assert len(result.story_threads) == len(
+            INITIAL_WORLD_LEDGER.story_threads
+        ) + 1
+
+    def test_update_story_thread(self):
+        existing = INITIAL_WORLD_LEDGER.story_threads[0].name
+        mutation = LedgerMutation(
+            update_story_threads=[
+                {"name": existing, "status": "resolved", "summary": "Updated."}
+            ]
+        )
+        result = apply_mutation(INITIAL_WORLD_LEDGER, mutation)
+        updated = next(t for t in result.story_threads if t.name == existing)
+        assert updated.status == "resolved"
+        assert updated.summary == "Updated."
+
     def test_empty_mutation_preserves_ledger(self):
         mutation = LedgerMutation()
         result = apply_mutation(INITIAL_WORLD_LEDGER, mutation)
@@ -182,6 +217,9 @@ class TestDictRoundTrip:
         if restored.geopolitics.nations:
             assert restored.geopolitics.nations[0].name == INITIAL_WORLD_LEDGER.geopolitics.nations[0].name
         assert len(restored.history) == len(INITIAL_WORLD_LEDGER.history)
+        assert len(restored.story_threads) == len(INITIAL_WORLD_LEDGER.story_threads)
+        if restored.story_threads:
+            assert restored.story_threads[0].name == INITIAL_WORLD_LEDGER.story_threads[0].name
 
     def test_serialise_roundtrip_text(self):
         """Serialise → dict → deserialise → serialise produces same text."""

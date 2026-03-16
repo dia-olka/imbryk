@@ -146,6 +146,17 @@ class HistoricalEvent:
 
 
 @dataclass
+class StoryThread:
+    name: str
+    status: Literal["developing", "ongoing", "resolved"]
+    started: str
+    last_covered: str
+    summary: str
+    related_nations: list[str] = field(default_factory=list)
+    sectors: list[str] = field(default_factory=list)
+
+
+@dataclass
 class WorldLedger:
     epoch: str = ""
     synopsis: str = ""
@@ -155,4 +166,5 @@ class WorldLedger:
     culture: CultureState = field(default_factory=CultureState)
     military: MilitaryState = field(default_factory=MilitaryState)
     environment: EnvironmentState = field(default_factory=EnvironmentState)
+    story_threads: list[StoryThread] = field(default_factory=list)
     history: list[HistoricalEvent] = field(default_factory=list)

@@ -19,6 +19,7 @@ from .types import (
     MilitaryState,
     Nation,
     Scarcity,
+    StoryThread,
     TechDomain,
     TechnologyState,
     TradingBloc,
@@ -83,6 +84,9 @@ def ledger_from_dict(data: dict) -> WorldLedger:
             ],
             mitigation_efforts=env.get("mitigation_efforts", []),
         ),
+        story_threads=[
+            StoryThread(**t) for t in data.get("story_threads", [])
+        ],
         history=[
             HistoricalEvent(**e) for e in data.get("history", [])
         ],

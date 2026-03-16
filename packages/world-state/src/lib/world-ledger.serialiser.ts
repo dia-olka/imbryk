@@ -14,6 +14,7 @@ export function serializeLedgerToSynopsis(ledger: WorldLedger): string {
   sections.push(serializeCulture(ledger));
   sections.push(serializeMilitary(ledger));
   sections.push(serializeEnvironment(ledger));
+  sections.push(serializeStoryThreads(ledger));
   sections.push(serializeHistory(ledger));
 
   return sections.filter(Boolean).join('\n\n');
@@ -181,6 +182,21 @@ function serializeEnvironment(ledger: WorldLedger): string {
     for (const e of mitigationEfforts) {
       lines.push(`- ${e}`);
     }
+  }
+
+  return lines.join('\n');
+}
+
+function serializeStoryThreads(ledger: WorldLedger): string {
+  const threads = ledger.storyThreads.filter((t) => t.status !== 'resolved');
+  if (threads.length === 0) return '';
+
+  const lines: string[] = ['--- STORY THREADS ---'];
+  for (const t of threads) {
+    const nations = t.relatedNations.length > 0 ? ` [${t.relatedNations.join(', ')}]` : '';
+    lines.push(
+      `- ${t.name} (${t.status}, since ${t.started})${nations}: ${t.summary}`
+    );
   }
 
   return lines.join('\n');

@@ -23,6 +23,7 @@ from .types import (
     MilitaryState,
     Nation,
     Scarcity,
+    StoryThread,
     TechDomain,
     TechnologyState,
     TradingBloc,
@@ -68,6 +69,10 @@ class LedgerMutation:
     update_temperature_anomaly: float | None = None
     add_crises: list[EnvironmentalCrisis] = field(default_factory=list)
     add_mitigation_efforts: list[str] = field(default_factory=list)
+
+    # Story Threads
+    add_story_threads: list[StoryThread] = field(default_factory=list)
+    update_story_threads: list[dict[str, Any]] = field(default_factory=list)
 
     # History
     add_historical_events: list[HistoricalEvent] = field(default_factory=list)
@@ -165,6 +170,12 @@ def apply_mutation(
                 ledger.environment.mitigation_efforts,
                 mutation.add_mitigation_efforts,
             ),
+        ),
+        story_threads=_merge_by_key(
+            ledger.story_threads,
+            mutation.add_story_threads,
+            mutation.update_story_threads,
+            "name",
         ),
         history=_append(ledger.history, mutation.add_historical_events),
     )

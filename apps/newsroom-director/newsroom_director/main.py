@@ -50,6 +50,7 @@ from .db import (
     fetch_unprocessed_prompts,
     get_engine,
     get_session_factory,
+    load_edition_by_date,
     load_edition_metrics,
     load_recent_journal,
     load_world_ledger,
@@ -85,6 +86,7 @@ from .personas import (
 )
 from .reflection import (
     format_journal_for_generation,
+    format_previous_edition_summary,
     run_persona_reflection,
     run_pipeline_observation,
 )
@@ -284,6 +286,36 @@ def run_morning_press(
                 },
             )
 
+        # Step 6c: Load previous edition data for persona generation prompts
+        from datetime import timedelta as _td
+
+        prev_date_str = (
+            datetime.strptime(today_date, "%Y-%m-%d") - _td(days=1)
+        ).strftime("%Y-%m-%d")
+        prev_edition = load_edition_by_date(session, prev_date_str)
+        prev_metrics: dict[str, list[ArticleMetric]] = {}
+        if ENABLE_READER_METRICS:
+            prev_metrics = load_edition_metrics(session, prev_date_str)
+
+        prev_edition_by_persona: dict[str, str] = {}
+        if prev_edition:
+            for persona in NEWSPAPER_PERSONAS:
+                content_json = prev_edition.get(persona.id)
+                persona_metrics = prev_metrics.get(persona.id)
+                summary = format_previous_edition_summary(
+                    persona.id,
+                    prev_date_str,
+                    content_json,
+                    metrics=persona_metrics,
+                )
+                if summary:
+                    prev_edition_by_persona[persona.id] = summary
+            if prev_edition_by_persona:
+                logger.info(
+                    "Previous edition summaries loaded for %d personas",
+                    len(prev_edition_by_persona),
+                )
+
         # Step 7: For each newspaper, distill and generate.
         # Failures for individual newspapers are isolated — a single Gemini error
         # skips that paper but allows the remaining newspapers to proceed.
@@ -354,6 +386,10 @@ def run_morning_press(
                     if ENABLE_EDITORIAL_JOURNAL
                     else ""
                 )
+                # Append previous edition summary if available
+                prev_summary = prev_edition_by_persona.get(persona.id, "")
+                if prev_summary:
+                    journal_text = f"{journal_text}\n\n{prev_summary}" if journal_text else prev_summary
                 system_instruction = system_instruction.replace(
                     "{{EDITORIAL_JOURNAL}}", journal_text
                 )
@@ -951,7 +987,18 @@ with optional keys: {"name": str, "maturity_level": "emerging"|"growth"|\
 - update_temperature_anomaly: float
 - add_crises, add_mitigation_efforts
 - add_historical_events: list of {date, headline, description, impact, \
-sectors}}
+sectors}
+- add_story_threads: list of {name, status, started, last_covered, summary, \
+related_nations, sectors} — create NEW narrative arcs for developing stories \
+that span multiple editions. Status: "developing" | "ongoing" | "resolved".
+- update_story_threads: list of {name, ...fields_to_update} — update existing \
+story threads by name. Use this to evolve summaries, change status to \
+"resolved" when a story concludes, or update last_covered dates.
+
+IMPORTANT: Story threads are how you track evolving narratives across editions. \
+When today's articles introduce a significant new storyline, create a thread. \
+When a thread's story concludes or becomes irrelevant, mark it "resolved". \
+Always update last_covered for threads that appear in today's coverage.
 
 Respond with ONLY the JSON mutation object, no explanation."""
 
@@ -1000,6 +1047,7 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
         MilitaryForce,
         Nation,
         Scarcity,
+        StoryThread,
         TechDomain,
         TradingBloc,
     )
@@ -1160,6 +1208,23 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
 
     if "add_mitigation_efforts" in data:
         mutation.add_mitigation_efforts = data["add_mitigation_efforts"]
+
+    if "add_story_threads" in data:
+        mutation.add_story_threads = [
+            StoryThread(
+                name=t["name"],
+                status=t.get("status", "developing"),
+                started=t.get("started", ""),
+                last_covered=t.get("last_covered", ""),
+                summary=t.get("summary", ""),
+                related_nations=t.get("related_nations", []),
+                sectors=t.get("sectors", []),
+            )
+            for t in data["add_story_threads"]
+        ]
+
+    if "update_story_threads" in data:
+        mutation.update_story_threads = data["update_story_threads"]
 
     if "add_historical_events" in data:
         mutation.add_historical_events = [

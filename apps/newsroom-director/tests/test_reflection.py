@@ -1,11 +1,14 @@
 """Tests for editorial self-reflection module."""
 
 
+import json
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from newsroom_director.db import (
+    ArticleMetric,
     Base,
     JournalEntry,
     load_recent_journal,
@@ -15,6 +18,7 @@ from newsroom_director.generation import StubGenerationStrategy
 from newsroom_director.personas import SOVEREIGN
 from newsroom_director.reflection import (
     format_journal_for_generation,
+    format_previous_edition_summary,
     run_persona_reflection,
     run_pipeline_observation,
 )
@@ -263,3 +267,74 @@ class TestRunPipelineObservation:
         )
         # Pipeline observation should use pro tier
         assert any(c["model_tier"] == "pro" for c in gen.calls)
+
+
+# --- Previous edition summary tests ---
+
+
+class TestFormatPreviousEditionSummary:
+    def test_empty_content(self):
+        assert format_previous_edition_summary("sovereign", "2026-03-15", None) == ""
+        assert format_previous_edition_summary("sovereign", "2026-03-15", "") == ""
+
+    def test_list_format(self):
+        content = json.dumps([
+            {"headline": "Iran crisis deepens", "body": "..."},
+            {"headline": "AI regulation passes", "body": "..."},
+        ])
+        result = format_previous_edition_summary("sovereign", "2026-03-15", content)
+        assert "YOUR PREVIOUS EDITION (2026-03-15)" in result
+        assert '"Iran crisis deepens"' in result
+        assert '"AI regulation passes"' in result
+
+    def test_dict_format(self):
+        content = json.dumps({
+            "articles": [
+                {"headline": "Test headline", "body": "..."},
+            ]
+        })
+        result = format_previous_edition_summary("sovereign", "2026-03-15", content)
+        assert '"Test headline"' in result
+
+    def test_with_metrics(self):
+        content = json.dumps([
+            {"headline": "Iran crisis deepens", "body": "..."},
+            {"headline": "AI regulation passes", "body": "..."},
+        ])
+        metrics = [
+            ArticleMetric(
+                newspaper_id="sovereign",
+                article_slug="iran-crisis",
+                headline="Iran crisis deepens",
+                page_views=342,
+            ),
+            ArticleMetric(
+                newspaper_id="sovereign",
+                article_slug="ai-regulation",
+                headline="AI regulation passes",
+                page_views=891,
+            ),
+        ]
+        result = format_previous_edition_summary(
+            "sovereign", "2026-03-15", content, metrics=metrics,
+        )
+        assert "342 views" in result
+        assert "891 views" in result
+
+    def test_without_metrics_no_view_counts(self):
+        content = json.dumps([
+            {"headline": "Test article", "body": "..."},
+        ])
+        result = format_previous_edition_summary("sovereign", "2026-03-15", content)
+        assert "views" not in result
+        assert '"Test article"' in result
+
+    def test_malformed_json(self):
+        assert format_previous_edition_summary("sovereign", "2026-03-15", "not json") == ""
+
+    def test_fallback_to_title_field(self):
+        content = json.dumps([
+            {"title": "Old format headline", "content": "..."},
+        ])
+        result = format_previous_edition_summary("sovereign", "2026-03-15", content)
+        assert '"Old format headline"' in result

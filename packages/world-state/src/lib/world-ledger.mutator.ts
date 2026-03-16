@@ -7,6 +7,7 @@ import type {
   Scarcity,
   EnvironmentalCrisis,
   HistoricalEvent,
+  StoryThread,
   TechDomain,
   CulturalMovement,
   TradingBloc,
@@ -50,6 +51,10 @@ export interface LedgerMutation {
   updateTemperatureAnomaly?: number;
   addCrises?: EnvironmentalCrisis[];
   addMitigationEfforts?: string[];
+
+  // Story Threads
+  addStoryThreads?: StoryThread[];
+  updateStoryThreads?: (Partial<StoryThread> & { name: string })[];
 
   // History
   addHistoricalEvents?: HistoricalEvent[];
@@ -134,6 +139,13 @@ export function applyMutation(
         mutation.addMitigationEfforts
       ),
     },
+
+    storyThreads: mergeByKey(
+      ledger.storyThreads,
+      mutation.addStoryThreads,
+      mutation.updateStoryThreads,
+      'name'
+    ),
 
     history: append(ledger.history, mutation.addHistoricalEvents),
   };

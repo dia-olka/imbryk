@@ -112,6 +112,16 @@ export interface HistoricalEvent {
   sectors: string[];
 }
 
+export interface StoryThread {
+  name: string;
+  status: 'developing' | 'ongoing' | 'resolved';
+  started: string;
+  lastCovered: string;
+  summary: string;
+  relatedNations: string[];
+  sectors: string[];
+}
+
 export interface WorldLedger {
   epoch: string;
   synopsis: string;
@@ -121,5 +131,6 @@ export interface WorldLedger {
   culture: CultureState;
   military: MilitaryState;
   environment: EnvironmentState;
+  storyThreads: StoryThread[];
   history: HistoricalEvent[];
 }

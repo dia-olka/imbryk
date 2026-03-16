@@ -8,9 +8,10 @@ memory that evolves over time.
 
 from __future__ import annotations
 
+import json
 import logging
 
-from .db import JournalEntry
+from .db import ArticleMetric, JournalEntry
 from .generation import GenerationStrategy
 from .personas import PersonaConfig
 
@@ -202,6 +203,64 @@ def format_journal_for_generation(
         )
 
     return "\n".join(parts) if parts else "(No editorial journal entries yet.)"
+
+
+def format_previous_edition_summary(
+    persona_id: str,
+    edition_date: str,
+    edition_content_json: str | None,
+    metrics: list[ArticleMetric] | None = None,
+) -> str:
+    """Format a compact summary of the persona's previous edition.
+
+    Returns a short block (~200 tokens) listing headlines + view counts,
+    suitable for appending to the editorial journal in generation prompts.
+    Returns empty string if no previous edition data is available.
+    """
+    if not edition_content_json:
+        return ""
+
+    try:
+        content = json.loads(edition_content_json)
+    except (json.JSONDecodeError, TypeError):
+        return ""
+
+    # Extract headlines from either list or dict format
+    if isinstance(content, list):
+        headlines = [
+            a.get("headline") or a.get("title", "")
+            for a in content
+            if isinstance(a, dict)
+        ]
+    elif isinstance(content, dict):
+        article_list = content.get("articles", [])
+        headlines = [
+            a.get("headline") or a.get("title", "")
+            for a in article_list
+            if isinstance(a, dict)
+        ]
+    else:
+        return ""
+
+    headlines = [h for h in headlines if h]
+    if not headlines:
+        return ""
+
+    # Build metrics lookup by headline
+    views_by_headline: dict[str, int] = {}
+    if metrics:
+        for m in metrics:
+            views_by_headline[m.headline] = m.page_views
+
+    lines = [f"YOUR PREVIOUS EDITION ({edition_date}):"]
+    for h in headlines:
+        views = views_by_headline.get(h)
+        if views is not None:
+            lines.append(f'- "{h}" \u2014 {views} views')
+        else:
+            lines.append(f'- "{h}"')
+
+    return "\n".join(lines)
 
 
 def run_persona_reflection(

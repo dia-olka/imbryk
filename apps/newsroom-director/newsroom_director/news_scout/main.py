@@ -10,10 +10,13 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from ..config import (
     DATABASE_URL,
+    ENABLE_EDITORIAL_JOURNAL,
+    ENABLE_READER_METRICS,
+    JOURNAL_LOOKBACK_DAYS,
     NEWS_SCOUT_ENABLED,
     TAVILY_API_KEY,
     TAVILY_MAX_RESULTS_PER_QUERY,
@@ -26,6 +29,9 @@ from ..config import (
 from ..db import (
     get_engine,
     get_session_factory,
+    load_edition_by_date,
+    load_edition_metrics,
+    load_recent_journal,
     load_world_ledger,
     save_news_item,
 )
@@ -35,10 +41,17 @@ from ..personas import NEWSPAPER_PERSONAS
 from ..taxonomy import CATEGORY_IDS
 from ..world_ledger import INITIAL_WORLD_LEDGER, serialize_ledger_to_synopsis
 from ..world_ledger.serialise_dict import ledger_from_dict
+from .context import format_scout_context
 from .query_generator import generate_queries
 from .searcher import RateLimitExceeded, SearchStrategy, StubSearcher, TavilySearcher
 
 logger = logging.getLogger(__name__)
+
+
+def _previous_date(edition_date: str) -> str:
+    """Return the day before *edition_date* as YYYY-MM-DD."""
+    dt = datetime.strptime(edition_date, "%Y-%m-%d") - timedelta(days=1)
+    return dt.strftime("%Y-%m-%d")
 
 
 def run_news_scout(
@@ -85,12 +98,56 @@ def run_news_scout(
         # Step 2: Serialize to synopsis
         synopsis = serialize_ledger_to_synopsis(ledger)
 
+        # Step 2b: Load editorial context from DB
+        editorial_context = ""
+        prev_date = _previous_date(target_date)
+
+        if ENABLE_EDITORIAL_JOURNAL:
+            # load_recent_journal includes _pipeline entries alongside
+            # each persona's own, so deduplicate by (persona_id, date, type).
+            seen_keys: set[tuple[str, str, str]] = set()
+            journal_entries = []
+            for persona in NEWSPAPER_PERSONAS:
+                for entry in load_recent_journal(
+                    session,
+                    persona.id,
+                    lookback_days=JOURNAL_LOOKBACK_DAYS,
+                    current_date=target_date,
+                ):
+                    key = (entry.persona_id, entry.entry_date, entry.entry_type)
+                    if key not in seen_keys:
+                        seen_keys.add(key)
+                        journal_entries.append(entry)
+        else:
+            journal_entries = []
+
+        previous_edition = load_edition_by_date(session, prev_date)
+
+        if ENABLE_READER_METRICS:
+            reader_metrics = load_edition_metrics(session, prev_date)
+        else:
+            reader_metrics = {}
+
+        editorial_context = format_scout_context(
+            journal_entries=journal_entries,
+            previous_edition=previous_edition,
+            reader_metrics=reader_metrics,
+        )
+        if editorial_context:
+            logger.info(
+                "Editorial context loaded for scout (%d chars)",
+                len(editorial_context),
+            )
+
         # Step 3: Generate search queries via Gemini Flash
         logger.info(
             "Generating search queries",
             extra={"step": "news_scout_generate", "category_count": len(CATEGORY_IDS)},
         )
-        queries_by_category = generate_queries(synopsis, CATEGORY_IDS, gen, NEWSPAPER_PERSONAS)
+        queries_by_category = generate_queries(
+            synopsis, CATEGORY_IDS, gen, NEWSPAPER_PERSONAS,
+            editorial_context=editorial_context,
+        )
 
         if not queries_by_category:
             logger.warning("No queries generated, exiting News Scout")

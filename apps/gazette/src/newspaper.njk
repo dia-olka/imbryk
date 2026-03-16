@@ -101,12 +101,15 @@ eleventyComputed:
     </aside>
   {% endif %}
 
+  {% set siblingNewspaperIds = np.allNewspaperIds %}
+  {% set currentNewspaperId = np.newspaperId %}
+  {% set siblingEditionDate = np.editionDate %}
+  {% include "sibling-nav.njk" %}
+
   {% set editionNavPrev = np.prevEditionDate %}
   {% set editionNavNext = np.nextEditionDate %}
   {% set editionNavNewspaperId = np.newspaperId %}
   {% set editionNavNewspaperName = np.newspaperName %}
   {% include "edition-nav.njk" %}
-
-  <a href="/edition/{{ np.editionDate }}/" class="back-link">← Back to edition overview</a>
 
 </div>

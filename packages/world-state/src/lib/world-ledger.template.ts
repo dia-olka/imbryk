@@ -50,5 +50,6 @@ export const WORLD_LEDGER_TEMPLATE: WorldLedger = {
     crises: [],
     mitigationEfforts: [],
   },
+  storyThreads: [],
   history: [],
 };
