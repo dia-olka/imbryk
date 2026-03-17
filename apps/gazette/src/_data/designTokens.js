@@ -17,7 +17,7 @@ const PERSONA_DESIGN_MAP = {
       'https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap',
   },
   aspirant: {
-    primary: '#1a8a7d',
+    primary: '#0d6b5f',
     accent: '#2980b9',
     secondary: '#eaf6f4',
     fontHeading: "'Libre Franklin', sans-serif",
@@ -61,7 +61,7 @@ const PERSONA_DESIGN_MAP = {
       'https://fonts.googleapis.com/css2?family=Vollkorn:ital,wght@0,400;0,700;1,400&family=Nunito:wght@400;700&display=swap',
   },
   hedonist: {
-    primary: '#d4ac0d',
+    primary: '#7a5f00',
     accent: '#e74c8b',
     secondary: '#fef9e7',
     fontHeading: "'Poppins', sans-serif",
