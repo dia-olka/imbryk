@@ -680,7 +680,7 @@ def run_morning_press(
             if parsed is None:
                 continue
 
-            # Always re-serialize to clean JSON (strips any markdown fences
+            # Always re-serialize to clean JSON (strips any markdown fences 
             # that the LLM may have emitted) before attempting image generation.
             # This ensures R2 always receives valid JSON regardless of whether
             # image generation succeeds or fails.
