@@ -29,6 +29,19 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 /**
+ * Resolve an image URL/path to an absolute URL.
+ * - Absolute URLs (legacy data with baked-in domain) are returned as-is.
+ * - Relative R2 keys are prefixed with R2_PUBLIC_URL.
+ * - Falsy values pass through unchanged.
+ */
+function resolveImageUrl(urlOrPath) {
+  if (!urlOrPath) return urlOrPath;
+  if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) return urlOrPath;
+  if (R2_PUBLIC_URL) return `${R2_PUBLIC_URL}/${urlOrPath}`;
+  return urlOrPath;
+}
+
+/**
  * Static mapping from newspaper ID to display name.
  * Derived from data/personas.json — update if personas change.
  */
@@ -130,6 +143,7 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
           ...a,
           headline: a.headline ?? a.title ?? undefined,
           body: a.body ?? a.content ?? a.text ?? undefined,
+          image_url: resolveImageUrl(a.image_url),
         }));
       }
 
@@ -160,6 +174,11 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
             headline ?? (summary ? summary.split(/[.!?]/)[0].trim().slice(0, 80) : undefined);
           return { ...item, headline: resolvedHeadline, summary };
         });
+      }
+
+      // Resolve heroImageUrl (relative key → absolute URL)
+      if (parsed.heroImageUrl) {
+        parsed.heroImageUrl = resolveImageUrl(parsed.heroImageUrl);
       }
 
       // Validate the parsed newspaper content

@@ -251,7 +251,7 @@ class TestRunImageBackfill:
         # write_edition should have been called with the updated content
         assert len(storage._editions) == 1
         updated = json.loads(storage._editions[0]["articles"]["sovereign"])
-        assert updated["articles"][0]["image_url"].startswith("https://")
+        assert updated["articles"][0]["image_url"].startswith("editions/")
 
     def test_image_url_uses_edition_date_not_uuid(self, tmp_path):
         """Images must be stored under the date path to match main pipeline convention."""

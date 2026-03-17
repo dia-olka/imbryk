@@ -218,6 +218,68 @@ describe('transformR2Edition', () => {
     });
   });
 
+  it('resolves relative image_url paths using R2_PUBLIC_URL', async () => {
+    const origEnv = process.env.R2_PUBLIC_URL;
+    process.env.R2_PUBLIC_URL = 'https://editions.example.com';
+
+    // Re-import to pick up the new env var
+    const { transformR2Edition: freshTransform } = await import(
+      './loadEditions.js?resolve-test'
+    );
+
+    const r2Edition = {
+      edition_id: '2026-03-01',
+      date: '2026-03-01',
+      articles: {
+        sovereign: {
+          newspaper_name: 'The Sovereign',
+          articles: [
+            { headline: 'Test', body: 'Body', image_url: 'editions/2026-03-01/sovereign/0.png' },
+          ],
+          heroImageUrl: 'editions/2026-03-01/sovereign/hero.png',
+          in_brief: [],
+        },
+      },
+    };
+
+    const result = await freshTransform(r2Edition, 'test');
+
+    expect(result.newspapers[0].articles[0].image_url).toBe(
+      'https://editions.example.com/editions/2026-03-01/sovereign/0.png'
+    );
+    expect(result.newspapers[0].heroImageUrl).toBe(
+      'https://editions.example.com/editions/2026-03-01/sovereign/hero.png'
+    );
+
+    process.env.R2_PUBLIC_URL = origEnv ?? '';
+  });
+
+  it('leaves absolute image_url unchanged (backward compat)', async () => {
+    const r2Edition = {
+      edition_id: '2026-03-01',
+      date: '2026-03-01',
+      articles: {
+        sovereign: {
+          newspaper_name: 'The Sovereign',
+          articles: [
+            { headline: 'Test', body: 'Body', image_url: 'https://old-bucket.r2.dev/editions/2026-03-01/sovereign/0.png' },
+          ],
+          heroImageUrl: 'https://old-bucket.r2.dev/editions/2026-03-01/sovereign/hero.png',
+          in_brief: [],
+        },
+      },
+    };
+
+    const result = await transformR2Edition(r2Edition, 'test');
+
+    expect(result.newspapers[0].articles[0].image_url).toBe(
+      'https://old-bucket.r2.dev/editions/2026-03-01/sovereign/0.png'
+    );
+    expect(result.newspapers[0].heroImageUrl).toBe(
+      'https://old-bucket.r2.dev/editions/2026-03-01/sovereign/hero.png'
+    );
+  });
+
   it('handles already-parsed objects (not JSON strings)', async () => {
     const r2Edition = {
       edition_id: '2026-03-01',

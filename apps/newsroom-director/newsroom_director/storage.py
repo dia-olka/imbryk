@@ -61,7 +61,7 @@ class StubEditionStorage(EditionStorage):
     ) -> str:
         key = f"editions/{edition_id}/{newspaper_id}/{filename}"
         self._images[key] = image_bytes
-        return f"https://stub-r2.example.com/{key}"
+        return key
 
     def list_editions(self) -> list[dict]:
         return list(self._editions)

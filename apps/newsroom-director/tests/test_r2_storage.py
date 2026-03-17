@@ -107,7 +107,7 @@ class TestR2EditionStorage:
         assert "date" in data
         assert "articles" in data
 
-    def test_write_image_returns_custom_domain_url(self, mock_s3_client):
+    def test_write_image_returns_relative_key(self, mock_s3_client):
         storage = R2EditionStorage(
             account_id="test-acct",
             access_key_id="key",
@@ -118,23 +118,10 @@ class TestR2EditionStorage:
 
         url = storage.write_image("2026-03-01", "sovereign", "hero.png", b"img")
 
-        assert url == "https://editions.example.com/editions/2026-03-01/sovereign/hero.png"
+        assert url == "editions/2026-03-01/sovereign/hero.png"
         call_kwargs = mock_s3_client.put_object.call_args[1]
         assert call_kwargs["ContentType"] == "image/png"
         assert call_kwargs["CacheControl"] == "public, max-age=31536000, immutable"
-
-    def test_write_image_strips_trailing_slash(self, mock_s3_client):
-        storage = R2EditionStorage(
-            account_id="test-acct",
-            access_key_id="key",
-            secret_access_key="secret",
-            bucket_name="test-bucket",
-            public_url="https://editions.example.com/",
-        )
-
-        url = storage.write_image("2026-03-01", "owner", "0.png", b"img")
-
-        assert url == "https://editions.example.com/editions/2026-03-01/owner/0.png"
 
     def test_write_index(self, mock_s3_client):
         storage = R2EditionStorage(

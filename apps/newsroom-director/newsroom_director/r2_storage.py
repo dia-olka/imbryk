@@ -93,7 +93,7 @@ class R2EditionStorage(EditionStorage):
                 "key": key,
             },
         )
-        return f"{self._public_url}/{key}"
+        return key
 
     def list_editions(self) -> list[dict]:
         response = self._client.list_objects_v2(
