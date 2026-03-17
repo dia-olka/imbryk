@@ -28,6 +28,8 @@ eleventyComputed:
 {% set siblingEditionDate = np.editionDate %}
 {% include "sibling-nav.njk" %}
 
+<a href="/edition/{{ np.editionDate }}/" class="back-link" aria-label="Back to {{ np.editionDate | dateDisplay }} edition overview">&larr; Back to edition overview</a>
+
 <div class="newspaper" data-persona="{{ np.newspaperId }}" style="{{ np.cssVars }}">
 
   {% set mastheadName = np.newspaperName %}

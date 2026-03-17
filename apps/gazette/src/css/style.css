@@ -1752,7 +1752,7 @@ main:has(.newspaper) {
 }
 
 /* When no image, always use dark bg so white text meets WCAG 4.5:1.
-   Brand primary colours like aspirant (#1a8a7d) or hedonist (#d4ac0d) do not
+   Brand primary colours like aspirant (#0d6b5f) or hedonist (#7a5f00) do not
    provide sufficient contrast against white text on their own. */
 .front-page-card:not(:has(.front-page-card__image)) .front-page-card__masthead {
   background: var(--color-text);
