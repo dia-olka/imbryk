@@ -60,6 +60,16 @@ class R2EditionStorage(EditionStorage):
             extra={"edition_id": edition_id, "key": key},
         )
 
+    @staticmethod
+    def _content_type_for(filename: str) -> str:
+        if filename.endswith(".webp"):
+            return "image/webp"
+        if filename.endswith(".png"):
+            return "image/png"
+        if filename.endswith(".jpg") or filename.endswith(".jpeg"):
+            return "image/jpeg"
+        return "application/octet-stream"
+
     def write_image(
         self,
         edition_id: str,
@@ -72,7 +82,8 @@ class R2EditionStorage(EditionStorage):
             Bucket=self._bucket,
             Key=key,
             Body=image_bytes,
-            ContentType="image/png",
+            ContentType=self._content_type_for(filename),
+            CacheControl="public, max-age=31536000, immutable",
         )
         logger.info(
             "Image written to R2",

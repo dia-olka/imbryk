@@ -70,6 +70,7 @@ eleventyComputed:
         <img src="{{ ap.article.image_url }}"
              alt="{{ ap.article.imagePrompt }}"
              loading="lazy"
+             decoding="async"
              width="800"
              height="450"
              srcset="{{ ap.article.image_url }} 800w"

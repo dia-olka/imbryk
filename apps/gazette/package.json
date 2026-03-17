@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@11ty/eleventy": "^3.0.0",
+    "@11ty/eleventy-img": "^6.0.4",
     "@org/ai-personas": "*",
     "@org/taxonomy": "*",
     "@org/world-state": "*",
@@ -15,6 +16,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "clean-css": "^5.3.3",
     "tsx": "^4.19.0"
   }
 }

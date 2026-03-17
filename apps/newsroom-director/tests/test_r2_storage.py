@@ -116,9 +116,12 @@ class TestR2EditionStorage:
             public_url="https://editions.example.com",
         )
 
-        url = storage.write_image("2026-03-01", "sovereign", "hero.png", b"img")
+        url = storage.write_image("2026-03-01", "sovereign", "hero.webp", b"img")
 
-        assert url == "https://editions.example.com/editions/2026-03-01/sovereign/hero.png"
+        assert url == "https://editions.example.com/editions/2026-03-01/sovereign/hero.webp"
+        call_kwargs = mock_s3_client.put_object.call_args[1]
+        assert call_kwargs["ContentType"] == "image/webp"
+        assert call_kwargs["CacheControl"] == "public, max-age=31536000, immutable"
 
     def test_write_image_strips_trailing_slash(self, mock_s3_client):
         storage = R2EditionStorage(
@@ -129,9 +132,9 @@ class TestR2EditionStorage:
             public_url="https://editions.example.com/",
         )
 
-        url = storage.write_image("2026-03-01", "owner", "0.png", b"img")
+        url = storage.write_image("2026-03-01", "owner", "0.webp", b"img")
 
-        assert url == "https://editions.example.com/editions/2026-03-01/owner/0.png"
+        assert url == "https://editions.example.com/editions/2026-03-01/owner/0.webp"
 
     def test_write_index(self, mock_s3_client):
         storage = R2EditionStorage(

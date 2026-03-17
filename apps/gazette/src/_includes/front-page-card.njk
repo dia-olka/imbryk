@@ -15,14 +15,16 @@
      style="{{ cardPersona.cssVars if cardPersona else '' }}"
      aria-label="{{ cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name }} — {{ leadHeadline }}">
 
-    {# Image layer — uses hero image when available, falls back to a seeded placeholder #}
-    <img src="{{ cardNewspaper.heroImageUrl or ('https://picsum.photos/seed/' + cardNewspaper.newspaper_id + '/600/800') }}"
+    {# Image layer — uses hero image when available #}
+    {% if cardNewspaper.heroImageUrl %}
+    <img src="{{ cardNewspaper.heroImageUrl }}"
          alt=""
          {% if loop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
          decoding="async"
          width="600"
          height="800"
          class="front-page-card__image">
+    {% endif %}
 
     {# Top: Masthead overlay #}
     <div class="front-page-card__masthead">

@@ -40,6 +40,8 @@ eleventyComputed:
       <img src="{{ np.heroImageUrl }}"
            alt="{{ np.frontPageImagePrompt }}"
            loading="eager"
+           decoding="async"
+           fetchpriority="high"
            width="800"
            height="450"
            srcset="{{ np.heroImageUrl }} 800w"

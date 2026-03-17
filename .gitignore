@@ -52,4 +52,7 @@ vitest.config.*.timestamp*
 !.env.example
 apps/ingestion-api/imbryk.db
 
+# eleventy-img build cache (persisted on Cloudflare Pages)
+apps/gazette/.cache
+
 

@@ -54,9 +54,7 @@ def _format_journal_context(
     # Per-persona latest intentions
     intentions_by_persona: dict[str, JournalEntry] = {}
     for e in persona_entries:
-        if e.entry_type == "intention":
-            intentions_by_persona[e.persona_id] = e
-        elif e.entry_type == "reflection" and e.persona_id not in intentions_by_persona:
+        if e.entry_type == "intention" or e.entry_type == "reflection" and e.persona_id not in intentions_by_persona:
             intentions_by_persona[e.persona_id] = e
 
     if intentions_by_persona:

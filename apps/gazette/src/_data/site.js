@@ -6,6 +6,14 @@
  *   IMBRYK_APP_URL — public URL of the Imbryk submission app (e.g. https://app.imbryk.com)
  */
 export default function () {
+  // Extract the origin from R2_PUBLIC_URL for preconnect hints in templates
+  let r2Origin = '';
+  if (process.env.R2_PUBLIC_URL) {
+    try {
+      r2Origin = new URL(process.env.R2_PUBLIC_URL).origin;
+    } catch { /* ignore malformed URLs */ }
+  }
+
   return {
     url: process.env.GAZETTE_URL ?? 'https://imbryk.news',
     submitUrl: process.env.IMBRYK_APP_URL ?? 'https://whisper.imbryk.news',
@@ -15,5 +23,6 @@ export default function () {
     locale: 'en_US',
     ogImageFallback: '/og-gazette.png',
     cfWebAnalyticsToken: process.env.CF_WEB_ANALYTICS_TOKEN ?? '',
+    r2Origin,
   };
 }

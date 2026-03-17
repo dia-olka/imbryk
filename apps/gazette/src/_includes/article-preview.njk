@@ -17,6 +17,7 @@
       <img src="{{ previewArticle.image_url }}"
            alt="{{ previewArticle.imagePrompt }}"
            loading="{% if previewIsLead %}eager{% else %}lazy{% endif %}"
+           decoding="async"
            width="400"
            height="225"
            class="article-preview__image">
