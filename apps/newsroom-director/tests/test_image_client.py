@@ -9,12 +9,13 @@ from newsroom_director.image_gen.client import (
 
 
 class TestStubImageClient:
-    def test_returns_png_bytes_by_default(self):
+    def test_returns_webp_bytes_by_default(self):
         client = StubImageClient()
         result = client.generate("A photo of a cat")
 
         assert result is not None
-        assert result.startswith(b"\x89PNG")
+        assert result.startswith(b"RIFF")
+        assert b"WEBP" in result
 
     def test_tracks_calls(self):
         client = StubImageClient()

@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import io
 import logging
 from dataclasses import dataclass
-
-from PIL import Image
 
 from ..storage import EditionStorage
 from ..validation import sanitize_prompt_text
@@ -16,18 +13,6 @@ logger = logging.getLogger(__name__)
 
 # Maximum number of article images per newspaper (excluding hero).
 MAX_ARTICLE_IMAGES = 3
-
-# WebP quality setting (0–100). 80 gives excellent visual fidelity at ~10×
-# smaller file size than the PNGs returned by Imagen.
-_WEBP_QUALITY = 80
-
-
-def _png_to_webp(png_bytes: bytes) -> bytes:
-    """Convert PNG image bytes to lossy WebP."""
-    img = Image.open(io.BytesIO(png_bytes))
-    buf = io.BytesIO()
-    img.save(buf, format="WEBP", quality=_WEBP_QUALITY)
-    return buf.getvalue()
 
 
 @dataclass
@@ -111,10 +96,9 @@ def generate_images_for_newspaper(
             )
             continue
 
-        webp_bytes = _png_to_webp(image_bytes)
-        filename = f"{idx}.webp"
+        filename = f"{idx}.png"
         url = storage.write_image(
-            edition_id, newspaper_id, filename, webp_bytes
+            edition_id, newspaper_id, filename, image_bytes
         )
         article_image_urls[idx] = url
 
@@ -145,9 +129,8 @@ def generate_images_for_newspaper(
 
         hero_bytes = imagen_client.generate(sanitized_hero_prompt)
         if hero_bytes is not None:
-            hero_webp = _png_to_webp(hero_bytes)
             hero_image_url = storage.write_image(
-                edition_id, newspaper_id, "hero.webp", hero_webp
+                edition_id, newspaper_id, "hero.png", hero_bytes
             )
             logger.info(
                 "Hero image uploaded: %s -> %s",

@@ -1,62 +1,14 @@
 import 'dotenv/config';
-import { cpSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import markdownIt from 'markdown-it';
 import CleanCSS from 'clean-css';
-import { eleventyImageTransformPlugin } from '@11ty/eleventy-img';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const md = markdownIt({ html: false, breaks: true, linkify: true });
 const cleanCss = new CleanCSS({ level: 2 });
 
 const OUTPUT_DIR = '../../dist/apps/gazette';
-const IMG_CACHE_DIR = join(__dirname, '.cache/@11ty/img');
 
 export default function (eleventyConfig) {
-  // ---------------------------------------------------------------------------
-  // Image optimisation — fetches remote R2 images, generates responsive WebP
-  // variants, and replaces <img> with <picture> elements.
-  // Uses .cache/ for persistence across Cloudflare Pages builds.
-  // ---------------------------------------------------------------------------
-  const imageOptions = {
-    formats: ['webp', 'auto'],
-    widths: [400, 800, 1400],
-    failOnError: false,
-    htmlOptions: {
-      imgAttributes: {
-        loading: 'lazy',
-        decoding: 'async',
-      },
-    },
-    sharpOptions: {
-      animated: true,
-    },
-    cacheOptions: {
-      duration: '1d',
-    },
-  };
-
-  if (process.env.ELEVENTY_RUN_MODE === 'build') {
-    // On Cloudflare Pages the .cache/ folder persists between deploys but the
-    // output dir is ephemeral. Write optimised images to cache, then copy them
-    // into the output directory after the build finishes.
-    imageOptions.outputDir = IMG_CACHE_DIR;
-    imageOptions.urlPath = '/img/built/';
-
-    eleventyConfig.on('eleventy.after', () => {
-      try {
-        cpSync(IMG_CACHE_DIR, join(__dirname, OUTPUT_DIR, 'img/built'), {
-          recursive: true,
-        });
-      } catch {
-        // First build — cache dir may not exist yet
-      }
-    });
-  }
-
-  eleventyConfig.addPlugin(eleventyImageTransformPlugin, imageOptions);
-
   // ---------------------------------------------------------------------------
   // CSS minification
   // ---------------------------------------------------------------------------
