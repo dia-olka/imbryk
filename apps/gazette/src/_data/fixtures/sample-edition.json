@@ -255,37 +255,24 @@
     }
   ],
   "curator_synthesis": {
-    "analysis": "Today's coverage reveals a world grappling with three interconnected crises: military escalation in the Malacca Strait, environmental collapse in the Southern Union and Pacific Rim, and the social consequences of accelerating AI autonomy. Each newspaper's framing reveals as much about their worldview as about the events themselves.\n\nThe Sovereign leads with military positioning, treating the Malacca incidents as a strategic chess match. The Owner sees the same events through the lens of market disruption and supply chain repricing. The Aspirant centres the human cost of climate displacement that other papers treat as background. The Radical connects the AI job cuts to the autonomy directive, seeing a pattern of institutional capture.\n\nNotably absent from most coverage: the voices of the 200,000 displaced people, the Pacific island communities facing reef collapse, and the 15,000 workers losing their jobs. The papers write about these people but rarely speak to them.",
     "consensus": [
-      "The Malacca Strait situation represents a significant escalation in Atlantic-Eastern tensions",
-      "AI autonomy is advancing faster than governance frameworks can adapt",
-      "The Meridian currency is gaining traction as geopolitical instability increases"
+      "The Malacca Strait situation represents a significant escalation in Atlantic-Eastern tensions.",
+      "AI autonomy is advancing faster than governance frameworks can adapt, with all outlets acknowledging the gap between deployment speed and regulatory response.",
+      "The Meridian currency is gaining traction as geopolitical instability increases, though outlets disagree on whether this represents opportunity or threat."
     ],
-    "disagreements": {
-      "Malacca Strait framing": [
-        "The Sovereign frames it as a strategic defence challenge requiring military response",
-        "The Owner frames it as a market disruption and repricing event",
-        "The Radical frames it as a distraction from domestic policy failures"
-      ],
-      "AI Autonomy Directive": [
-        "The Sovereign presents it neutrally as policy",
-        "The Radical links it directly to job losses and corporate capture",
-        "The Aspirant does not cover it, prioritising environmental stories"
-      ]
-    },
-    "watch_list": {
-      "Malacca Strait": [
-        "Watch for Eastern Compact response to second carrier group deployment",
-        "Monitor maritime insurance rates as a proxy for escalation risk"
-      ],
-      "Water Crisis": [
-        "Track displacement numbers — projections suggest 600,000 by year end",
-        "Monitor European Commonwealth refugee policy response"
-      ],
-      "AI Governance": [
-        "Follow the Tromsø Protocol negotiations at the Fracture Accords council",
-        "Track tech sector layoff numbers as AI automation accelerates"
-      ]
-    }
+    "fault_lines": [
+      "The Sovereign frames the Malacca Strait as a strategic defence challenge requiring military response, while The Owner sees it as a market disruption and repricing event. The Radical dismisses both framings, treating it as a distraction from domestic policy failures.",
+      "On the AI Autonomy Directive, The Sovereign presents it neutrally as policy, The Radical links it directly to job losses and corporate capture, and The Aspirant does not cover it at all — prioritising environmental stories instead.",
+      "Climate displacement coverage splits along predictable lines: The Aspirant centres the human cost, while The Sovereign and The Owner treat the 200,000 displaced people as background to strategic and market narratives."
+    ],
+    "uncovered_angles": [
+      "Only The Aspirant covered the Pacific island reef collapse in any depth. Other outlets buried it beneath geopolitical and financial headlines, despite projections of 600,000 displaced by year end.",
+      "The connection between AI-driven job cuts and the autonomy directive was explored only by The Radical. Mainstream outlets treated these as separate stories, missing the pattern of institutional capture."
+    ],
+    "what_to_watch": [
+      "Watch for the Eastern Compact response to the second carrier group deployment — The Sovereign will frame it as escalation, The Owner will track maritime insurance rates as a proxy for risk.",
+      "Track displacement numbers from the Southern Union water crisis. The Aspirant will continue centering human stories, while The Sovereign monitors European Commonwealth refugee policy.",
+      "Follow the Tromsø Protocol negotiations at the Fracture Accords council. The gap between AI deployment speed and governance frameworks will widen, with each outlet framing the consequences through its own ideological lens."
+    ]
   }
 }

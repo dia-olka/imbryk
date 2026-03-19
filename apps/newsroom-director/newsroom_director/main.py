@@ -575,7 +575,26 @@ def run_morning_press(
                 if "curator" in articles:
                     import json as _json
                     try:
-                        curator_text = _json.loads(articles["curator"]).get("text", "")
+                        parsed_curator = _json.loads(articles["curator"])
+                        # New structured format
+                        if "consensus" in parsed_curator:
+                            sections = []
+                            for key, label in [
+                                ("consensus", "CONSENSUS"),
+                                ("fault_lines", "FAULT LINES"),
+                                ("uncovered_angles", "UNCOVERED ANGLES"),
+                                ("what_to_watch", "WHAT TO WATCH"),
+                            ]:
+                                items = parsed_curator.get(key, [])
+                                if items:
+                                    numbered = "\n".join(
+                                        f"{i}. {item}" for i, item in enumerate(items, 1)
+                                    )
+                                    sections.append(f"{label}\n{numbered}")
+                            curator_text = "\n\n".join(sections)
+                        else:
+                            # Legacy text format
+                            curator_text = parsed_curator.get("text", "")
                     except (ValueError, TypeError, AttributeError):
                         curator_text = articles.get("curator", "")
 

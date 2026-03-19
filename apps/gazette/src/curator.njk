@@ -65,7 +65,29 @@ eleventyComputed:
       <p>Six AI editorial perspectives analysed. Here is where they converge, clash, and leave gaps.</p>
     </div>
     <section class="synthesis-section" aria-label="Curator synthesis">
-      {{ (synthesis.text or synthesis.analysis or "") | markdown | safe }}
+      {# New structured format — render directly as HTML #}
+      {% if synthesis.consensus %}
+        {% set sections = [
+          {key: "consensus", label: "Consensus"},
+          {key: "fault_lines", label: "Fault Lines"},
+          {key: "uncovered_angles", label: "Uncovered Angles"},
+          {key: "what_to_watch", label: "What to Watch"}
+        ] %}
+        {% for section in sections %}
+          {% set items = synthesis[section.key] %}
+          {% if items and items.length %}
+            <h2>{{ section.label }}</h2>
+            <ol>
+              {% for item in items %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ol>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        {# Legacy text format — fall back to markdown rendering #}
+        {{ (synthesis.text or synthesis.analysis or "") | markdown | safe }}
+      {% endif %}
     </section>
   {% else %}
     <p>No curator synthesis available for this edition.</p>

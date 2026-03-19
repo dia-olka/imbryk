@@ -38,8 +38,11 @@ class NewspaperOutput:
 
 @dataclass
 class CuratorOutput:
-    """Single-field JSON wrapper for the curator's markdown synthesis."""
-    text: str
+    """Structured curator synthesis — one list per section."""
+    consensus: list[str]
+    fault_lines: list[str]
+    uncovered_angles: list[str]
+    what_to_watch: list[str]
 
 
 # ─── Output validation ────────────────────────────────────────────────────────
@@ -64,5 +67,10 @@ def is_valid_curator(raw: str) -> bool:
         parsed = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return False
+    # New structured format
+    consensus = parsed.get("consensus")
+    if isinstance(consensus, list) and len(consensus) > 0:
+        return True
+    # Legacy text format
     text = parsed.get("text", "")
     return isinstance(text, str) and len(text.strip()) > 100

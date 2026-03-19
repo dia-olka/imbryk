@@ -118,12 +118,15 @@ class StubGenerationStrategy(GenerationStrategy):
         if response_schema is not None:
             from .output_schemas import CuratorOutput, NewspaperOutput
             if response_schema is CuratorOutput:
-                return json.dumps({"text": (
-                    "## CONSENSUS\nStub consensus point one. Stub consensus point two.\n\n"
-                    "## FAULT LINES\nStub fault line analysis.\n\n"
-                    "## UNCOVERED ANGLES\nStub uncovered angle.\n\n"
-                    "## WHAT TO WATCH\nStub watch item."
-                )})
+                return json.dumps({
+                    "consensus": [
+                        "Stub consensus point one.",
+                        "Stub consensus point two.",
+                    ],
+                    "fault_lines": ["Stub fault line analysis."],
+                    "uncovered_angles": ["Stub uncovered angle."],
+                    "what_to_watch": ["Stub watch item."],
+                })
             if response_schema is NewspaperOutput:
                 return json.dumps({
                     "newspaper_name": f"Stub {model_tier}",
