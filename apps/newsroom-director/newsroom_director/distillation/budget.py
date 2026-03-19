@@ -100,7 +100,7 @@ def merge_low_weight_clusters(
     merged = sorted_digests[max_clusters - 1 :]
 
     # Combine merged clusters into one "Other Topics" digest
-    all_verbatim: list[tuple[float, str]] = []
+    all_verbatim: list[tuple[float, str, str]] = []
     all_keywords: list[str] = []
     total_size = 0
     total_weight = 0.0

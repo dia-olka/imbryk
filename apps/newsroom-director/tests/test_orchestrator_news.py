@@ -32,7 +32,7 @@ class StubDistillationPipeline(DistillationPipeline):
             cluster_size=len(prompts),
             aggregate_weight=sum(p.payment_amount for p in prompts),
             verbatim_prompts=[
-                (p.payment_amount, p.text) for p in prompts[:5]
+                (p.payment_amount, p.text, "") for p in prompts[:5]
             ],
             long_tail_summary="Test summary",
             keywords=["test"],

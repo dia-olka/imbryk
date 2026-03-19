@@ -120,6 +120,34 @@ class TestSerializeDigest:
 
         assert "Keywords:" in text
 
+    def test_source_url_included_when_present(self):
+        wp = WeightedPrompt(
+            prompt=Prompt(
+                text="EU AI Act enforcement begins",
+                payment_amount=10.0,
+                source_url="https://example.com/ai-act",
+            ),
+            weight=10.0,
+            embedding=np.random.rand(8).astype(np.float32),
+        )
+        cluster = Cluster(cluster_id=0, prompts=[wp], aggregate_weight=10.0)
+        digest = build_digest(cluster)
+        text = serialize_digest(digest)
+
+        assert "EU AI Act enforcement begins" in text
+        assert "Source: https://example.com/ai-act" in text
+
+    def test_source_url_omitted_when_empty(self):
+        cluster = Cluster(
+            cluster_id=0,
+            prompts=[_make_wp("regular prompt text", 5.0)],
+            aggregate_weight=5.0,
+        )
+        digest = build_digest(cluster)
+        text = serialize_digest(digest)
+
+        assert "Source:" not in text
+
 
 class TestExtractKeywords:
     def test_filters_stop_words(self):

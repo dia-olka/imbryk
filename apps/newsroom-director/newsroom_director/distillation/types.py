@@ -50,7 +50,7 @@ class ClusterDigest:
     cluster_id: int
     cluster_size: int
     aggregate_weight: float
-    verbatim_prompts: list[tuple[float, str]]  # (weight, text)
+    verbatim_prompts: list[tuple[float, str, str]]  # (weight, text, source_url)
     long_tail_summary: str
     keywords: list[str]
 

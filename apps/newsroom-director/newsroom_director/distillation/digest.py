@@ -44,7 +44,10 @@ def build_digest(cluster: Cluster) -> ClusterDigest:
     sorted_prompts = sorted(cluster.prompts, key=lambda wp: wp.weight, reverse=True)
 
     k = min(MAX_VERBATIM, len(sorted_prompts))
-    verbatim = [(wp.weight, sanitize_prompt_text(wp.prompt.text)) for wp in sorted_prompts[:k]]
+    verbatim = [
+        (wp.weight, sanitize_prompt_text(wp.prompt.text), wp.prompt.source_url)
+        for wp in sorted_prompts[:k]
+    ]
 
     # Long-tail summary for remaining prompts
     remaining = sorted_prompts[k:]
@@ -79,8 +82,11 @@ def serialize_digest(digest: ClusterDigest) -> str:
 
     if digest.verbatim_prompts:
         lines.append("High-value verbatim prompts:")
-        for weight, text in digest.verbatim_prompts:
-            lines.append(f'  [w:{weight:,.0f}] "{text}"')
+        for weight, text, source_url in digest.verbatim_prompts:
+            line = f'  [w:{weight:,.0f}] "{text}"'
+            if source_url:
+                line += f"\n          Source: {source_url}"
+            lines.append(line)
 
     if digest.long_tail_summary:
         tail_count = digest.cluster_size - len(digest.verbatim_prompts)
