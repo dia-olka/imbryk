@@ -19,6 +19,7 @@ class PlannedPost:
     post_type: str  # edition_teaser, contrast, thread
     text: str  # For threads, newline-separated posts
     reasoning: str = ""
+    url: str = ""  # Target URL for embed card (for threads: comma-separated per post)
 
 
 @dataclass
@@ -42,15 +43,30 @@ the editorial tension between newspapers without taking sides.
 
 POST TYPES (use 1-2 per day):
 - "edition_teaser": One post that captures the day's most interesting angle. \
-Lead with the conflict or surprise, not a summary.
+Lead with the conflict or surprise, not a summary. Set "url" to the edition page.
 - "contrast": Highlight when two newspapers disagree sharply on the same event. \
-Name the newspapers. Quote or paraphrase their positions.
-- "thread": 3-5 linked posts, each covering a different newspaper's hottest take. \
-Use the newspaper name as a label. End with a link to the full edition.
+Name the newspapers. Quote or paraphrase their positions. Set "url" to the \
+more provocative newspaper's page.
+- "thread": A HIERARCHICAL thread — readers see the root post first, then \
+expand to see per-newspaper takes as replies. Structure it as:
+  1. Root post: an intriguing hook about today's edition (url = edition page).
+  2. Reply posts (2-4): each focuses on ONE newspaper's hottest take \
+(url = that newspaper's page). Name the newspaper. Be specific.
+  3. Final reply: the Curator's synthesis or a "read the full edition" nudge \
+(url = curator page or edition page).
+Separate posts with \\n---\\n. Provide matching URLs comma-separated in "url".
+
+URL GUIDELINES:
+- Every post MUST have a "url" field pointing to the most relevant page.
+- The edition summary below includes URLs for the edition, each newspaper, \
+and the curator. Use them directly — do not fabricate URLs.
+- URLs in post text become clickable links AND show as embed cards \
+(with title, description, and preview image) on Bluesky.
+- For threads: "url" is a comma-separated list matching the posts in order.
 
 RULES:
-- Maximum 255 characters per post (a gazette link is appended automatically).
-- Do NOT include the gazette URL in post text — it is added for you.
+- Maximum 255 characters per post (leave room for the URL).
+- Include the relevant URL at the end of each post text.
 - Never be generic ("check out today's edition!"). Always name specific \
 articles, newspapers, or tensions.
 - Learn from the marketing journal — if contrast posts got more engagement, \
@@ -65,7 +81,8 @@ OUTPUT: Respond with ONLY a JSON object matching this schema:
     {
       "channel": "bluesky",
       "post_type": "edition_teaser" | "contrast" | "thread",
-      "text": "Post text here (for threads, separate posts with \\n---\\n)"
+      "text": "Post text here (for threads, separate posts with \\n---\\n)",
+      "url": "https://gazette.example/edition/2026-03-15/ (for threads: comma-separated per post)"
     }
   ]
 }
@@ -145,6 +162,7 @@ def _parse_plan(response: str) -> MarketingPlan:
             post_type=p.get("post_type", "edition_teaser"),
             text=p.get("text", ""),
             reasoning=p.get("reasoning", ""),
+            url=p.get("url", ""),
         ))
 
     return MarketingPlan(
@@ -162,6 +180,9 @@ def build_edition_summary(
 
     Extracts headlines from each newspaper's JSON content.
     """
+    edition_page = f"{gazette_url}/edition/{edition_date}/"
+    curator_page = f"{gazette_url}/edition/{edition_date}/curator/"
+
     sections = []
     for newspaper_id, content_json in articles.items():
         try:
@@ -172,8 +193,12 @@ def build_edition_summary(
         if newspaper_id == "curator":
             text = parsed.get("text", "")
             if text:
-                sections.append(f"=== THE CURATOR ===\n{text[:500]}")
+                sections.append(
+                    f"=== THE CURATOR ===\nURL: {curator_page}\n{text[:500]}"
+                )
             continue
+
+        newspaper_page = f"{gazette_url}/edition/{edition_date}/{newspaper_id}/"
 
         headlines = []
         for a in parsed.get("articles", []):
@@ -184,12 +209,12 @@ def build_edition_summary(
         editors_note = parsed.get("editors_note", "")
         name = parsed.get("newspaper_name", newspaper_id)
 
-        section = f"=== {name.upper()} ===\n"
+        section = f"=== {name.upper()} ===\nURL: {newspaper_page}\n"
         if headlines:
             section += "\n".join(headlines[:5])
         if editors_note:
             section += f"\nEditor's note: {editors_note[:200]}"
         sections.append(section)
 
-    header = f"Edition date: {edition_date}\nGazette: {gazette_url}/edition/{edition_date}/\n"
+    header = f"Edition date: {edition_date}\nEdition URL: {edition_page}\nCurator URL: {curator_page}\n"
     return header + "\n\n".join(sections)

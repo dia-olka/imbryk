@@ -25,12 +25,30 @@ class ChannelStrategy(ABC):
         """Return the channel identifier (e.g. 'bluesky', 'twitter')."""
 
     @abstractmethod
-    def post(self, text: str) -> PostResult:
-        """Publish a single post. Returns result with post ID/URL on success."""
+    def post(self, text: str, url: str | None = None) -> PostResult:
+        """Publish a single post.
+
+        Args:
+            text: Post body text.
+            url: Optional target URL for an embed card (link preview).
+
+        Returns:
+            Result with post ID/URL on success.
+        """
 
     @abstractmethod
-    def post_thread(self, texts: list[str]) -> list[PostResult]:
-        """Publish a thread (sequence of linked posts). Returns one result per post."""
+    def post_thread(
+        self, texts: list[str], urls: list[str] | None = None,
+    ) -> list[PostResult]:
+        """Publish a thread (sequence of linked posts).
+
+        Args:
+            texts: Ordered list of post bodies.
+            urls: Optional per-post URLs for embed cards (matched by index).
+
+        Returns:
+            One result per post.
+        """
 
 
 class StubChannel(ChannelStrategy):
@@ -45,7 +63,7 @@ class StubChannel(ChannelStrategy):
     def channel_name(self) -> str:
         return "stub"
 
-    def post(self, text: str) -> PostResult:
+    def post(self, text: str, url: str | None = None) -> PostResult:
         self.posts.append(text)
         if self._should_fail:
             return PostResult(success=False, error="stub failure")
@@ -55,7 +73,9 @@ class StubChannel(ChannelStrategy):
             post_url=f"https://stub.example.com/post/{len(self.posts)}",
         )
 
-    def post_thread(self, texts: list[str]) -> list[PostResult]:
+    def post_thread(
+        self, texts: list[str], urls: list[str] | None = None,
+    ) -> list[PostResult]:
         self.threads.append(texts)
         results = []
         for i, text in enumerate(texts):

@@ -180,10 +180,18 @@ def run_marketing_agent(
                 if not thread_texts:
                     continue
 
-                # Ensure the last thread post has the edition link
-                thread_texts[-1] = _ensure_link(thread_texts[-1])
+                # Parse per-post URLs (comma-separated in planned.url)
+                thread_urls: list[str] = []
+                if planned.url:
+                    thread_urls = [
+                        u.strip() for u in planned.url.split(",")
+                    ]
 
-                results = ch.post_thread(thread_texts)
+                # Ensure every thread post has a gazette link (fallback)
+                for idx in range(len(thread_texts)):
+                    thread_texts[idx] = _ensure_link(thread_texts[idx])
+
+                results = ch.post_thread(thread_texts, urls=thread_urls or None)
                 for i, result in enumerate(results):
                     post = MarketingPost(
                         edition_date=today,
@@ -205,7 +213,7 @@ def run_marketing_agent(
                         )
             else:
                 planned_text = _ensure_link(planned.text)
-                result = ch.post(planned_text)
+                result = ch.post(planned_text, url=planned.url or None)
                 post = MarketingPost(
                     edition_date=today,
                     channel=ch.channel_name,
