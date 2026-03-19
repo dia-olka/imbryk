@@ -37,7 +37,7 @@ describe('OrbInput', () => {
   it('should render textarea with placeholder', () => {
     render(<OrbInput {...defaultProps} />);
     expect(
-      screen.getByPlaceholderText('What happens next in the world?')
+      screen.getByPlaceholderText('What would you like coverage on?')
     ).toBeTruthy();
   });
 
@@ -45,7 +45,7 @@ describe('OrbInput', () => {
     const onChange = vi.fn();
     render(<OrbInput {...defaultProps} onChange={onChange} />);
     const textarea = screen.getByPlaceholderText(
-      'What happens next in the world?'
+      'What would you like coverage on?'
     );
     fireEvent.change(textarea, { target: { value: 'Test event' } });
     expect(onChange).toHaveBeenCalledWith('Test event');
@@ -63,7 +63,7 @@ describe('OrbInput', () => {
 
   it('should have accessible label', () => {
     render(<OrbInput {...defaultProps} />);
-    const textarea = screen.getByLabelText('Describe a world-altering event');
+    const textarea = screen.getByLabelText('Request coverage of a topic');
     expect(textarea).toBeTruthy();
   });
 
@@ -103,7 +103,7 @@ describe('OrbInput', () => {
     act(() => {
       vi.advanceTimersByTime(300);
     });
-    const textarea = screen.getByPlaceholderText('What happens next in the world?');
+    const textarea = screen.getByPlaceholderText('What would you like coverage on?');
     expect(textarea.getAttribute('tabindex')).toBe('-1');
   });
 

@@ -132,7 +132,7 @@ test.describe('Newspaper directory page', () => {
   });
 });
 
-// ── World timeline page ───────────────────────────────────────────────────────
+// ── World history page ────────────────────────────────────────────────────────
 
 test.describe('Timeline page', () => {
   test.beforeEach(async ({ page }) => {

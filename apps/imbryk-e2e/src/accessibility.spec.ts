@@ -40,7 +40,7 @@ test.describe('WCAG 2.2 AA — Imbryk prompt UI', () => {
   // ── 3. Orb textarea has an accessible label ───────────────────────────────
   test('orb textarea is labelled', async ({ page }) => {
     await page.goto('/');
-    const textarea = page.getByLabel('Describe a world-altering event');
+    const textarea = page.getByLabel('Request coverage of a topic');
     await expect(textarea).toBeVisible();
   });
 
@@ -55,7 +55,7 @@ test.describe('WCAG 2.2 AA — Imbryk prompt UI', () => {
   // ── 5. Validation error appears with role=alert when input is too short ───
   test('validation error uses role=alert', async ({ page }) => {
     await page.goto('/');
-    const textarea = page.getByLabel('Describe a world-altering event');
+    const textarea = page.getByLabel('Request coverage of a topic');
     await textarea.fill('short'); // < 10 chars
     const alert = page.locator('[role="alert"]');
     await expect(alert).toBeVisible();
@@ -64,7 +64,7 @@ test.describe('WCAG 2.2 AA — Imbryk prompt UI', () => {
   // ── 6. Textarea aria-invalid is set when input is too short ───────────────
   test('textarea aria-invalid when below minimum length', async ({ page }) => {
     await page.goto('/');
-    const textarea = page.getByLabel('Describe a world-altering event');
+    const textarea = page.getByLabel('Request coverage of a topic');
     await textarea.fill('short'); // < 10 chars
     await expect(textarea).toHaveAttribute('aria-invalid', 'true');
   });

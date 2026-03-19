@@ -93,7 +93,7 @@ export function OrbInput({
   return (
     <div className="flex flex-col items-center gap-6">
       <Label htmlFor={textareaId} className="sr-only">
-        Describe a world-altering event
+        Request coverage of a topic
       </Label>
 
       <Orb3D

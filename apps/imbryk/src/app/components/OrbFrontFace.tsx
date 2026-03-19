@@ -52,7 +52,7 @@ export function OrbFrontFace({
               if (!isSubmitDisabled) onSubmit();
             }
           }}
-          placeholder="What happens next in the world?"
+          placeholder="What would you like coverage on?"
           maxLength={PROMPT_MAX}
           aria-describedby={`${validationId} ${charCountId}`}
           aria-invalid={value.length > 0 && value.length < 10}
