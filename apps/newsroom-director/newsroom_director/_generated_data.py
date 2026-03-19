@@ -268,7 +268,7 @@ OUTPUT FORMAT (respond with ONLY a valid JSON object — no markdown fences, no 
 
 {
   "newspaper_name": "<Publication name>",
-  "frontPageImagePrompt": "<Imagen prompt following IMAGE PROMPT RULES below — or null>",
+  "frontPageImagePrompt": "<REQUIRED — Imagen prompt for the edition's hero image, following IMAGE PROMPT RULES below. Must capture the day's dominant story visually.>",
   "articles": [
     {
       "headline": "<article headline>",

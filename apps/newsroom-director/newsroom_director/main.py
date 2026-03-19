@@ -166,6 +166,7 @@ def run_morning_press(
                 imagen_client=img_client,
                 storage=store,
                 max_images_per_run=MAX_BACKFILL_IMAGES_PER_RUN,
+                llm=gen,
             )
         except Exception:
             logger.warning(

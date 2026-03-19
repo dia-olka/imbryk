@@ -13,6 +13,7 @@ from newsroom_director.db import (
     EditionRow,
     fetch_editions_needing_image_backfill,
 )
+from newsroom_director.generation import StubGenerationStrategy
 from newsroom_director.image_gen.backfill import run_image_backfill
 from newsroom_director.image_gen.client import StubImageClient
 from newsroom_director.storage import StubEditionStorage
@@ -33,20 +34,43 @@ def _make_session(tmp_path):
     return sessionmaker(bind=engine)()
 
 
-def _seed_edition(session, edition_id, date, newspapers: dict[str, list[dict]]):
-    """Add an edition + article rows. newspapers maps newspaper_id -> articles list."""
+def _seed_edition(
+    session,
+    edition_id,
+    date,
+    newspapers: dict[str, list[dict]],
+    hero_urls: dict[str, str] | None = None,
+    hero_prompts: dict[str, str] | None = None,
+):
+    """Add an edition + article rows.
+
+    newspapers maps newspaper_id -> articles list.
+    hero_urls optionally maps newspaper_id -> heroImageUrl.
+    hero_prompts optionally maps newspaper_id -> frontPageImagePrompt.
+    """
+    hero_urls = hero_urls or {}
+    hero_prompts = hero_prompts or {}
     edition = EditionRow(id=edition_id, date=date, status="published")
     session.add(edition)
     session.flush()
 
     for newspaper_id, articles in newspapers.items():
-        content = json.dumps({"newspaper_name": newspaper_id, "articles": articles})
+        content: dict | str
+        if isinstance(articles, str):
+            # curator-style plain text
+            content = articles
+        else:
+            content = {"newspaper_name": newspaper_id, "articles": articles}
+            if newspaper_id in hero_urls:
+                content["heroImageUrl"] = hero_urls[newspaper_id]
+            if newspaper_id in hero_prompts:
+                content["frontPageImagePrompt"] = hero_prompts[newspaper_id]
         session.add(
             EditionArticleRow(
                 id=f"{edition_id}-{newspaper_id}",
                 edition_id=edition_id,
                 newspaper_id=newspaper_id,
-                content_json=content,
+                content_json=content if isinstance(content, str) else json.dumps(content),
             )
         )
     session.commit()
@@ -92,6 +116,19 @@ class TestFetchEditionsNeedingImageBackfill:
         assert result[0].edition_id == "ed-yest"
         assert "sovereign" in result[0].newspapers_to_backfill
 
+    def test_returns_target_for_missing_hero_image(self, tmp_path):
+        session = _make_session(tmp_path)
+        # All article images present, but hero is missing
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="p", image_url="https://done")]},
+        )
+        result = fetch_editions_needing_image_backfill(session, exclude_date=TODAY)
+        assert len(result) == 1
+        assert "sovereign" in result[0].newspapers_to_backfill
+
     def test_excludes_today_edition(self, tmp_path):
         session = _make_session(tmp_path)
         _seed_edition(
@@ -118,12 +155,13 @@ class TestFetchEditionsNeedingImageBackfill:
             YESTERDAY,
             {
                 "sovereign": [_article(image_prompt="p", image_url="https://done")],
-                "aspirant": [_article(image_prompt="p")],  # missing
+                "aspirant": [_article(image_prompt="p")],  # missing article image
             },
+            hero_urls={"sovereign": "https://hero"},  # sovereign fully complete
         )
         result = fetch_editions_needing_image_backfill(session, exclude_date=TODAY)
         assert len(result) == 1
-        assert result[0].newspapers_to_backfill == ["aspirant"]
+        assert "aspirant" in result[0].newspapers_to_backfill
         assert "sovereign" not in result[0].newspapers_to_backfill
 
     def test_excludes_articles_without_image_prompt(self, tmp_path):
@@ -133,6 +171,7 @@ class TestFetchEditionsNeedingImageBackfill:
             "ed-yest",
             YESTERDAY,
             {"sovereign": [_article()]},  # no imagePrompt at all
+            hero_urls={"sovereign": "https://hero"},  # hero present
         )
         result = fetch_editions_needing_image_backfill(session, exclude_date=TODAY)
         assert result == []
@@ -208,6 +247,18 @@ class TestFetchEditionsNeedingImageBackfill:
         result = fetch_editions_needing_image_backfill(session, exclude_date=TODAY)
         assert result == []
 
+    def test_no_backfill_when_hero_and_articles_complete(self, tmp_path):
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="p", image_url="https://done")]},
+            hero_urls={"sovereign": "https://hero"},
+        )
+        result = fetch_editions_needing_image_backfill(session, exclude_date=TODAY)
+        assert result == []
+
 
 # ---------------------------------------------------------------------------
 # TestRunImageBackfill
@@ -217,7 +268,11 @@ class TestFetchEditionsNeedingImageBackfill:
 class TestRunImageBackfill:
     def test_no_previous_editions_returns_zero_result(self, tmp_path):
         session = _make_session(tmp_path)
-        _seed_edition(session, "ed-today", TODAY, {"sovereign": [_article()]})
+        _seed_edition(
+            session, "ed-today", TODAY,
+            {"sovereign": [_article()]},
+            hero_urls={"sovereign": "https://hero"},
+        )
 
         result = run_image_backfill(
             session=session,
@@ -235,6 +290,7 @@ class TestRunImageBackfill:
             "ed-yest",
             YESTERDAY,
             {"sovereign": [_article(image_prompt="a vivid scene")]},
+            hero_urls={"sovereign": "https://hero"},
         )
         storage = StubEditionStorage()
 
@@ -261,6 +317,7 @@ class TestRunImageBackfill:
             "ed-yest-uuid",
             YESTERDAY,
             {"sovereign": [_article(image_prompt="scene")]},
+            hero_urls={"sovereign": "https://hero"},
         )
         storage = StubEditionStorage()
 
@@ -284,6 +341,7 @@ class TestRunImageBackfill:
             "ed-yest",
             YESTERDAY,
             {"sovereign": [_article(image_prompt="p", image_url="https://already")]},
+            hero_urls={"sovereign": "https://hero"},
         )
         client = StubImageClient()
 
@@ -304,6 +362,7 @@ class TestRunImageBackfill:
             "ed-yest",
             YESTERDAY,
             {"sovereign": [_article(image_prompt="p")]},
+            hero_urls={"sovereign": "https://hero"},
         )
 
         result = run_image_backfill(
@@ -324,6 +383,7 @@ class TestRunImageBackfill:
             "ed-yest",
             YESTERDAY,
             {"sovereign": [_article(image_prompt="p")]},
+            hero_urls={"sovereign": "https://hero"},
         )
 
         class FailingStorage(StubEditionStorage):
@@ -354,6 +414,7 @@ class TestRunImageBackfill:
                         _article(image_prompt="p2"),
                     ]
                 },
+                hero_urls={"sovereign": "https://hero"},
             )
 
         result = run_image_backfill(
@@ -377,6 +438,7 @@ class TestRunImageBackfill:
                 "sovereign": [_article(image_prompt="p")],  # needs backfill
                 "owner": [_article(image_url="https://already")],  # already done
             },
+            hero_urls={"sovereign": "https://hero", "owner": "https://hero"},
         )
         storage = StubEditionStorage()
 
@@ -401,6 +463,7 @@ class TestRunImageBackfill:
                 "sovereign": [_article(image_prompt="p1")],
                 "aspirant": [_article(image_prompt="p2")],
             },
+            hero_urls={"sovereign": "https://hero", "aspirant": "https://hero"},
         )
         storage = StubEditionStorage()
 
@@ -415,3 +478,311 @@ class TestRunImageBackfill:
         assert result.editions_updated == 1
         # Only one write_edition call (not one per newspaper)
         assert len(storage._editions) == 1
+
+
+# ---------------------------------------------------------------------------
+# TestHeroImageBackfill
+# ---------------------------------------------------------------------------
+
+
+class TestHeroImageBackfill:
+    def test_backfills_hero_with_existing_prompt(self, tmp_path):
+        """Hero prompt exists but hero image was never generated."""
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="p", image_url="https://done")]},
+            hero_prompts={"sovereign": "A grand government building at sunset"},
+        )
+        storage = StubEditionStorage()
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=StubImageClient(),
+            storage=storage,
+        )
+
+        assert result.images_generated == 1
+        assert result.editions_updated == 1
+        updated = json.loads(storage._editions[0]["articles"]["sovereign"])
+        assert updated["heroImageUrl"].endswith("hero.png")
+
+    def test_generates_hero_prompt_from_articles_via_llm(self, tmp_path):
+        """No hero prompt at all — Flash generates one from headlines."""
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [
+                _article(headline="War Erupts in Cascadia", image_prompt="p", image_url="https://done"),
+                _article(headline="Markets Plunge on Trade Fears"),
+            ]},
+        )
+        storage = StubEditionStorage()
+        llm = StubGenerationStrategy(responses={
+            "flash": "Dramatic aerial view of a city skyline, 4K HDR professional photography",
+        })
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=StubImageClient(),
+            storage=storage,
+            llm=llm,
+        )
+
+        assert result.images_generated == 1
+        assert result.editions_updated == 1
+        updated = json.loads(storage._editions[0]["articles"]["sovereign"])
+        assert updated["heroImageUrl"].endswith("hero.png")
+        # Flash-generated prompt should be persisted
+        assert updated["frontPageImagePrompt"]
+
+    def test_no_hero_backfill_without_llm_or_prompt(self, tmp_path):
+        """Without an LLM and without a stored prompt, hero is skipped."""
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="p", image_url="https://done")]},
+            # no hero_urls, no hero_prompts, no llm
+        )
+        storage = StubEditionStorage()
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=StubImageClient(),
+            storage=storage,
+            llm=None,
+        )
+
+        assert result.images_generated == 0
+        assert result.editions_updated == 0
+
+    def test_hero_counts_toward_budget(self, tmp_path):
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="p")]},
+            hero_prompts={"sovereign": "A grand building"},
+        )
+        storage = StubEditionStorage()
+
+        # Budget of 1: should generate the article image and then run out
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=StubImageClient(),
+            storage=storage,
+            max_images_per_run=1,
+        )
+
+        assert result.images_generated == 1
+        # Hero wasn't generated because budget ran out
+        updated = json.loads(storage._editions[0]["articles"]["sovereign"])
+        assert "heroImageUrl" not in updated
+
+    def test_skips_hero_when_already_present(self, tmp_path):
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="p", image_url="https://done")]},
+            hero_urls={"sovereign": "https://existing-hero"},
+        )
+        client = StubImageClient()
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=client,
+            storage=StubEditionStorage(),
+        )
+
+        assert result.images_generated == 0
+        assert client._calls == []
+
+
+# ---------------------------------------------------------------------------
+# TestPromptRewriting
+# ---------------------------------------------------------------------------
+
+
+class TestPromptRewriting:
+    def test_rewrites_prompt_on_imagen_failure(self, tmp_path):
+        """When Imagen rejects the original, Flash rewrites and retries."""
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="A violent political clash")]},
+            hero_urls={"sovereign": "https://hero"},
+        )
+
+        call_count = [0]
+        original_fail = StubImageClient()
+
+        def _selective_generate(prompt: str) -> bytes | None:
+            original_fail._calls.append(prompt)
+            call_count[0] += 1
+            # Fail the first call (original prompt), succeed the second (rewritten)
+            if call_count[0] == 1:
+                return None
+            return StubImageClient.STUB_WEBP
+
+        original_fail.generate = _selective_generate
+
+        llm = StubGenerationStrategy(responses={
+            "flash": "Tense diplomatic scene in a marble hall, 4K HDR photography",
+        })
+        storage = StubEditionStorage()
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=original_fail,
+            storage=storage,
+            llm=llm,
+            max_images_per_run=10,
+        )
+
+        assert result.images_generated == 1
+        assert result.prompts_rewritten == 1
+        # Two Imagen calls: original failed, rewritten succeeded
+        assert call_count[0] == 2
+
+    def test_no_rewrite_when_original_succeeds(self, tmp_path):
+        """Flash should not be called if the original prompt works."""
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="A sunny park")]},
+            hero_urls={"sovereign": "https://hero"},
+        )
+
+        llm = StubGenerationStrategy()
+        storage = StubEditionStorage()
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=StubImageClient(),
+            storage=storage,
+            llm=llm,
+        )
+
+        assert result.images_generated == 1
+        assert result.prompts_rewritten == 0
+        # Flash was never called
+        assert llm.calls == []
+
+    def test_rewrite_also_fails_counts_as_failure(self, tmp_path):
+        """Both original and rewritten prompts fail → counted as failure."""
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="problematic prompt")]},
+            hero_urls={"sovereign": "https://hero"},
+        )
+
+        llm = StubGenerationStrategy(responses={
+            "flash": "A safer prompt description",
+        })
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=StubImageClient(should_fail=True),
+            storage=StubEditionStorage(),
+            llm=llm,
+        )
+
+        assert result.images_failed == 1
+        assert result.images_generated == 0
+
+    def test_hero_prompt_rewrite_on_failure(self, tmp_path):
+        """Hero image prompt gets rewritten via Flash when Imagen rejects it."""
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {"sovereign": [_article(image_prompt="p", image_url="https://done")]},
+            hero_prompts={"sovereign": "A controversial political scene"},
+        )
+
+        call_count = [0]
+        client = StubImageClient()
+
+        def _selective_generate(prompt: str) -> bytes | None:
+            client._calls.append(prompt)
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return None
+            return StubImageClient.STUB_WEBP
+
+        client.generate = _selective_generate
+
+        llm = StubGenerationStrategy(responses={
+            "flash": "Serene government plaza at dawn, 4K HDR photography",
+        })
+        storage = StubEditionStorage()
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=client,
+            storage=storage,
+            llm=llm,
+        )
+
+        assert result.images_generated == 1
+        assert result.prompts_rewritten == 1
+        updated = json.loads(storage._editions[0]["articles"]["sovereign"])
+        assert updated["heroImageUrl"].endswith("hero.png")
+
+    def test_budget_accounts_for_rewrite_retries(self, tmp_path):
+        """Each Imagen call (original + rewrite) costs 1 budget unit."""
+        session = _make_session(tmp_path)
+        _seed_edition(
+            session,
+            "ed-yest",
+            YESTERDAY,
+            {
+                "sovereign": [
+                    _article(image_prompt="p1"),
+                    _article(image_prompt="p2"),
+                ]
+            },
+            hero_urls={"sovereign": "https://hero"},
+        )
+
+        # Always fail → each article uses 2 budget (original + rewrite)
+        llm = StubGenerationStrategy(responses={"flash": "rewritten"})
+
+        result = run_image_backfill(
+            session=session,
+            today_date=TODAY,
+            imagen_client=StubImageClient(should_fail=True),
+            storage=StubEditionStorage(),
+            llm=llm,
+            max_images_per_run=3,  # only enough for 1 full retry cycle + 1 original
+        )
+
+        # With budget 3: article 0 original (fail, budget 2), article 0 rewrite (fail, budget 1),
+        # article 1 original (fail, budget 0), no rewrite budget left
+        assert result.images_failed == 2

@@ -116,6 +116,12 @@ def generate_images_for_newspaper(
         )
 
     # Generate hero image
+    if not front_page_image_prompt:
+        logger.warning(
+            "No hero image prompt provided for %s — skipping hero image generation",
+            newspaper_id,
+            extra={"newspaper_id": newspaper_id},
+        )
     if front_page_image_prompt:
         sanitized_hero_prompt = sanitize_prompt_text(front_page_image_prompt)
         logger.info(

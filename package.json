@@ -6,6 +6,7 @@
     "start": "nx serve gazette",
     "build": "nx build gazette",
     "format": "npx nx format:write",
+    "generate": "npx nx run-many --target=generate-data --projects=ingestion-api,newsroom-director,ai-personas",
     "lint": "npx nx run-many --target=lint --all",
     "lint:py": "npx nx run-many --targets=lint --projects=ingestion-api,newsroom-director --fix",
     "lint:ts": "npx nx run-many --targets=lint --all --exclude=ingestion-api,newsroom-director --fix",

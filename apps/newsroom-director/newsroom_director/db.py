@@ -214,14 +214,15 @@ class MarketingPost:
 
 @dataclass
 class EditionBackfillTarget:
-    """An edition that has at least one newspaper with missing article images."""
+    """An edition that has at least one newspaper with missing images."""
 
     edition_id: str
     edition_date: str
     # All newspaper articles for this edition (newspaper_id -> content_json).
     # Includes curator. Required so write_edition can re-upload the full envelope.
     newspaper_articles: dict[str, str]
-    # Subset of newspaper_ids that have articles with imagePrompt but no image_url.
+    # Subset of newspaper_ids that need image backfill (missing article images
+    # or missing hero image).
     newspapers_to_backfill: list[str]
 
 
@@ -425,11 +426,12 @@ def fetch_editions_needing_image_backfill(
             except (json.JSONDecodeError, TypeError):
                 continue
 
-            needs_backfill = any(
+            needs_article_images = any(
                 isinstance(a, dict) and a.get("imagePrompt") and not a.get("image_url")
                 for a in parsed.get("articles", [])
             )
-            if needs_backfill:
+            needs_hero = not parsed.get("heroImageUrl")
+            if needs_article_images or needs_hero:
                 newspapers_to_backfill.append(article_row.newspaper_id)
 
         if newspapers_to_backfill:
