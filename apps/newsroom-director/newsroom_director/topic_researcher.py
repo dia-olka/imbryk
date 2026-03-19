@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from .config import TAVILY_MAX_RESULTS_PER_QUERY, TOPIC_RESEARCH_MAX_QUERIES
 from .db import PromptRecord
 from .generation import GenerationStrategy
-from .news_scout.searcher import SearchResult, SearchStrategy
+from .news_scout.searcher import RateLimitExceeded, SearchResult, SearchStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +119,7 @@ def research_prompts(
     generation_strategy: GenerationStrategy,
     max_queries: int | None = None,
     max_results_per_query: int | None = None,
+    exclude_urls: set[str] | None = None,
 ) -> list[ResearchedPrompt]:
     """Research all prompts and return ResearchedPrompts with inherited weights.
 
@@ -136,6 +137,7 @@ def research_prompts(
         max_queries: Max queries per prompt (default: TOPIC_RESEARCH_MAX_QUERIES).
         max_results_per_query: Max Tavily results per query
             (default: TAVILY_MAX_RESULTS_PER_QUERY).
+        exclude_urls: URLs to skip (e.g. News Scout items already in pipeline).
 
     Returns:
         List of ResearchedPrompts that can be routed like PromptRecords.
@@ -151,10 +153,18 @@ def research_prompts(
     )
 
     researched: list[ResearchedPrompt] = []
-    seen_urls: set[str] = set()
+    seen_urls: set[str] = set(exclude_urls) if exclude_urls else set()
     total_queries = 0
+    rate_limited = False
 
     for prompt in prompts:
+        if rate_limited:
+            logger.info(
+                "Skipping prompt %s — Tavily rate limit reached",
+                prompt.prompt_id,
+            )
+            continue
+
         queries = _generate_queries_for_prompt(
             prompt, generation_strategy, mq
         )
@@ -168,6 +178,8 @@ def research_prompts(
         # Collect all search results for this prompt
         prompt_results: list[SearchResult] = []
         for query in queries:
+            if rate_limited:
+                break
             total_queries += 1
             try:
                 results = searcher.search(query, max_results=mr)
@@ -175,6 +187,14 @@ def research_prompts(
                     if r.url not in seen_urls:
                         seen_urls.add(r.url)
                         prompt_results.append(r)
+            except RateLimitExceeded:
+                logger.warning(
+                    "Tavily rate limit reached during query %r (prompt %s), "
+                    "stopping all further searches",
+                    query,
+                    prompt.prompt_id,
+                )
+                rate_limited = True
             except Exception:
                 logger.warning(
                     "Search failed for query %r (prompt %s), skipping",
@@ -212,6 +232,7 @@ def research_prompts(
             "queries_generated": total_queries,
             "results_output": len(researched),
             "unique_urls": len(seen_urls),
+            "rate_limited": rate_limited,
         },
     )
 

@@ -248,7 +248,7 @@ class TestResearchPrompts:
             def search(self, query, max_results=5):
                 self._call_count += 1
                 if self._call_count == 1:
-                    raise RateLimitExceeded("limit hit")
+                    raise ConnectionError("network error")
                 return [SearchResult("OK", "Content", "https://ok.com", 0.9)]
 
         searcher = FailingSearcher()
@@ -256,9 +256,77 @@ class TestResearchPrompts:
 
         result = research_prompts(prompts, searcher, gen)
 
-        # First query failed, second succeeded
+        # First query failed (network error), second succeeded
         assert len(result) == 1
         assert result[0].source_url == "https://ok.com"
+
+    def test_exclude_urls_skips_known_urls(self):
+        """URLs already in pipeline (e.g. News Scout) are excluded."""
+        gen = _make_stub_gen(["q1"])
+        searcher = StubSearcher(results=[
+            SearchResult("A", "S", "https://example.com/already-known", 0.9),
+            SearchResult("B", "S", "https://example.com/new", 0.8),
+        ])
+        prompts = [_make_prompt()]
+
+        result = research_prompts(
+            prompts, searcher, gen,
+            exclude_urls={"https://example.com/already-known"},
+        )
+
+        assert len(result) == 1
+        assert result[0].source_url == "https://example.com/new"
+
+    def test_rate_limit_stops_all_searches(self):
+        """RateLimitExceeded aborts remaining queries and prompts."""
+        gen = _make_stub_gen(["q1", "q2"])
+
+        class RateLimitSearcher(StubSearcher):
+            def __init__(self):
+                super().__init__(results=[])
+                self._call_count = 0
+
+            def search(self, query, max_results=5):
+                self._call_count += 1
+                if self._call_count == 1:
+                    return [SearchResult("OK", "C", "https://ok.com", 0.9)]
+                raise RateLimitExceeded("monthly limit")
+
+        searcher = RateLimitSearcher()
+        prompts = [
+            _make_prompt(prompt_id="p1"),
+            _make_prompt(prompt_id="p2"),
+        ]
+
+        result = research_prompts(prompts, searcher, gen)
+
+        # First query of first prompt succeeded, second hit rate limit.
+        # Second prompt skipped entirely.
+        assert len(result) == 1
+        assert result[0].prompt_id == "p1"
+        # Searcher was only called twice (once success, once rate limit)
+        assert searcher._call_count == 2
+
+    def test_rate_limit_preserves_results_before_limit(self):
+        """Results gathered before rate limit are kept."""
+        gen = _make_stub_gen(["q1"])
+
+        class LateRateLimitSearcher(StubSearcher):
+            def __init__(self):
+                super().__init__(results=[])
+                self._call_count = 0
+
+            def search(self, query, max_results=5):
+                self._call_count += 1
+                raise RateLimitExceeded("limit")
+
+        searcher = LateRateLimitSearcher()
+        prompts = [_make_prompt()]
+
+        result = research_prompts(prompts, searcher, gen)
+
+        # Rate limit on first query — no results for this prompt
+        assert len(result) == 0
 
     def test_custom_max_queries_and_results(self):
         gen = _make_stub_gen(["q1", "q2", "q3"])

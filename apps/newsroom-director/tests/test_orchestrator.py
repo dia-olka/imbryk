@@ -1,7 +1,5 @@
 """Integration tests for the orchestrator (run_morning_press)."""
 
-import json
-
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -221,43 +219,8 @@ class TestOrchestrator:
             distillation_pipeline=pipeline,
         )
 
-        # Generation should be called for validation + newspapers + curator + mutation
+        # Generation should be called for newspapers + curator + mutation
         assert len(gen.calls) > 0
-
-    def test_validation_filters_prompts(self, test_db_url):
-        """Validation that rejects all prompts produces empty edition."""
-        accepted_json = json.dumps({"accepted": []})
-        gen = StubGenerationStrategy(responses={"pro": accepted_json})
-        storage = StubEditionStorage()
-        pipeline = StubDistillationPipeline()
-
-        result = run_morning_press(
-            database_url=test_db_url,
-            generation_strategy=gen,
-            storage=storage,
-            distillation_pipeline=pipeline,
-            enable_validation=True,
-        )
-
-        assert result["edition_id"] is None
-        assert result["newspaper_count"] == 0
-
-    def test_validation_disabled(self, test_db_url):
-        gen = StubGenerationStrategy()
-        storage = StubEditionStorage()
-        pipeline = StubDistillationPipeline()
-
-        result = run_morning_press(
-            database_url=test_db_url,
-            generation_strategy=gen,
-            storage=storage,
-            distillation_pipeline=pipeline,
-            enable_validation=False,
-        )
-
-        # Should still produce an edition without validation step
-        assert result["edition_id"] is not None
-        assert result["newspaper_ids"]
 
     def test_edition_index_written(self, test_db_url):
         """After pipeline completes, storage should have an index."""

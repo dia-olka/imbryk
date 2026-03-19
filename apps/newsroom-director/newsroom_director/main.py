@@ -93,7 +93,6 @@ from .reflection import (
 )
 from .storage import EditionStorage, StubEditionStorage
 from .taxonomy import route_prompt
-from .validation import validate_prompts
 from .world_ledger import (
     INITIAL_WORLD_LEDGER,
     LedgerMutation,
@@ -122,10 +121,9 @@ def run_morning_press(
     storage: EditionStorage | None = None,
     distillation_pipeline: DistillationPipeline | None = None,
     imagen_client: ImageGenerationStrategy | None = None,
-    enable_validation: bool = True,
     edition_date: str | None = None,
 ) -> dict:
-    """Execute the full Morning Press generation pipeline.    
+    """Execute the full Morning Press generation pipeline.
 
     Args:
         database_url: Override for the database connection string.
@@ -133,7 +131,6 @@ def run_morning_press(
         storage: Edition output storage (defaults to stub).
         distillation_pipeline: Override for the distillation pipeline.
         imagen_client: Image generation backend (defaults to stub).
-        enable_validation: Run coherence validation on prompts.
 
     Returns:
         Summary dict with edition_id, newspaper_count, article_count.
@@ -215,34 +212,7 @@ def run_morning_press(
             extra={"synopsis_length": len(synopsis)},
         )
 
-        # Step 5: Coherence validation — user prompts only (news items skip)
-        if enable_validation and prompt_records:
-            logger.info(
-                "Starting coherence validation",
-                extra={"prompt_count": len(prompt_records)},
-            )
-            prompt_records = validate_prompts(
-                prompt_records, synopsis, gen
-            )
-            logger.info(
-                "Coherence validation complete",
-                extra={"surviving_prompts": len(prompt_records)},
-            )
-
-        # Only reachable here when coherence validation rejected all prompts;
-        # the pre-validation check already handled the case with no prompts at all.
-        if not prompt_records and not news_items:
-            logger.info(
-                "All prompts rejected by coherence validation and no news items, skipping edition"
-            )
-            _run_backfill()
-            return {
-                "edition_id": None,
-                "newspaper_count": 0,
-                "article_count": 0,
-            }
-
-        # Step 5b: Topic research — replace raw prompts with researched news
+        # Step 5: Topic research — replace raw prompts with researched news
         if TOPIC_RESEARCH_ENABLED and prompt_records:
             from .config import (
                 TAVILY_API_KEY,
@@ -260,8 +230,15 @@ def run_morning_press(
                     monthly_limit=TAVILY_MONTHLY_LIMIT,
                     search_depth=TAVILY_SEARCH_DEPTH,
                 )
+                # Exclude URLs already in pipeline via News Scout
+                news_urls = {
+                    ni.source_url
+                    for ni in news_items
+                    if hasattr(ni, "source_url") and ni.source_url
+                }
                 researched = research_prompts(
                     prompt_records, topic_searcher, gen,
+                    exclude_urls=news_urls,
                 )
                 logger.info(
                     "Topic research replaced %d prompts with %d researched items",
@@ -1358,14 +1335,11 @@ def cli_main() -> None:
             logger.info("Image generation disabled via ENABLE_IMAGES=false")
         img_client = StubImageClient(should_fail=not enable_images)
 
-    enable_validation = os.getenv("ENABLE_VALIDATION", "true").lower() == "true"
-
     summary = run_morning_press(
         database_url=db_url,
         generation_strategy=gen,
         storage=store,
         imagen_client=img_client,
-        enable_validation=enable_validation,
     )
 
     logger.info("Pipeline finished", extra={"summary": summary})
