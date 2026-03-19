@@ -674,7 +674,7 @@ def run_morning_press(
                     "Editorial reflection step failed, continuing without journal updates"
                 )
 
-        # Step 9: WorldLedger mutation via LLM
+        # Step 9: WorldLedger mutation  via LLM
         # Always run when articles were generated — world news drives world state
         # regardless of whether any user prompts were processed in this edition.
         if articles:

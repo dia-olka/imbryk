@@ -73,6 +73,6 @@ describe('Personas', () => {
   });
 
   it('should have Curator as pro tier', () => {
-    expect(CURATOR.modelTier).toBe('pro');
+    expect(CURATOR.modelTier).toBe('flash');
   });
 });

@@ -131,7 +131,7 @@ async def _expire_stale_quotes() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application startup and shutdown lifecycle."""
+    """Manage application  startup and shutdown lifecycle."""
     global _expiry_task
     # --- startup ---
     validate_production_config()
