@@ -48,7 +48,6 @@ TAVILY_MAX_RESULTS_PER_QUERY = int(os.getenv("TAVILY_MAX_RESULTS_PER_QUERY", "5"
 TAVILY_SEARCH_DEPTH = os.getenv("TAVILY_SEARCH_DEPTH", "basic")  # "basic" (1 credit) or "advanced" (2 credits)
 TAVILY_MAX_QUERIES_PER_CATEGORY = int(os.getenv("TAVILY_MAX_QUERIES_PER_CATEGORY", "1"))
 NEWS_ITEM_BASE_WEIGHT = float(os.getenv("NEWS_ITEM_BASE_WEIGHT", "0.3"))
-NEWS_MUTATES_LEDGER = os.getenv("NEWS_MUTATES_LEDGER", "true").lower() == "true"
 
 # Topic Research — transforms user prompts into real-world news research
 TOPIC_RESEARCH_ENABLED = os.getenv("TOPIC_RESEARCH_ENABLED", "false").lower() == "true"

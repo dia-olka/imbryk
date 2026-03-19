@@ -4,7 +4,7 @@
 
 User-submitted prompts currently enter the distillation pipeline **verbatim** — their raw text appears in cluster digests and is fed directly to the article-writing LLM. The WorldLedger provides a fictional world context, and a coherence gate filters prompts against it.
 
-This plan pivots to **real-world news**: prompts become topic requests that trigger Tavily research during the daily batch. The article-writing LLM receives researched news articles, never the user's original text. The fictional WorldLedger is retired. The economy ($1/newspaper, weight multiplier, categories, routing) is preserved unchanged.
+This plan pivots to **real-world news**: prompts become topic requests that trigger Tavily research during the daily batch. The article-writing LLM receives researched news articles, never the user's original text. The WorldLedger transforms from fictional world state into **World History** — a factual record of real-world events over time, received by all LLMs. The economy ($1/newspaper, weight multiplier, categories, routing) is preserved unchanged.
 
 ### Design Decisions
 
@@ -118,56 +118,65 @@ The user's original text is consumed by the query generator and discarded from t
 
 ---
 
-## Phase 3: WorldLedger Removal
+## Phase 3: WorldLedger → World History Transformation
 
-**Goal:** Remove the fictional WorldLedger from the pipeline. The world is real now.
+**Goal:** Transform the fictional WorldLedger into **World History** — a factual record of real-world events over time. All LLMs (personas, News Scout, mutation) receive the world history as context. The infrastructure (DB, load/save, synopsis injection, mutation step) stays; the framing shifts from fiction to fact.
 
-### What Gets Removed
+### Why Keep It
 
-| Component | Location | Action |
+- **Temporal context**: Knowing what happened last week/month helps personas write better, more contextual articles
+- **Autonomous fallback**: When no paid prompts arrive, the News Scout uses world history to decide what topics to research
+- **Factual record**: Accumulating a structured timeline of real-world events has standalone value
+
+### What Changes
+
+| Component | Location | Change |
 |-----------|----------|--------|
-| WorldLedger loading | `main.py` Steps 3–4 (lines 201–215) | Remove `load_world_ledger`, `ledger_from_dict`, `serialize_ledger_to_synopsis` calls |
-| Synopsis injection | `main.py` line 379 (`.replace("{{WORLD_LEDGER_SYNOPSIS}}", synopsis)`) | Remove replacement; placeholder removed in Phase 4 |
-| WorldLedger mutation | `main.py` Step 9 (lines 677–691) | Remove entire mutation block (`_build_mutation_prompt`, `_parse_mutation`, `_dict_to_mutation`, `apply_mutation`, `save_world_ledger`) |
-| `NEWS_MUTATES_LEDGER` config | `config.py` line 51 | Remove |
-| News Scout WorldLedger loading | `news_scout/main.py` lines 89–99 | Remove WorldLedger load + synopsis serialization |
-| Query generator WorldLedger input | `news_scout/query_generator.py` | Remove synopsis from query generation prompt; queries are now driven by category definitions and editorial context only |
-| WorldLedger imports | `main.py` lines 96–105 | Remove `world_ledger` imports |
+| `NEWS_MUTATES_LEDGER` config flag | `config.py` | **Remove** — mutation always runs (factual history should always be updated) |
+| Mutation prompt | `main.py` `_build_mutation_prompt()` | **Reframe**: "Record new real-world facts from today's articles" instead of "Evolve the fictional world state" |
+| News Scout query generator | `news_scout/query_generator.py` | **Reframe**: Remove fictional-world framing from system prompt; keep world history as context for editorial decisions |
+| News Scout WorldLedger loading | `news_scout/main.py` | **Keep** — still loads world history and passes synopsis to query generator |
+| Synopsis injection in `main.py` | `main.py` `.replace("{{WORLD_LEDGER_SYNOPSIS}}", synopsis)` | **Keep** — all personas receive world history |
+| `packages/world-state/` | package | **Rename/reframe** types: `WorldLedger` → keep class name but update docstrings from "fictional world" to "factual history" |
 
-### What Gets Kept
+### What Stays Unchanged
 
 | Component | Reason |
 |-----------|--------|
-| `world_ledger` DB table | Don't drop production tables; data may be useful for archive/history |
-| `packages/world-state/` package | Deprecate (add deprecation note to README), don't delete — gazette archive pages may reference historical ledger data |
+| `world_ledger` DB table + load/save functions | Infrastructure stays; data is now factual |
+| `load_world_ledger`, `save_world_ledger` | Still needed — just records facts now |
+| `serialize_ledger_to_synopsis` | Still serializes world history for LLM context |
+| `apply_mutation` | Still applies daily updates |
+| `{{WORLD_LEDGER_SYNOPSIS}}` placeholder | All LLMs receive world history |
+| Steps 3–4 in `main.py` (ledger load) | Still needed |
+| Step 9 in `main.py` (mutation) | Still needed — always runs now (no flag check) |
 
 ### Gazette Changes
 
 | File | Change |
 |------|--------|
-| `apps/gazette/src/timeline.njk` | Remove entire page. Add redirect to archive index. |
-| `apps/gazette/src/about.njk` | Update copy: remove WorldLedger/fictional-world references, reframe as real-world AI newspaper platform |
+| `apps/gazette/src/timeline.njk` | **Keep** — now displays real-world history timeline. Update header copy from fictional to factual framing |
+| `apps/gazette/src/about.njk` | Update copy: remove fictional-world references, reframe as real-world AI newspaper platform with historical record |
 
 ### News Scout Adaptation
 
-The News Scout continues to operate but without WorldLedger context. Query generation shifts from "what would a journalist in this fictional world find interesting?" to "what real-world developments are editorially relevant for each category?". The editorial journal and reader metrics remain as context inputs.
+The News Scout continues to load world history and pass it to the query generator. The query generation prompt shifts from "what would a journalist in this fictional world investigate?" to "what real-world developments are most editorially relevant, given this history of recent events?" The editorial journal and reader metrics remain as context inputs alongside the world history.
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `newsroom_director/main.py` | Remove Steps 3–4 (ledger load/synopsis), Step 9 (mutation), all `world_ledger` imports, `_build_mutation_prompt`, `_parse_mutation`, `_dict_to_mutation` functions |
-| `newsroom_director/config.py` | Remove `NEWS_MUTATES_LEDGER` |
-| `newsroom_director/news_scout/main.py` | Remove WorldLedger loading and synopsis serialization |
-| `newsroom_director/news_scout/query_generator.py` | Remove `synopsis` parameter and WorldLedger context from system prompt; keep editorial context inputs |
-| `apps/gazette/src/timeline.njk` | Remove (redirect to archive) |
+| `newsroom_director/main.py` | Remove `NEWS_MUTATES_LEDGER` flag check (always mutate); reframe `_build_mutation_prompt()` for factual recording |
+| `newsroom_director/config.py` | Remove `NEWS_MUTATES_LEDGER` flag |
+| `newsroom_director/news_scout/query_generator.py` | Reframe system prompt: fictional world → real-world context; keep `synopsis` parameter |
+| `apps/gazette/src/timeline.njk` | Update copy for real-world framing |
 | `apps/gazette/src/about.njk` | Rewrite copy for real-world framing |
 
 ---
 
 ## Phase 4: Persona Prompt Updates
 
-**Goal:** Update persona definitions to reflect real-world news reporting instead of fictional world simulation.
+**Goal:** Update persona definitions to reflect real-world news reporting instead of fictional world simulation. The `{{WORLD_LEDGER_SYNOPSIS}}` placeholder **stays** — all LLMs receive world history.
 
 ### Preamble Changes (`data/personas.json`)
 
@@ -175,7 +184,7 @@ The `preamble` field (shared across all personas) needs these edits:
 
 | Section | Current | New |
 |---------|---------|-----|
-| Role description | "Use the world context provided to ground your reporting" | "You produce a full newspaper edition based on real-world news articles provided in the cluster digests below" |
+| Role description | "Use the world context provided to ground your reporting" | "You produce a full newspaper edition based on real-world news articles provided in the cluster digests below. The WORLD HISTORY section provides a factual record of recent events for context." |
 | ENCRYPTED PROMPTS section | Full paragraph about gibberish/encrypted submissions | **Remove entirely** — prompts no longer reach the LLM |
 | Source citation | Not present | Add: "CITATION: When an article's source cluster includes source URLs, cite them naturally within the article body" |
 
@@ -188,7 +197,7 @@ WORLD CONTEXT:
 {{WORLD_LEDGER_SYNOPSIS}}
 ```
 
-**Remove this block from all 6 newspaper personas.** The `{{EDITORIAL_JOURNAL}}` and `{{CLUSTER_DIGESTS}}` placeholders remain.
+**Keep this block but rename the header** from `WORLD CONTEXT` to `WORLD HISTORY` across all 6 newspaper personas. The `{{WORLD_LEDGER_SYNOPSIS}}` placeholder remains — it will be populated with the factual world history. The `{{EDITORIAL_JOURNAL}}` and `{{CLUSTER_DIGESTS}}` placeholders also remain.
 
 ### What Stays Unchanged
 
@@ -198,6 +207,8 @@ WORLD CONTEXT:
 - The Curator's `curatorPrompt` (operates on generated articles, not prompts)
 - `{{EDITORIAL_JOURNAL}}` placeholder
 - `{{CLUSTER_DIGESTS}}` placeholder
+- `{{WORLD_LEDGER_SYNOPSIS}}` placeholder (now carries factual world history)
+- Synopsis replacement in `main.py` (keeps working as-is)
 
 ### Codegen
 
@@ -209,27 +220,11 @@ node scripts/generate-data.mjs
 
 This regenerates `_generated_data.ts` and `_generated_data.py` across all consuming packages.
 
-### Pipeline Code
-
-In `main.py`, remove the synopsis replacement (line 379):
-
-```python
-# REMOVE:
-system_instruction = persona.system_prompt_template.replace(
-    "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
-)
-# KEEP:
-system_instruction = persona.system_prompt_template.replace(
-    "{{CLUSTER_DIGESTS}}", "[See user content below]"
-)
-```
-
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `data/personas.json` | Remove `{{WORLD_LEDGER_SYNOPSIS}}` from all `promptSuffix` fields; update preamble; remove ENCRYPTED PROMPTS section; add citation instructions |
-| `newsroom_director/main.py` | Remove `{{WORLD_LEDGER_SYNOPSIS}}` replacement from persona system instruction construction |
+| `data/personas.json` | Rename `WORLD CONTEXT` → `WORLD HISTORY` in all `promptSuffix` fields; update preamble for real-world framing; remove ENCRYPTED PROMPTS section; add citation instructions |
 | Generated outputs | `_generated_data.ts`, `_generated_data.py` regenerated via codegen |
 
 ---
@@ -311,8 +306,8 @@ Note: `sanitize_prompt_text()` is imported by `distillation/digest.py` and shoul
 |-------|-------------|
 | Phase 1 | Unit tests for `topic_researcher.py`: query generation, weight inheritance math, Tavily integration. Integration test: prompt → research results → DistillationPrompt conversion |
 | Phase 2 | Update `digest.py` tests: verify source URL appears in serialized digests. Verify user text never appears in digest output when research is active |
-| Phase 3 | Remove WorldLedger-related test fixtures. Update `main.py` integration tests to remove ledger assertions. Update News Scout tests to remove synopsis input |
-| Phase 4 | Snapshot tests for generated persona prompts — verify no `{{WORLD_LEDGER_SYNOPSIS}}` placeholder remains. Verify codegen output matches `data/personas.json` |
+| Phase 3 | Update mutation prompt tests for factual framing. Remove `NEWS_MUTATES_LEDGER` flag from test fixtures. Update News Scout query generator tests for real-world framing |
+| Phase 4 | Snapshot tests for generated persona prompts — verify `{{WORLD_LEDGER_SYNOPSIS}}` placeholder is present (world history). Verify `WORLD HISTORY` header replaces `WORLD CONTEXT`. Verify codegen output matches `data/personas.json` |
 | Phase 5 | Remove validation step tests. Verify `sanitize_prompt_text()` tests still pass |
 | Phase 6 | Update e2e tests (`apps/imbryk-e2e/`) — check for new copy text. Update gazette e2e for removed timeline page |
 
@@ -340,7 +335,7 @@ Each phase is independently deployable and reversible:
 
 - **Phase 1:** Set `TOPIC_RESEARCH_ENABLED=false` → immediate rollback to verbatim prompts
 - **Phase 2:** Digest format is backward-compatible (source URL is additive)
-- **Phase 3:** WorldLedger removal requires re-deploy of previous code to restore (but DB table is preserved)
+- **Phase 3:** Prompt reframing is cosmetic — revert mutation/query-generator prompts to restore fictional framing; re-add `NEWS_MUTATES_LEDGER` flag
 - **Phase 4:** Revert `data/personas.json` and re-run codegen
 - **Phase 5:** Re-enable validation flag in `cli_main()`
 - **Phase 6:** Revert copy changes (cosmetic only)
@@ -366,12 +361,12 @@ Each phase is independently deployable and reversible:
 | Item | Current | After Pivot | Delta |
 |------|---------|-------------|-------|
 | Coherence validation (Pro) | ~$3/day | $0 | -$3/day |
-| WorldLedger mutation (Pro) | ~$3/day | $0 | -$3/day |
+| World History mutation (Pro) | ~$3/day | ~$3/day | $0 (kept) |
 | Topic research queries (Flash) | $0 | ~$0.50/day | +$0.50/day |
 | Topic research Tavily searches | $0 | ~$0.50–1.00/day | +$0.50–1.00/day |
-| **Net daily change** | | | **-$4.50 to -$5.00/day** |
+| **Net daily change** | | | **-$1.50 to -$2.00/day** |
 
-The pivot is cost-negative: removing two Pro model calls saves more than the new Flash + Tavily costs.
+The pivot is cost-negative: removing the Pro validation call saves more than the new Flash + Tavily costs. The World History mutation cost stays (factual history recording is valuable).
 
 ### No More "Paid But Rejected" Prompts
 
@@ -401,15 +396,9 @@ Currently, the coherence gate can reject paid prompts — users pay but their ev
 
 ### 3. Timeline Page Fate
 
-**Scenario:** The gazette's `timeline.njk` displays WorldLedger history — a feature with no equivalent in the real-world model.
+**Scenario:** The gazette's `timeline.njk` displays WorldLedger history.
 
-**Recommended: Remove and redirect.** The timeline was a WorldLedger artifact. Replace with a redirect to the edition archive (`/archive/`). Historical ledger data remains in the DB for potential future use.
-
-### 4. News Scout Query Generation Without WorldLedger
-
-**Scenario:** The News Scout currently uses WorldLedger context to generate "editorially interesting" queries. Without it, what drives query quality?
-
-**Answer:** The editorial journal, reader metrics, and previous edition headlines provide sufficient context. The query generator prompt shifts from "what would a journalist in this fictional world investigate?" to "what real-world developments are most editorially relevant for each category right now?" Category definitions and newspaper persona identities still guide query framing.
+**Decision: Keep.** The timeline now displays real-world history — a factual record of events over time. Update the page header and copy from fictional to factual framing. This is a differentiating feature: readers can see the accumulating historical context that informs each edition.
 
 ---
 
@@ -424,15 +413,15 @@ Currently, the coherence gate can reject paid prompts — users pay but their ev
 | `apps/newsroom-director/newsroom_director/distillation/digest.py` | Digest serialization — add source URL output |
 | `apps/newsroom-director/newsroom_director/distillation/scorer.py` | Weight computation — unchanged but verify with inherited weights |
 | `apps/newsroom-director/newsroom_director/news_scout/searcher.py` | `TavilySearcher` — reused by topic researcher |
-| `apps/newsroom-director/newsroom_director/news_scout/query_generator.py` | Pattern to follow; also updated to remove WorldLedger input |
-| `apps/newsroom-director/newsroom_director/news_scout/main.py` | News Scout entry point — remove WorldLedger loading |
+| `apps/newsroom-director/newsroom_director/news_scout/query_generator.py` | Pattern to follow; also reframed from fictional to real-world context |
+| `apps/newsroom-director/newsroom_director/news_scout/main.py` | News Scout entry point — keeps WorldLedger loading (now world history) |
 | `apps/newsroom-director/newsroom_director/validation.py` | Coherence gate — deprecate `validate_prompts()` |
-| `data/personas.json` | Persona prompts — remove `{{WORLD_LEDGER_SYNOPSIS}}`, update preamble |
+| `data/personas.json` | Persona prompts — keep `{{WORLD_LEDGER_SYNOPSIS}}`, rename header to `WORLD HISTORY`, update preamble |
 | `scripts/generate-data.mjs` | Codegen — regenerate after persona changes |
 | `src/app/components/OrbInput.tsx` | Frontend copy — "world-altering event" text |
 | `apps/imbryk/src/app/components/OrbFrontFace.tsx` | Frontend copy |
 | `apps/imbryk/src/app/components/Confirmation.tsx` | Frontend copy |
-| `apps/gazette/src/timeline.njk` | Remove (WorldLedger artifact) |
+| `apps/gazette/src/timeline.njk` | Keep — update copy for real-world history framing |
 | `apps/gazette/src/about.njk` | Rewrite copy for real-world framing |
 
 ---
@@ -442,7 +431,7 @@ Currently, the coherence gate can reject paid prompts — users pay but their ev
 ```
 Phase 1 (Topic Research) ──► Phase 2 (Digest Reform)
                                      │
-Phase 3 (WorldLedger Removal) ◄──────┘
+Phase 3 (World History Reframe) ◄────┘
         │
         ├──► Phase 4 (Persona Updates)
         │

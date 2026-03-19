@@ -723,8 +723,8 @@ def run_morning_press(
                     "Editorial reflection step failed, continuing without journal updates"
                 )
 
-        # Step 9: WorldLedger mutation via LLM
-        # Always run when articles were generated — world news drives world state
+        # Step 9: World History update via LLM
+        # Always run when articles were generated — record real-world facts
         # regardless of whether any user prompts were processed in this edition.
         if articles:
             try:
@@ -736,7 +736,7 @@ def run_morning_press(
                     save_world_ledger(session, ledger_to_dict(ledger))
             except Exception:
                 logger.exception(
-                    "WorldLedger mutation failed, skipping world state update"
+                    "World History update failed, skipping history mutation"
                 )
 
         # Step 9b: Image generation — parse article JSON, generate images,
@@ -1030,16 +1030,21 @@ def _try_parse_edition_json(content: str) -> dict | None:
 def _build_mutation_prompt(
     synopsis: str, articles: dict[str, str]
 ) -> tuple[str, str]:
-    """Build a system instruction + user content for WorldLedger mutation."""
+    """Build a system instruction + user content for World History mutation."""
     articles_text = _format_all_articles(articles)
 
     system_instruction = """\
-You are a world-state updater. Given the current world state and today's \
-newspaper articles, produce a JSON object describing changes to the world \
-ledger. Only include fields that should change.
+You are a world history recorder. Given the current historical record and \
+today's newspaper articles, produce a JSON object describing factual updates \
+to the world history ledger. Only include fields that should change.
+
+Your job is to record real-world facts — events, developments, and trends \
+that actually happened — not to speculate or editorialize. Extract concrete \
+facts from today's articles and update the historical record accordingly.
 
 The mutation JSON should follow this schema (all fields optional):
-- synopsis: string (updated world synopsis)
+- synopsis: string (updated world history synopsis — a factual summary of \
+the current state of world affairs)
 - add_nations: list of new nations
 - update_nations: list of {name, ...fields_to_update}
 - add_alliances, add_conflicts, update_conflicts
@@ -1056,23 +1061,23 @@ with optional keys: {"name": str, "maturity_level": "emerging"|"growth"|\
 - update_temperature_anomaly: float
 - add_crises, add_mitigation_efforts
 - add_historical_events: list of {date, headline, description, impact, \
-sectors}
+sectors} — record significant real-world events from today's coverage
 - add_story_threads: list of {name, status, started, last_covered, summary, \
-related_nations, sectors} — create NEW narrative arcs for developing stories \
-that span multiple editions. Status: "developing" | "ongoing" | "resolved".
+related_nations, sectors} — create NEW threads for developing real-world \
+stories that span multiple days. Status: "developing" | "ongoing" | "resolved".
 - update_story_threads: list of {name, ...fields_to_update} — update existing \
-story threads by name. Use this to evolve summaries, change status to \
-"resolved" when a story concludes, or update last_covered dates.
+story threads by name. Use this to update summaries with new facts, change \
+status to "resolved" when a story concludes, or update last_covered dates.
 
-IMPORTANT: Story threads are how you track evolving narratives across editions. \
-When today's articles introduce a significant new storyline, create a thread. \
+IMPORTANT: Story threads track evolving real-world narratives across editions. \
+When today's articles cover a significant new developing story, create a thread. \
 When a thread's story concludes or becomes irrelevant, mark it "resolved". \
 Always update last_covered for threads that appear in today's coverage.
 
 Respond with ONLY the JSON mutation object, no explanation."""
 
     user_content = f"""\
-CURRENT WORLD STATE:
+CURRENT WORLD HISTORY:
 {synopsis}
 
 TODAY'S ARTICLES:
