@@ -16,7 +16,7 @@ class TestPersonaDefinitions:
 
     def test_curator_defined(self):
         assert CURATOR_PERSONA.id == "curator"
-        assert CURATOR_PERSONA.model_tier == "pro"
+        assert CURATOR_PERSONA.model_tier == "flash"
 
     def test_all_personas_includes_curator(self):
         assert len(ALL_PERSONAS) == 7
@@ -57,7 +57,7 @@ class TestPersonaDefinitions:
         assert MODEL_TIER_MAP["moralist"] == "flash"
         assert MODEL_TIER_MAP["radical"] == "flash"
         assert MODEL_TIER_MAP["hedonist"] == "flash"
-        assert MODEL_TIER_MAP["curator"] == "pro"
+        assert MODEL_TIER_MAP["curator"] == "flash"
 
     def test_each_persona_has_biases_and_blindspots(self):
         for persona in ALL_PERSONAS:
