@@ -40,6 +40,7 @@ from .config import (
     JOURNAL_LOOKBACK_DAYS,
     NEWS_ITEM_BASE_WEIGHT,
     R2_ACCOUNT_ID,
+    TOPIC_RESEARCH_ENABLED,
     VERTEX_AI_LOCATION,
     VERTEX_AI_PROJECT,
 )
@@ -241,6 +242,53 @@ def run_morning_press(
                 "article_count": 0,
             }
 
+        # Step 5b: Topic research — replace raw prompts with researched news
+        if TOPIC_RESEARCH_ENABLED and prompt_records:
+            from .config import (
+                TAVILY_API_KEY,
+                TAVILY_MONTHLY_LIMIT,
+                TAVILY_RPM,
+                TAVILY_SEARCH_DEPTH,
+            )
+            from .news_scout.searcher import TavilySearcher
+            from .topic_researcher import research_prompts
+
+            if TAVILY_API_KEY:
+                topic_searcher = TavilySearcher(
+                    api_key=TAVILY_API_KEY,
+                    rpm=TAVILY_RPM,
+                    monthly_limit=TAVILY_MONTHLY_LIMIT,
+                    search_depth=TAVILY_SEARCH_DEPTH,
+                )
+                researched = research_prompts(
+                    prompt_records, topic_searcher, gen,
+                )
+                logger.info(
+                    "Topic research replaced %d prompts with %d researched items",
+                    len(prompt_records),
+                    len(researched),
+                )
+                # Replace prompt_records with researched items for routing.
+                # ResearchedPrompt has the same interface (prompt_id, text,
+                # payment_amount, category_ids) so routing works unchanged.
+                prompt_records = researched  # type: ignore[assignment]
+
+                if not prompt_records and not news_items:
+                    logger.info(
+                        "Topic research produced no results and no news items, skipping edition"
+                    )
+                    _run_backfill()
+                    return {
+                        "edition_id": None,
+                        "newspaper_count": 0,
+                        "article_count": 0,
+                    }
+            else:
+                logger.warning(
+                    "TOPIC_RESEARCH_ENABLED but TAVILY_API_KEY not set, "
+                    "falling back to verbatim prompts"
+                )
+
         # Step 6: Route prompts + news items to newspapers
         newspaper_prompts: dict[str, list] = defaultdict(list)
         for pr in prompt_records:
@@ -355,6 +403,7 @@ def run_morning_press(
                                 text=item.text,
                                 payment_amount=item.payment_amount,
                                 prompt_id=item.prompt_id,
+                                source_url=getattr(item, "source_url", ""),
                             )
                         )
 

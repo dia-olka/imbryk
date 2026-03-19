@@ -10,11 +10,17 @@ from numpy.typing import NDArray
 
 @dataclass
 class Prompt:
-    """A user-submitted prompt with payment metadata."""
+    """A prompt entering the distillation pipeline.
+
+    May originate from a user submission or from topic research.
+    When source_url is set, the prompt was derived from a Tavily
+    search result and the URL should be cited in the digest.
+    """
 
     text: str
     payment_amount: float
     prompt_id: str = ""
+    source_url: str = ""
 
 
 @dataclass
