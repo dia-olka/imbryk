@@ -1,3 +1,61 @@
+/* Responsive date display for curator-nav-row */
+.curator-nav-row__date-full {
+  display: inline;
+}
+.curator-nav-row__date-short {
+  display: none;
+}
+@media (max-width: 600px) {
+  .curator-nav-row__date-full {
+    display: none;
+  }
+  .curator-nav-row__date-short {
+    display: inline;
+  }
+}
+/* Force curator-nav-row to be horizontal flex row */
+.curator-nav-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  margin: 0.25rem 0 0.25rem 0;
+  min-height: 0;
+}
+
+.curator-nav-row__item {
+  min-width: 0;
+  padding: 0;
+}
+.curator-nav-row__link,
+.curator-nav-row__link--prev {
+  font-size: 1rem;
+  padding: 0.1em 0.2em;
+  line-height: 1.2;
+}
+.curator-nav-row__center .curator-banner {
+  margin: 0;
+  padding: 0.1em 0.5em;
+  min-width: 0;
+}
+
+.curator-nav-row__item {
+  min-width: 0;
+}
+
+.curator-nav-row__item--next,
+.curator-nav-row__item--prev {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+}
+.curator-nav-row__item--center {
+  flex: 2 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 /* === Custom Properties === */
 :root {
   --color-bg: #faf9f7;

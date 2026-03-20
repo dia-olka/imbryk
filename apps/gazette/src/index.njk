@@ -16,12 +16,11 @@ ogType: website
   </p>
   {% set neighbours = editions | editionNeighbours(edition.date) %}
   <nav class="curator-nav-row" aria-label="Browse editions by date">
-    <div class="curator-nav-row__next">
+    <div class="curator-nav-row__item curator-nav-row__item--next">
       {% if neighbours.next %}
         <a href="/edition/{{ neighbours.next }}/" class="curator-nav-row__link">
           <span class="curator-nav-row__arrow" aria-hidden="true">&larr;</span>
           <span class="curator-nav-row__meta">
-            <span class="curator-nav-row__label">Newer edition</span>
             <span class="curator-nav-row__date">
               <span class="curator-nav-row__date-full">{{ neighbours.next | dateDisplay }}</span>
               <span class="curator-nav-row__date-short">{{ neighbours.next | dateShort }}</span>
@@ -30,7 +29,7 @@ ogType: website
         </a>
       {% endif %}
     </div>
-    <div class="curator-nav-row__center">
+    <div class="curator-nav-row__item curator-nav-row__item--center">
       {% if edition.curator_synthesis %}
         <a href="/edition/{{ edition.date }}/curator/"
            class="curator-banner"
@@ -42,11 +41,10 @@ ogType: website
         </a>
       {% endif %}
     </div>
-    <div class="curator-nav-row__prev">
+    <div class="curator-nav-row__item curator-nav-row__item--prev">
       {% if neighbours.prev %}
         <a href="/edition/{{ neighbours.prev }}/" class="curator-nav-row__link curator-nav-row__link--prev">
           <span class="curator-nav-row__meta">
-            <span class="curator-nav-row__label">Older edition</span>
             <span class="curator-nav-row__date">
               <span class="curator-nav-row__date-full">{{ neighbours.prev | dateDisplay }}</span>
               <span class="curator-nav-row__date-short">{{ neighbours.prev | dateShort }}</span>

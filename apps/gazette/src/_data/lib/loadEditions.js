@@ -365,5 +365,19 @@ function loadFromFixture() {
     );
   }
 
-  return [result.data];
+  // Return 3 editions with different dates (today, minus 1 day, minus 2 days)
+  const editions = [];
+  const baseDate = new Date(result.data.date);
+  for (let i = 0; i < 3; i++) {
+    const newEdition = JSON.parse(JSON.stringify(result.data));
+    const newDate = new Date(baseDate);
+    newDate.setDate(baseDate.getDate() - i);
+    // Format as YYYY-MM-DD
+    const yyyy = newDate.getFullYear();
+    const mm = String(newDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(newDate.getDate()).padStart(2, '0');
+    newEdition.date = `${yyyy}-${mm}-${dd}`;
+    editions.push(newEdition);
+  }
+  return editions;
 }

@@ -26,7 +26,7 @@ eleventyComputed:
         <a href="/edition/{{ neighbours.next }}/" class="curator-nav-row__link">
           <span class="curator-nav-row__arrow" aria-hidden="true">&larr;</span>
           <span class="curator-nav-row__meta">
-            <span class="curator-nav-row__label">Newer edition</span>
+            
             <span class="curator-nav-row__date">
               <span class="curator-nav-row__date-full">{{ neighbours.next | dateDisplay }}</span>
               <span class="curator-nav-row__date-short">{{ neighbours.next | dateShort }}</span>
@@ -51,7 +51,7 @@ eleventyComputed:
       {% if neighbours.prev %}
         <a href="/edition/{{ neighbours.prev }}/" class="curator-nav-row__link curator-nav-row__link--prev">
           <span class="curator-nav-row__meta">
-            <span class="curator-nav-row__label">Older edition</span>
+          
             <span class="curator-nav-row__date">
               <span class="curator-nav-row__date-full">{{ neighbours.prev | dateDisplay }}</span>
               <span class="curator-nav-row__date-short">{{ neighbours.prev | dateShort }}</span>
