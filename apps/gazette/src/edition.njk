@@ -30,6 +30,10 @@ eleventyComputed:
       <span class="curator-banner__cta" aria-hidden="true">&rarr;</span>
     </a>
   {% endif %}
+  {% set neighbours = editions | editionNeighbours(edition.date) %}
+  {% set editionDatePrev = neighbours.prev %}
+  {% set editionDateNext = neighbours.next %}
+  {% include "edition-date-nav.njk" %}
 </div>
 
 <ul class="front-page-grid" role="list">

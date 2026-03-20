@@ -1,0 +1,52 @@
+{# Edition date navigation for homepage and edition overview pages.
+   Navigates between edition dates (not within a newspaper).
+
+   Usage: {% include "edition-date-nav.njk" %}
+   Expects:
+     - editionDatePrev: older edition date string or null
+     - editionDateNext: newer edition date string or null
+#}
+
+{% if editionDatePrev or editionDateNext %}
+<nav class="edition-nav edition-nav--inline" aria-label="Browse editions by date">
+  <div class="edition-nav__inner">
+
+    <div class="edition-nav__prev">
+      {% if editionDatePrev %}
+        <a href="/edition/{{ editionDatePrev }}/"
+           class="edition-nav__link">
+          <span class="edition-nav__arrow" aria-hidden="true">&larr;</span>
+          <span class="edition-nav__info">
+            <span class="edition-nav__label">Older edition</span>
+            <span class="edition-nav__date">
+              <span class="edition-nav__date-full">{{ editionDatePrev | dateDisplay }}</span>
+              <span class="edition-nav__date-short">{{ editionDatePrev | dateShort }}</span>
+            </span>
+          </span>
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="edition-nav__center">
+      <a href="/archive/" class="edition-nav__all">All editions</a>
+    </div>
+
+    <div class="edition-nav__next">
+      {% if editionDateNext %}
+        <a href="/edition/{{ editionDateNext }}/"
+           class="edition-nav__link edition-nav__link--next">
+          <span class="edition-nav__info">
+            <span class="edition-nav__label">Newer edition</span>
+            <span class="edition-nav__date">
+              <span class="edition-nav__date-full">{{ editionDateNext | dateDisplay }}</span>
+              <span class="edition-nav__date-short">{{ editionDateNext | dateShort }}</span>
+            </span>
+          </span>
+          <span class="edition-nav__arrow" aria-hidden="true">&rarr;</span>
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+</nav>
+{% endif %}

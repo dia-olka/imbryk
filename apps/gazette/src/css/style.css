@@ -1249,6 +1249,46 @@ main:has(.newspaper) {
   }
 }
 
+/* === Inline edition nav (homepage & edition overview) === */
+.edition-nav--inline {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: none;
+}
+
+.edition-nav--inline .edition-nav__link {
+  color: var(--color-link);
+}
+
+.edition-nav--inline .edition-nav__link:hover {
+  background: var(--color-surface);
+  color: var(--color-link-hover);
+}
+
+.edition-nav--inline .edition-nav__arrow {
+  color: var(--color-accent);
+}
+
+.edition-header .edition-nav--inline {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+/* Responsive dates: short on mobile, full on desktop */
+.edition-nav__date-short {
+  display: none;
+}
+
+@media (max-width: 35.9rem) {
+  .edition-nav--inline .edition-nav__date-full {
+    display: none;
+  }
+
+  .edition-nav--inline .edition-nav__date-short {
+    display: inline;
+  }
+}
+
 /* === Back Link === */
 .back-link {
   display: inline-block;

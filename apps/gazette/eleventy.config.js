@@ -50,6 +50,15 @@ export default function (eleventyConfig) {
     return new Date(value).toISOString().split('T')[0];
   });
 
+  eleventyConfig.addFilter('dateShort', (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+    });
+  });
+
   eleventyConfig.addFilter('markdown', (value) => {
     if (!value) return '';
     // Strip HTML paragraph tags the LLM occasionally produces instead of
@@ -113,6 +122,19 @@ export default function (eleventyConfig) {
   eleventyConfig.addFilter('latestEdition', (editions) => {
     if (!editions || editions.length === 0) return null;
     return editions[0];
+  });
+
+  eleventyConfig.addFilter('editionNeighbours', (editions, date) => {
+    if (!editions || !date) return { prev: null, next: null };
+    // editions is sorted newest-first
+    const idx = editions.findIndex((e) => e.date === date);
+    if (idx === -1) return { prev: null, next: null };
+    return {
+      // prev (older) = next index in newest-first array
+      prev: idx < editions.length - 1 ? editions[idx + 1].date : null,
+      // next (newer) = previous index in newest-first array
+      next: idx > 0 ? editions[idx - 1].date : null,
+    };
   });
 
   return {
