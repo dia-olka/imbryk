@@ -155,12 +155,13 @@ def run_morning_press(
 
     today_date = edition_date or EDITION_DATE or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    def _run_backfill() -> None:
+    def _run_backfill() -> bool:
+        """Run image backfill. Returns True if any editions were updated."""
         try:
             from .config import MAX_BACKFILL_IMAGES_PER_RUN
             from .image_gen.backfill import run_image_backfill
 
-            run_image_backfill(
+            result = run_image_backfill(
                 session=session,
                 today_date=today_date,
                 imagen_client=img_client,
@@ -168,11 +169,13 @@ def run_morning_press(
                 max_images_per_run=MAX_BACKFILL_IMAGES_PER_RUN,
                 llm=gen,
             )
+            return result.editions_updated > 0
         except Exception:
             logger.warning(
                 "Image backfill step failed, today's edition unaffected",
                 exc_info=True,
             )
+            return False
 
     try:
         # Step 2: Fetch unprocessed prompts
@@ -775,7 +778,10 @@ def run_morning_press(
         # Step 15: Backfill missing images from previous editions (best-effort).
         # Runs after today's edition is committed and published so a slow
         # Imagen backfill cannot delay the current edition reaching readers.
-        _run_backfill()
+        if _run_backfill():
+            # Backfill updated past editions on R2 — trigger a second rebuild
+            # so the gazette picks up the newly generated hero/article images.
+            _trigger_deploy_hook()
 
         total_ms = int((time.monotonic() - start_time) * 1000)
         newspaper_ids = [k for k in articles if k != "curator"]

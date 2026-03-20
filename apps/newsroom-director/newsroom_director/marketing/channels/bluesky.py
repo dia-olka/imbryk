@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import re
 import urllib.request
@@ -62,6 +63,33 @@ def _build_rich_text(text: str):
     return tb
 
 
+def _compress_image(image_data: bytes, max_bytes: int = 976_000) -> tuple[bytes, str]:
+    """Compress *image_data* to fit within *max_bytes*.
+
+    Returns ``(data, content_type)``.  Falls back to the original bytes
+    if Pillow is unavailable.
+    """
+    if len(image_data) <= max_bytes:
+        return image_data, "image/jpeg"
+
+    from PIL import Image  # noqa: PIL is an optional-but-expected dep
+
+    img = Image.open(io.BytesIO(image_data))
+    img = img.convert("RGB")
+
+    # Progressively shrink until under the limit
+    for quality in (80, 60, 40, 20):
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=quality, optimize=True)
+        if buf.tell() <= max_bytes:
+            return buf.getvalue(), "image/jpeg"
+        # Also try halving dimensions at lower qualities
+        if quality <= 60:
+            img = img.resize((img.width // 2, img.height // 2), Image.LANCZOS)
+
+    return buf.getvalue(), "image/jpeg"
+
+
 def _build_embed_card(url: str, client):
     """Fetch OG metadata for *url* and return an embed-external record.
 
@@ -89,7 +117,8 @@ def _build_embed_card(url: str, client):
             )
             with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
                 image_data = resp.read()
-            upload_resp = client.upload_blob(image_data)
+            image_data, content_type = _compress_image(image_data)
+            upload_resp = client.upload_blob(image_data, content_type=content_type)
             thumb = upload_resp.blob
         except Exception:
             logger.debug(
