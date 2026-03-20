@@ -1,7 +1,5 @@
 """Tests for morning batch integration with news items."""
 
-import json
-
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -32,7 +30,7 @@ class StubDistillationPipeline(DistillationPipeline):
             cluster_size=len(prompts),
             aggregate_weight=sum(p.payment_amount for p in prompts),
             verbatim_prompts=[
-                (p.payment_amount, p.text) for p in prompts[:5]
+                (p.payment_amount, p.text, "") for p in prompts[:5]
             ],
             long_tail_summary="Test summary",
             keywords=["test"],
@@ -127,7 +125,6 @@ class TestNewsItemsIntegration:
             generation_strategy=gen,
             storage=storage,
             distillation_pipeline=pipeline,
-            enable_validation=False,
             edition_date="2026-03-12",
         )
 
@@ -146,7 +143,6 @@ class TestNewsItemsIntegration:
             generation_strategy=gen,
             storage=storage,
             distillation_pipeline=pipeline,
-            enable_validation=False,
             edition_date="2026-03-12",
         )
 
@@ -168,7 +164,6 @@ class TestNewsItemsIntegration:
             generation_strategy=gen,
             storage=storage,
             distillation_pipeline=pipeline,
-            enable_validation=False,
             edition_date="2026-03-12",
         )
 
@@ -194,7 +189,6 @@ class TestNewsItemsIntegration:
             generation_strategy=gen,
             storage=storage,
             distillation_pipeline=pipeline,
-            enable_validation=False,
             edition_date="2026-03-12",
         )
 
@@ -214,7 +208,6 @@ class TestNewsItemsIntegration:
             generation_strategy=gen,
             storage=storage,
             distillation_pipeline=pipeline,
-            enable_validation=False,
             edition_date="2026-03-12",
         )
 
@@ -233,30 +226,8 @@ class TestNewsItemsIntegration:
             generation_strategy=gen,
             storage=storage,
             distillation_pipeline=pipeline,
-            enable_validation=False,
             edition_date="2026-03-12",
         )
 
         assert result["edition_id"] is not None
 
-    def test_validation_skips_news_items(self, db_url_mixed):
-        """Coherence validation should not reject news items."""
-        # Validation rejects ALL prompts, but news items should survive
-        accepted_json = json.dumps({"accepted": []})
-        gen = StubGenerationStrategy(responses={"pro": accepted_json})
-        storage = StubEditionStorage()
-        pipeline = StubDistillationPipeline()
-
-        result = run_morning_press(
-            database_url=db_url_mixed,
-            generation_strategy=gen,
-            storage=storage,
-            distillation_pipeline=pipeline,
-            enable_validation=True,
-            edition_date="2026-03-12",
-        )
-
-        # All user prompts rejected, but news items survive
-        assert result["edition_id"] is not None
-        assert result["prompt_count"] == 0
-        assert result["news_item_count"] == 3

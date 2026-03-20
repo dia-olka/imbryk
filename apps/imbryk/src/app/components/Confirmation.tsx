@@ -40,7 +40,7 @@ export function Confirmation({ quote, onReset }: ConfirmationProps) {
         tabIndex={-1}
         className="focus-visible:outline-none"
       >
-        <AlertTitle>Your event has been sent into the world</AlertTitle>
+        <AlertTitle>Your topic request has been submitted</AlertTitle>
         <AlertDescription>
           It will appear in tomorrow morning&apos;s edition. Each newspaper will
           cover it from their own angle.{' '}
@@ -64,7 +64,7 @@ export function Confirmation({ quote, onReset }: ConfirmationProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base font-sans">
-              Newspapers covering your event
+              Newspapers covering your topic
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -96,7 +96,7 @@ export function Confirmation({ quote, onReset }: ConfirmationProps) {
 
       <div className="text-center">
         <Button onClick={onReset} variant="outline" size="lg">
-          Submit another event
+          Submit another topic
         </Button>
       </div>
     </div>

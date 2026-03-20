@@ -70,9 +70,9 @@ class TestPreambleLanguageInstructions:
         assert "LANGUAGE:" in _PREAMBLE
         assert "English" in _PREAMBLE
 
-    def test_preamble_handles_encrypted_prompts(self):
-        assert "ENCRYPTED PROMPTS:" in _PREAMBLE
-        assert "encrypted" in _PREAMBLE.lower()
+    def test_preamble_has_citation_instructions(self):
+        assert "CITATION:" in _PREAMBLE
+        assert "source" in _PREAMBLE.lower()
 
     def test_newspaper_system_prompts_contain_language_instruction(self):
         for persona in NEWSPAPER_PERSONAS:

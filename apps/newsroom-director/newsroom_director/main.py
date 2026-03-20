@@ -40,6 +40,7 @@ from .config import (
     JOURNAL_LOOKBACK_DAYS,
     NEWS_ITEM_BASE_WEIGHT,
     R2_ACCOUNT_ID,
+    TOPIC_RESEARCH_ENABLED,
     VERTEX_AI_LOCATION,
     VERTEX_AI_PROJECT,
 )
@@ -92,7 +93,6 @@ from .reflection import (
 )
 from .storage import EditionStorage, StubEditionStorage
 from .taxonomy import route_prompt
-from .validation import validate_prompts
 from .world_ledger import (
     INITIAL_WORLD_LEDGER,
     LedgerMutation,
@@ -121,10 +121,9 @@ def run_morning_press(
     storage: EditionStorage | None = None,
     distillation_pipeline: DistillationPipeline | None = None,
     imagen_client: ImageGenerationStrategy | None = None,
-    enable_validation: bool = True,
     edition_date: str | None = None,
 ) -> dict:
-    """Execute the full Morning Press generation pipeline.    
+    """Execute the full Morning Press generation pipeline.
 
     Args:
         database_url: Override for the database connection string.
@@ -132,7 +131,6 @@ def run_morning_press(
         storage: Edition output storage (defaults to stub).
         distillation_pipeline: Override for the distillation pipeline.
         imagen_client: Image generation backend (defaults to stub).
-        enable_validation: Run coherence validation on prompts.
 
     Returns:
         Summary dict with edition_id, newspaper_count, article_count.
@@ -217,32 +215,59 @@ def run_morning_press(
             extra={"synopsis_length": len(synopsis)},
         )
 
-        # Step 5: Coherence validation — user prompts only (news items skip)
-        if enable_validation and prompt_records:
-            logger.info(
-                "Starting coherence validation",
-                extra={"prompt_count": len(prompt_records)},
+        # Step 5: Topic research — replace raw prompts with researched news
+        if TOPIC_RESEARCH_ENABLED and prompt_records:
+            from .config import (
+                TAVILY_API_KEY,
+                TAVILY_MONTHLY_LIMIT,
+                TAVILY_RPM,
+                TAVILY_SEARCH_DEPTH,
             )
-            prompt_records = validate_prompts(
-                prompt_records, synopsis, gen
-            )
-            logger.info(
-                "Coherence validation complete",
-                extra={"surviving_prompts": len(prompt_records)},
-            )
+            from .news_scout.searcher import TavilySearcher
+            from .topic_researcher import research_prompts
 
-        # Only reachable here when coherence validation rejected all prompts;
-        # the pre-validation check already handled the case with no prompts at all.
-        if not prompt_records and not news_items:
-            logger.info(
-                "All prompts rejected by coherence validation and no news items, skipping edition"
-            )
-            _run_backfill()
-            return {
-                "edition_id": None,
-                "newspaper_count": 0,
-                "article_count": 0,
-            }
+            if TAVILY_API_KEY:
+                topic_searcher = TavilySearcher(
+                    api_key=TAVILY_API_KEY,
+                    rpm=TAVILY_RPM,
+                    monthly_limit=TAVILY_MONTHLY_LIMIT,
+                    search_depth=TAVILY_SEARCH_DEPTH,
+                )
+                # Exclude URLs already in pipeline via News Scout
+                news_urls = {
+                    ni.source_url
+                    for ni in news_items
+                    if hasattr(ni, "source_url") and ni.source_url
+                }
+                researched = research_prompts(
+                    prompt_records, topic_searcher, gen,
+                    exclude_urls=news_urls,
+                )
+                logger.info(
+                    "Topic research replaced %d prompts with %d researched items",
+                    len(prompt_records),
+                    len(researched),
+                )
+                # Replace prompt_records with researched items for routing.
+                # ResearchedPrompt has the same interface (prompt_id, text,
+                # payment_amount, category_ids) so routing works unchanged.
+                prompt_records = researched  # type: ignore[assignment]
+
+                if not prompt_records and not news_items:
+                    logger.info(
+                        "Topic research produced no results and no news items, skipping edition"
+                    )
+                    _run_backfill()
+                    return {
+                        "edition_id": None,
+                        "newspaper_count": 0,
+                        "article_count": 0,
+                    }
+            else:
+                logger.warning(
+                    "TOPIC_RESEARCH_ENABLED but TAVILY_API_KEY not set, "
+                    "falling back to verbatim prompts"
+                )
 
         # Step 6: Route prompts + news items to newspapers
         newspaper_prompts: dict[str, list] = defaultdict(list)
@@ -358,6 +383,7 @@ def run_morning_press(
                                 text=item.text,
                                 payment_amount=item.payment_amount,
                                 prompt_id=item.prompt_id,
+                                source_url=getattr(item, "source_url", ""),
                             )
                         )
 
@@ -677,8 +703,8 @@ def run_morning_press(
                     "Editorial reflection step failed, continuing without journal updates"
                 )
 
-        # Step 9: WorldLedger mutation via LLM
-        # Always run when articles were generated — world news drives world state
+        # Step 9: World History update via LLM
+        # Always run when articles were generated — record real-world facts
         # regardless of whether any user prompts were processed in this edition.
         if articles:
             try:
@@ -690,7 +716,7 @@ def run_morning_press(
                     save_world_ledger(session, ledger_to_dict(ledger))
             except Exception:
                 logger.exception(
-                    "WorldLedger mutation failed, skipping world state update"
+                    "World History update failed, skipping history mutation"
                 )
 
         # Step 9b: Image generation — parse article JSON, generate images,
@@ -987,16 +1013,21 @@ def _try_parse_edition_json(content: str) -> dict | None:
 def _build_mutation_prompt(
     synopsis: str, articles: dict[str, str]
 ) -> tuple[str, str]:
-    """Build a system instruction + user content for WorldLedger mutation."""
+    """Build a system instruction + user content for World History mutation."""
     articles_text = _format_all_articles(articles)
 
     system_instruction = """\
-You are a world-state updater. Given the current world state and today's \
-newspaper articles, produce a JSON object describing changes to the world \
-ledger. Only include fields that should change.
+You are a world history recorder. Given the current historical record and \
+today's newspaper articles, produce a JSON object describing factual updates \
+to the world history ledger. Only include fields that should change.
+
+Your job is to record real-world facts — events, developments, and trends \
+that actually happened — not to speculate or editorialize. Extract concrete \
+facts from today's articles and update the historical record accordingly.
 
 The mutation JSON should follow this schema (all fields optional):
-- synopsis: string (updated world synopsis)
+- synopsis: string (updated world history synopsis — a factual summary of \
+the current state of world affairs)
 - add_nations: list of new nations
 - update_nations: list of {name, ...fields_to_update}
 - add_alliances, add_conflicts, update_conflicts
@@ -1013,23 +1044,23 @@ with optional keys: {"name": str, "maturity_level": "emerging"|"growth"|\
 - update_temperature_anomaly: float
 - add_crises, add_mitigation_efforts
 - add_historical_events: list of {date, headline, description, impact, \
-sectors}
+sectors} — record significant real-world events from today's coverage
 - add_story_threads: list of {name, status, started, last_covered, summary, \
-related_nations, sectors} — create NEW narrative arcs for developing stories \
-that span multiple editions. Status: "developing" | "ongoing" | "resolved".
+related_nations, sectors} — create NEW threads for developing real-world \
+stories that span multiple days. Status: "developing" | "ongoing" | "resolved".
 - update_story_threads: list of {name, ...fields_to_update} — update existing \
-story threads by name. Use this to evolve summaries, change status to \
-"resolved" when a story concludes, or update last_covered dates.
+story threads by name. Use this to update summaries with new facts, change \
+status to "resolved" when a story concludes, or update last_covered dates.
 
-IMPORTANT: Story threads are how you track evolving narratives across editions. \
-When today's articles introduce a significant new storyline, create a thread. \
+IMPORTANT: Story threads track evolving real-world narratives across editions. \
+When today's articles cover a significant new developing story, create a thread. \
 When a thread's story concludes or becomes irrelevant, mark it "resolved". \
 Always update last_covered for threads that appear in today's coverage.
 
 Respond with ONLY the JSON mutation object, no explanation."""
 
     user_content = f"""\
-CURRENT WORLD STATE:
+CURRENT WORLD HISTORY:
 {synopsis}
 
 TODAY'S ARTICLES:
@@ -1310,14 +1341,11 @@ def cli_main() -> None:
             logger.info("Image generation disabled via ENABLE_IMAGES=false")
         img_client = StubImageClient(should_fail=not enable_images)
 
-    enable_validation = os.getenv("ENABLE_VALIDATION", "true").lower() == "true"
-
     summary = run_morning_press(
         database_url=db_url,
         generation_strategy=gen,
         storage=store,
         imagen_client=img_client,
-        enable_validation=enable_validation,
     )
 
     logger.info("Pipeline finished", extra={"summary": summary})

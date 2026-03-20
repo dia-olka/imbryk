@@ -18,6 +18,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how the system works and [PLAN.md](PL
 7. [Step 5 — Deploy the Code](#step-5--deploy-the-code)
 8. [Step 6 — Set Up the Daily Schedule](#step-6--set-up-the-daily-schedule)
 9. [Day-to-Day Operations](#day-to-day-operations)
+   - [Enabling Topic Research](#enabling-topic-research)
 10. [Monthly Costs](#monthly-costs)
 11. [Monitoring & Alerts](#monitoring--alerts)
 12. [Troubleshooting](#troubleshooting)
@@ -781,6 +782,8 @@ gcloud run jobs create newsroom-director \
   --set-env-vars=ENABLE_EDITORIAL_JOURNAL=true \
   --set-env-vars=JOURNAL_LOOKBACK_DAYS=7 \
   --set-env-vars=ENABLE_READER_METRICS=false \
+  --set-env-vars=TOPIC_RESEARCH_ENABLED=false \
+  --set-env-vars=TOPIC_RESEARCH_MAX_QUERIES=3 \
   --set-secrets=CF_ANALYTICS_ZONE_ID=cf-analytics-zone-id:latest \
   --set-secrets=CF_ANALYTICS_API_TOKEN=cf-analytics-api-token:latest \
   --set-env-vars=SENTRY_DSN="" \
@@ -945,6 +948,43 @@ To see what the services are doing:
 2. Click on the service or job name
 3. Click the **"Logs"** tab
 
+### Enabling Topic Research
+
+Topic Research is an opt-in feature that transforms paid user prompts into real-world news before distillation. When a user submits and pays for a prompt (e.g. "war in Sudan"), the newsroom director uses Gemini Flash to generate targeted search queries, runs them through Tavily, and feeds the resulting news articles into the distillation pipeline with the user's payment weight distributed evenly across the results.
+
+**Prerequisites:** Topic Research requires `TAVILY_API_KEY` to be set (see Step 3.4a). The News Scout must also be enabled (`NEWS_SCOUT_ENABLED=true`).
+
+**How to enable on an existing Cloud Run job:**
+
+```sh
+PROJECT_ID=your-project-id
+
+gcloud run jobs update newsroom-director \
+  --region=us-central1 \
+  --update-env-vars=TOPIC_RESEARCH_ENABLED=true,TOPIC_RESEARCH_MAX_QUERIES=3
+```
+
+**How to enable via GitHub Actions (recommended for ongoing deployments):**
+
+1. Go to your GitHub repository **Settings > Secrets and variables > Actions > Variables**
+2. Click **"New repository variable"**
+3. Add:
+   - **Name:** `TOPIC_RESEARCH_ENABLED` — **Value:** `true`
+   - **Name:** `TOPIC_RESEARCH_MAX_QUERIES` — **Value:** `3` (increase if your Tavily plan allows; each prompt uses up to this many Tavily calls)
+4. Push any change to `main` to trigger the CD workflow, which will update the Cloud Run job automatically
+
+**Disabling Topic Research:**
+
+```sh
+gcloud run jobs update newsroom-director \
+  --region=us-central1 \
+  --update-env-vars=TOPIC_RESEARCH_ENABLED=false
+```
+
+Or set the `TOPIC_RESEARCH_ENABLED` GitHub Actions variable to `false` and push to `main`.
+
+**Tavily credit usage:** With the default `TOPIC_RESEARCH_MAX_QUERIES=3` and `TAVILY_MAX_RESULTS_PER_QUERY=5`, each paid prompt consumes up to 3 Tavily API calls. Factor this into your Tavily plan alongside the News Scout's daily usage (~60-90 calls/day).
+
 ### Switching Stripe from Test to Live
 
 When you are ready to accept real payments:
@@ -1101,6 +1141,8 @@ These are all the configuration values used by the backend services. Most are st
 | `MAX_CLUSTERS`                | Env var | `30`                         | Maximum number of topic clusters per newspaper before low-weight ones are merged                                  |
 | `MAX_BACKFILL_IMAGES_PER_RUN` | Env var | `20`                         | Max images to generate during the end-of-run backfill step for previously failed image generations                |
 | `NEWS_SCOUT_ENABLED`          | Env var | `true`                       | Set to `false` to disable the News Scout (no real-world news gap filling)                                         |
+| `TOPIC_RESEARCH_ENABLED`      | Env var | `false`                      | Enable Topic Research — transforms paid user prompts into Tavily news searches before distillation. Requires `TAVILY_API_KEY`. See [Enabling Topic Research](#enabling-topic-research). |
+| `TOPIC_RESEARCH_MAX_QUERIES`  | Env var | `3`                          | Maximum Tavily search queries generated per user prompt when Topic Research is enabled. Higher values improve coverage at the cost of more Tavily credits. |
 | `TAVILY_RPM`                  | Env var | `99`                         | Maximum Tavily API requests per minute                                                                            |
 | `TAVILY_MONTHLY_LIMIT`        | Env var | `999`                        | Maximum Tavily API requests per month. **Production note:** the counter is stored in `/tmp` and resets on each Cloud Run container start, so this does not enforce a hard monthly cap in production. Use Tavily's own dashboard alerts for billing protection.                                                           |
 | `TAVILY_SEARCH_DEPTH`         | Env var | `basic`                      | Tavily search depth: `basic` (1 credit/query) or `advanced` (2 credits/query). Use `basic` to stay within the free-tier 1,000 credits/month budget. |

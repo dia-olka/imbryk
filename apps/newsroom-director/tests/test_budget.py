@@ -17,7 +17,7 @@ def _make_digest(
         cluster_id=cluster_id,
         cluster_size=size,
         aggregate_weight=weight,
-        verbatim_prompts=[(weight, f"prompt for cluster {cluster_id}")],
+        verbatim_prompts=[(weight, f"prompt for cluster {cluster_id}", "")],
         long_tail_summary="",
         keywords=["test"],
     )

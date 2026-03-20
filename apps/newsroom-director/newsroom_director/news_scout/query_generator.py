@@ -1,8 +1,8 @@
-"""Generate search queries from the WorldLedger via Gemini Flash.
+"""Generate search queries from the World History via Gemini Flash.
 
-The LLM reasons about the current world state and produces targeted
-search queries for each taxonomy category — what a journalist in this
-world would find editorially interesting right now.
+The LLM reasons about the current state of world affairs and produces
+targeted search queries for each taxonomy category — what a journalist
+would find editorially interesting right now.
 """
 
 from __future__ import annotations
@@ -24,15 +24,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are the chief intelligence officer for a fictional world newspaper group. \
+You are the chief intelligence officer for a newspaper group. \
 Your job is to commission search queries that will surface the most \
 editorially consequential real-world news for today's editions across \
 all newspapers in the group.
 
 You have up to six inputs:
-1. A synopsis of the fictional world's current state — nations, conflicts, \
-alliances, economic trends, technological developments, cultural movements, \
-and environmental crises.
+1. A world history record — a factual summary of recent real-world events, \
+ongoing story threads, geopolitical developments, economic trends, \
+technological shifts, and environmental crises tracked over time.
 2. A set of editorial categories that the newspapers collectively cover.
 3. The editorial identities of the newspapers — their ideologies, political \
 leanings, and areas of focus — so you can tailor queries to what each \
@@ -46,9 +46,8 @@ commissioning duplicate stories and instead advance the narrative.
 engaged with, so you can prioritise topics that resonate.
 
 Your reasoning process:
-- Identify which fictional world threads have real-world analogues or \
-parallels that could enrich the narrative (e.g. a fictional energy scarcity \
-crisis maps to real-world energy market disruptions).
+- Review the world history to understand ongoing story threads, recent \
+developments, and evolving situations that may have new developments today.
 - For each category, consider which newspapers subscribe to it and what \
 angle their readership would find most valuable — a geopolitical category \
 read by a conservative-leaning paper demands different query framing than \
@@ -106,10 +105,11 @@ def generate_queries(
     personas: list[PersonaConfig] | None = None,
     editorial_context: str = "",
 ) -> dict[str, list[str]]:
-    """Generate search queries for each category based on the WorldLedger.
+    """Generate search queries for each category based on World History.
 
     Args:
-        synopsis: Serialized WorldLedger synopsis text.
+        synopsis: Serialized world history synopsis — a factual record
+            of recent real-world events and ongoing story threads.
         category_ids: All 30 taxonomy category slugs.
         generation_strategy: LLM backend (Gemini Flash).
         personas: Newspaper persona configs so the model knows which
@@ -133,7 +133,7 @@ def generate_queries(
         else ""
     )
     user_content = (
-        f"WORLD STATE SYNOPSIS:\n{synopsis}\n"
+        f"WORLD HISTORY:\n{synopsis}\n"
         f"{personas_section}"
         f"{context_section}\n"
         f"CATEGORIES:\n{category_list}\n\n"
