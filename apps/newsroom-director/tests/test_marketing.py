@@ -485,3 +485,32 @@ class TestRunMarketingAgent:
             assert saved[0].post_type == "teaser"
         finally:
             verify_session.close()
+
+    def test_retry_after_all_posts_failed(self, db_url_with_edition):
+        """A fully-failed run should NOT block a retry."""
+        plan_json = json.dumps({
+            "reasoning": "Attempt",
+            "posts": [
+                {"channel": "stub", "post_type": "teaser", "text": "Hello"},
+            ],
+        })
+
+        # First run: all posts fail
+        result1 = run_marketing_agent(
+            database_url=db_url_with_edition,
+            generation_strategy=StubGenerationStrategy(responses={"flash": plan_json}),
+            channel=StubChannel(should_fail=True),
+            edition_date="2026-03-15",
+        )
+        assert result1["posts_created"] == 0
+
+        # Second run: should NOT be blocked by the failed posts
+        ch2 = StubChannel()
+        result2 = run_marketing_agent(
+            database_url=db_url_with_edition,
+            generation_strategy=StubGenerationStrategy(responses={"flash": plan_json}),
+            channel=ch2,
+            edition_date="2026-03-15",
+        )
+        assert result2["posts_created"] == 1
+        assert len(ch2.posts) == 1

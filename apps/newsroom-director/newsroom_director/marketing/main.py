@@ -99,9 +99,10 @@ def run_marketing_agent(
         # Load past marketing posts for context
         past_posts = load_recent_marketing_posts(session, lookback_days=7, current_date=today)
 
-        # Idempotency: skip if posts for today's edition already exist.
+        # Idempotency: skip if successful posts for today's edition already exist.
         # Prevents duplicate publishing if the Cloud Run job is retried.
-        today_posts = [p for p in past_posts if p.edition_date == today]
+        # Only count successfully posted entries — failed posts should not block a retry.
+        today_posts = [p for p in past_posts if p.edition_date == today and p.status == "posted"]
         if today_posts:
             logger.info(
                 "Posts already published for edition %s (%d posts), skipping to prevent duplicates",
