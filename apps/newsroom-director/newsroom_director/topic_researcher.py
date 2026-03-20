@@ -37,7 +37,7 @@ timelines over broad topic searches.
 - Avoid generic queries like "latest news about X".
 
 Respond with ONLY a JSON object:
-{{"queries": ["query 1", "query 2", ...]}}"""
+{"queries": ["query 1", "query 2", ...]}"""
 
 
 @dataclass
@@ -97,9 +97,9 @@ def _generate_queries_for_prompt(
                 attempt,
                 MAX_RETRIES,
             )
-        except (json.JSONDecodeError, TypeError, AttributeError):
+        except Exception:
             logger.warning(
-                "Failed to parse query response for prompt %s (attempt %d/%d)",
+                "Failed to generate queries for prompt %s (attempt %d/%d)",
                 prompt.prompt_id,
                 attempt,
                 MAX_RETRIES,
@@ -229,7 +229,7 @@ def research_prompts(
         extra={
             "step": "topic_research",
             "prompts_input": len(prompts),
-            "queries_generated": total_queries,
+            "searches_executed": total_queries,
             "results_output": len(researched),
             "unique_urls": len(seen_urls),
             "rate_limited": rate_limited,
