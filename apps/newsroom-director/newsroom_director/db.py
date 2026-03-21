@@ -81,6 +81,20 @@ class WorldLedgerRow(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow)
 
 
+class PromptResearchLogRow(Base):
+    __tablename__ = "prompt_research_log"
+
+    id = Column(String(36), primary_key=True, default=_new_uuid)
+    prompt_id = Column(
+        String(36), ForeignKey("prompts.id"), nullable=False
+    )
+    edition_date = Column(String(10), nullable=False)
+    queries_json = Column(Text, nullable=False)
+    results_json = Column(Text, nullable=False)
+    status = Column(String(32), nullable=False, default="success")
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
 class WorldLedgerHistoryRow(Base):
     __tablename__ = "world_ledger_history"
 
@@ -306,6 +320,38 @@ def mark_prompts_processed(
         return
     session.query(PromptRow).filter(PromptRow.id.in_(prompt_ids)).update(
         {"status": "processed"}, synchronize_session="fetch"
+    )
+
+
+def save_prompt_research_log(
+    session: Session,
+    prompt_id: str,
+    edition_date: str,
+    queries: list[str],
+    results: list[dict],
+    status: str,
+) -> None:
+    """Record the queries and results of a topic research attempt."""
+    row = PromptResearchLogRow(
+        id=_new_uuid(),
+        prompt_id=prompt_id,
+        edition_date=edition_date,
+        queries_json=json.dumps(queries, ensure_ascii=False),
+        results_json=json.dumps(results, ensure_ascii=False),
+        status=status,
+        created_at=_utcnow(),
+    )
+    session.add(row)
+
+
+def count_prompt_research_attempts(
+    session: Session, prompt_id: str
+) -> int:
+    """Count how many times topic research has been attempted for a prompt."""
+    return (
+        session.query(PromptResearchLogRow)
+        .filter(PromptResearchLogRow.prompt_id == prompt_id)
+        .count()
     )
 
 

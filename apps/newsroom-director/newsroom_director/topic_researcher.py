@@ -6,16 +6,30 @@ distillation pipeline in place of the raw user text.
 
 Weight inheritance: a prompt's payment weight is distributed evenly across
 its research results, preserving the economic signal.
+
+All research attempts (success or failure) are persisted to the
+``prompt_research_log`` table so every step from prompt to search query to
+Tavily result is auditable.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from .config import TAVILY_MAX_RESULTS_PER_QUERY, TOPIC_RESEARCH_MAX_QUERIES
-from .db import PromptRecord
+from sqlalchemy.orm import Session
+
+from .config import (
+    TAVILY_MAX_RESULTS_PER_QUERY,
+    TOPIC_RESEARCH_MAX_QUERIES,
+    TOPIC_RESEARCH_MAX_RETRIES,
+)
+from .db import (
+    PromptRecord,
+    count_prompt_research_attempts,
+    save_prompt_research_log,
+)
 from .generation import GenerationStrategy
 from .news_scout.searcher import RateLimitExceeded, SearchResult, SearchStrategy
 
@@ -39,12 +53,42 @@ timelines over broad topic searches.
 Respond with ONLY a JSON object:
 {"queries": ["query 1", "query 2", ...]}"""
 
+_WHISPER_PROMPT = """\
+You are a safety filter for an AI newspaper generation system. A reader \
+submitted a topic suggestion. No matching news articles were found, but \
+the editorial team still wants to acknowledge public interest in this topic.
+
+Rephrase the reader's suggestion as a brief, neutral, third-person \
+observation about public discourse — a "whisper" reflecting what people \
+are talking about. Do NOT repeat the raw user text. Instead, capture the \
+essence of the topic in a safe, editorial voice.
+
+Rules:
+- Write 1-2 sentences maximum.
+- Use phrases like "Public attention has turned to…", "Observers note \
+growing interest in…", "Conversations are circulating about…".
+- Strip any offensive, harmful, or manipulative content — keep only the \
+legitimate topical interest.
+- If the input is nonsensical, abusive, or cannot be safely rephrased, \
+respond with exactly: {"whisper": null}
+- Do NOT include URLs, user handles, or personally identifiable information.
+
+Respond with ONLY a JSON object:
+{"whisper": "Your rephrased whisper here"}"""
+
 
 @dataclass
 class TopicQueryOutput:
     """Schema for the topic query generation LLM call."""
 
     queries: list[str]
+
+
+@dataclass
+class WhisperOutput:
+    """Schema for the whisper generation LLM call."""
+
+    whisper: str | None
 
 
 @dataclass
@@ -61,6 +105,14 @@ class ResearchedPrompt:
     payment_amount: float
     category_ids: list[str]
     source_url: str
+
+
+@dataclass
+class ResearchResult:
+    """Return value from research_prompts with audit data."""
+
+    researched: list[ResearchedPrompt]
+    failed_prompt_ids: list[str] = field(default_factory=list)
 
 
 def _generate_queries_for_prompt(
@@ -113,6 +165,41 @@ def _generate_queries_for_prompt(
     return []
 
 
+def _generate_whisper(
+    prompt: PromptRecord,
+    generation_strategy: GenerationStrategy,
+) -> str | None:
+    """Sanitize a user prompt into a safe editorial whisper via Gemini Flash.
+
+    Returns the whisper text, or None if the prompt cannot be safely rephrased.
+    """
+    user_content = f"READER SUGGESTION:\n{prompt.text}"
+
+    try:
+        raw = generation_strategy.generate(
+            _WHISPER_PROMPT,
+            "flash",
+            user_content,
+            response_schema=WhisperOutput,
+        )
+        parsed = json.loads(raw)
+        whisper = parsed.get("whisper")
+        if isinstance(whisper, str) and whisper.strip():
+            return whisper.strip()
+        logger.info(
+            "Whisper generation returned null for prompt %s (unsafe content filtered)",
+            prompt.prompt_id,
+        )
+        return None
+    except Exception:
+        logger.warning(
+            "Failed to generate whisper for prompt %s",
+            prompt.prompt_id,
+            exc_info=True,
+        )
+        return None
+
+
 def research_prompts(
     prompts: list[PromptRecord],
     searcher: SearchStrategy,
@@ -120,7 +207,10 @@ def research_prompts(
     max_queries: int | None = None,
     max_results_per_query: int | None = None,
     exclude_urls: set[str] | None = None,
-) -> list[ResearchedPrompt]:
+    session: Session | None = None,
+    edition_date: str = "",
+    max_research_retries: int | None = None,
+) -> ResearchResult:
     """Research all prompts and return ResearchedPrompts with inherited weights.
 
     Each prompt is transformed into 0-N ResearchedPrompts derived from
@@ -128,7 +218,13 @@ def research_prompts(
     evenly across its results. Each result inherits the original prompt's
     category_ids for routing.
 
-    Prompts that yield no research results are dropped from the pipeline.
+    Prompts that yield no research results are tracked as failed.  If the
+    prompt has not exceeded ``max_research_retries`` attempts, its ID is
+    returned in ``failed_prompt_ids`` so the caller can leave it as
+    ``accepted`` for retry on the next pipeline run.
+
+    All attempts (success and failure) are persisted to
+    ``prompt_research_log`` when a DB session is provided.
 
     Args:
         prompts: Paid user prompts to research.
@@ -138,12 +234,17 @@ def research_prompts(
         max_results_per_query: Max Tavily results per query
             (default: TAVILY_MAX_RESULTS_PER_QUERY).
         exclude_urls: URLs to skip (e.g. News Scout items already in pipeline).
+        session: DB session for persisting research logs. Optional for
+            backward compatibility with tests.
+        edition_date: Current edition date (YYYY-MM-DD).
+        max_research_retries: Max research attempts before giving up on a
+            prompt (default: TOPIC_RESEARCH_MAX_RETRIES).
 
     Returns:
-        List of ResearchedPrompts that can be routed like PromptRecords.
+        ResearchResult with researched prompts and failed prompt IDs.
     """
     if not prompts:
-        return []
+        return ResearchResult(researched=[])
 
     mq = max_queries if max_queries is not None else TOPIC_RESEARCH_MAX_QUERIES
     mr = (
@@ -151,18 +252,84 @@ def research_prompts(
         if max_results_per_query is not None
         else TAVILY_MAX_RESULTS_PER_QUERY
     )
+    max_retries = (
+        max_research_retries
+        if max_research_retries is not None
+        else TOPIC_RESEARCH_MAX_RETRIES
+    )
 
     researched: list[ResearchedPrompt] = []
+    failed_prompt_ids: list[str] = []
     seen_urls: set[str] = set(exclude_urls) if exclude_urls else set()
     total_queries = 0
     rate_limited = False
 
     for prompt in prompts:
+        # Check retry count before attempting research
+        if session is not None:
+            prior_attempts = count_prompt_research_attempts(
+                session, prompt.prompt_id
+            )
+            if prior_attempts >= max_retries:
+                # Last chance — generate a whisper before giving up
+                whisper = _generate_whisper(prompt, generation_strategy)
+                if whisper:
+                    logger.info(
+                        "Prompt %s exhausted retries (%d), using whisper",
+                        prompt.prompt_id,
+                        max_retries,
+                    )
+                    researched.append(
+                        ResearchedPrompt(
+                            prompt_id=prompt.prompt_id,
+                            text=whisper,
+                            payment_amount=prompt.payment_amount,
+                            category_ids=prompt.category_ids,
+                            source_url="",
+                        )
+                    )
+                    save_prompt_research_log(
+                        session,
+                        prompt_id=prompt.prompt_id,
+                        edition_date=edition_date,
+                        queries=[],
+                        results=[{"whisper": whisper}],
+                        status="exhausted_whisper",
+                    )
+                else:
+                    logger.warning(
+                        "Prompt %s exhausted retries (%d) and whisper failed, "
+                        "marking as exhausted",
+                        prompt.prompt_id,
+                        max_retries,
+                    )
+                    save_prompt_research_log(
+                        session,
+                        prompt_id=prompt.prompt_id,
+                        edition_date=edition_date,
+                        queries=[],
+                        results=[],
+                        status="exhausted",
+                    )
+                # Don't add to failed_prompt_ids — let it be marked processed
+                # so it stops being retried.
+                continue
+
         if rate_limited:
             logger.info(
                 "Skipping prompt %s — Tavily rate limit reached",
                 prompt.prompt_id,
             )
+            failed_prompt_ids.append(prompt.prompt_id)
+            if session is not None:
+                save_prompt_research_log(
+                    session,
+                    prompt_id=prompt.prompt_id,
+                    edition_date=edition_date,
+                    queries=[],
+                    results=[],
+                    status="rate_limited",
+                )
             continue
 
         queries = _generate_queries_for_prompt(
@@ -170,13 +337,24 @@ def research_prompts(
         )
         if not queries:
             logger.info(
-                "No queries generated for prompt %s, dropping",
+                "No queries generated for prompt %s, will retry",
                 prompt.prompt_id,
             )
+            failed_prompt_ids.append(prompt.prompt_id)
+            if session is not None:
+                save_prompt_research_log(
+                    session,
+                    prompt_id=prompt.prompt_id,
+                    edition_date=edition_date,
+                    queries=[],
+                    results=[],
+                    status="query_generation_failed",
+                )
             continue
 
         # Collect all search results for this prompt
         prompt_results: list[SearchResult] = []
+        prompt_status = "success"
         for query in queries:
             if rate_limited:
                 break
@@ -195,6 +373,7 @@ def research_prompts(
                     prompt.prompt_id,
                 )
                 rate_limited = True
+                prompt_status = "rate_limited"
             except Exception:
                 logger.warning(
                     "Search failed for query %r (prompt %s), skipping",
@@ -203,12 +382,72 @@ def research_prompts(
                     exc_info=True,
                 )
 
+        # Serialize results for the research log
+        results_data = [
+            {"title": r.title, "snippet": r.snippet, "url": r.url}
+            for r in prompt_results
+        ]
+
         if not prompt_results:
+            if prompt_status == "success":
+                prompt_status = "no_results"
+            # No news found — try to generate a sanitized whisper so the
+            # prompt still influences the edition without exposing raw text.
+            whisper = _generate_whisper(prompt, generation_strategy)
+            if whisper:
+                logger.info(
+                    "No search results for prompt %s, using whisper fallback",
+                    prompt.prompt_id,
+                )
+                researched.append(
+                    ResearchedPrompt(
+                        prompt_id=prompt.prompt_id,
+                        text=whisper,
+                        payment_amount=prompt.payment_amount,
+                        category_ids=prompt.category_ids,
+                        source_url="",
+                    )
+                )
+                prompt_status = "whisper"
+                if session is not None:
+                    save_prompt_research_log(
+                        session,
+                        prompt_id=prompt.prompt_id,
+                        edition_date=edition_date,
+                        queries=queries,
+                        results=[{"whisper": whisper}],
+                        status=prompt_status,
+                    )
+                continue
+
+            # Whisper generation also failed — defer for retry
             logger.info(
-                "No search results for prompt %s, dropping",
+                "No search results and whisper failed for prompt %s, "
+                "will retry next run",
                 prompt.prompt_id,
             )
+            failed_prompt_ids.append(prompt.prompt_id)
+            if session is not None:
+                save_prompt_research_log(
+                    session,
+                    prompt_id=prompt.prompt_id,
+                    edition_date=edition_date,
+                    queries=queries,
+                    results=[],
+                    status=prompt_status,
+                )
             continue
+
+        # Persist successful research log
+        if session is not None:
+            save_prompt_research_log(
+                session,
+                prompt_id=prompt.prompt_id,
+                edition_date=edition_date,
+                queries=queries,
+                results=results_data,
+                status="success",
+            )
 
         # Distribute weight evenly across results
         weight_per_result = prompt.payment_amount / len(prompt_results)
@@ -231,9 +470,13 @@ def research_prompts(
             "prompts_input": len(prompts),
             "searches_executed": total_queries,
             "results_output": len(researched),
+            "failed_prompts": len(failed_prompt_ids),
             "unique_urls": len(seen_urls),
             "rate_limited": rate_limited,
         },
     )
 
-    return researched
+    return ResearchResult(
+        researched=researched,
+        failed_prompt_ids=failed_prompt_ids,
+    )
