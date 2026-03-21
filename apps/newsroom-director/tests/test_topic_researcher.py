@@ -586,6 +586,7 @@ class TestResearchLogging:
         # p1 got rate_limited during search, p2 skipped entirely
         assert len(logs) == 2
         assert logs[0].prompt_id == "p1"
+        assert logs[0].status == "rate_limited"
         assert logs[1].prompt_id == "p2"
         assert logs[1].status == "rate_limited"
 

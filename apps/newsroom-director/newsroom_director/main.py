@@ -192,7 +192,6 @@ def run_morning_press(
 
         if not prompt_records and not news_items:
             logger.info("No prompts or news items found, skipping edition")
-            _run_backfill()
             return {
                 "edition_id": None,
                 "newspaper_count": 0,
@@ -267,7 +266,6 @@ def run_morning_press(
                         "Topic research produced no results and no news items, skipping edition"
                     )
                     session.commit()  # persist research logs
-                    _run_backfill()
                     return {
                         "edition_id": None,
                         "newspaper_count": 0,

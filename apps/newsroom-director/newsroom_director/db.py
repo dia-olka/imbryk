@@ -347,7 +347,13 @@ def save_prompt_research_log(
 def count_prompt_research_attempts(
     session: Session, prompt_id: str
 ) -> int:
-    """Count how many times topic research has been attempted for a prompt."""
+    """Count all research log entries for a prompt across all statuses.
+
+    Counts every row in prompt_research_log for the given prompt_id,
+    regardless of status (success, whisper, no_results, etc.). In practice
+    a successfully researched prompt is marked processed and won't appear in
+    the next run, so this effectively counts prior *failed* attempts.
+    """
     return (
         session.query(PromptResearchLogRow)
         .filter(PromptResearchLogRow.prompt_id == prompt_id)

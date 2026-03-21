@@ -285,6 +285,8 @@ def research_prompts(
                             text=whisper,
                             payment_amount=prompt.payment_amount,
                             category_ids=prompt.category_ids,
+                            # Empty string signals no citation URL (whisper has no source).
+                            # Downstream code checks `if result.source_url` for rendering.
                             source_url="",
                         )
                     )
@@ -405,6 +407,8 @@ def research_prompts(
                         text=whisper,
                         payment_amount=prompt.payment_amount,
                         category_ids=prompt.category_ids,
+                        # Empty string signals no citation URL (whisper has no source).
+                        # Downstream code checks `if result.source_url` for rendering.
                         source_url="",
                     )
                 )
