@@ -326,6 +326,22 @@ def db_url_with_edition(tmp_path):
 
 
 @pytest.fixture()
+def db_url_curator_only(tmp_path):
+    """Edition with only curator content — no newspapers, so no deterministic thread."""
+    db_path = tmp_path / "curator_only.db"
+    url = f"sqlite:///{db_path}"
+    engine = create_engine(url)
+    Base.metadata.create_all(bind=engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    curator_content = json.dumps({"text": "Brief curator synthesis."})
+    save_edition(session, "2026-03-15", {"curator": curator_content})
+    session.commit()
+    session.close()
+    return url
+
+
+@pytest.fixture()
 def db_url_empty(tmp_path):
     """Create a SQLite file DB with tables but no data."""
     db_path = tmp_path / "empty.db"
@@ -347,22 +363,8 @@ class TestRunMarketingAgent:
         assert result["reason"] == "no_edition"
 
     def test_full_pipeline_with_stub(self, db_url_with_edition):
-        plan_json = json.dumps({
-            "reasoning": "Test strategy: lead with contrast",
-            "posts": [
-                {
-                    "channel": "stub",
-                    "post_type": "edition_teaser",
-                    "text": "Sovereign and Radical clash on the summit.",
-                },
-                {
-                    "channel": "stub",
-                    "post_type": "contrast",
-                    "text": "Defence spending: Sovereign cheers, Radical jeers.",
-                },
-            ],
-        })
-        gen = StubGenerationStrategy(responses={"flash": plan_json})
+        """Deterministic edition thread: curator root + newspaper replies."""
+        gen = StubGenerationStrategy()
         ch = StubChannel()
 
         result = run_marketing_agent(
@@ -372,10 +374,12 @@ class TestRunMarketingAgent:
             edition_date="2026-03-15",
         )
 
-        assert result["posts_created"] == 2
-        assert result["posts_planned"] == 2
+        # Deterministic thread: 1 root (curator) + 2 newspapers = 3 posts
+        assert result["posts_created"] == 3
+        assert result["posts_planned"] == 1  # one PlannedPost of type "thread"
         assert result["channel"] == "stub"
-        assert len(ch.posts) == 2
+        assert len(ch.threads) == 1
+        assert len(ch.threads[0]) == 3
 
     def test_thread_posting(self, db_url_with_edition):
         plan_json = json.dumps({
@@ -401,7 +405,8 @@ class TestRunMarketingAgent:
         assert result["posts_created"] == 3
         assert len(ch.threads) == 1
 
-    def test_channel_mismatch_skips_post(self, db_url_with_edition):
+    def test_channel_mismatch_skips_post(self, db_url_curator_only):
+        """LLM fallback (no deterministic thread) with wrong channel → skipped."""
         plan_json = json.dumps({
             "reasoning": "Wrong channel",
             "posts": [
@@ -412,7 +417,7 @@ class TestRunMarketingAgent:
         ch = StubChannel()
 
         result = run_marketing_agent(
-            database_url=db_url_with_edition,
+            database_url=db_url_curator_only,
             generation_strategy=gen,
             channel=ch,
             edition_date="2026-03-15",
@@ -422,28 +427,22 @@ class TestRunMarketingAgent:
         assert len(ch.posts) == 0
 
     def test_idempotency_skips_if_already_posted(self, db_url_with_edition):
-        plan_json = json.dumps({
-            "reasoning": "First run",
-            "posts": [
-                {"channel": "stub", "post_type": "edition_teaser", "text": "Today's edition"},
-            ],
-        })
-        gen = StubGenerationStrategy(responses={"flash": plan_json})
+        gen = StubGenerationStrategy()
         ch = StubChannel()
 
-        # First run: should publish
+        # First run: deterministic thread publishes 3 posts
         result1 = run_marketing_agent(
             database_url=db_url_with_edition,
             generation_strategy=gen,
             channel=ch,
             edition_date="2026-03-15",
         )
-        assert result1["posts_created"] == 1
+        assert result1["posts_created"] == 3
 
         # Second run (simulating a job retry): should be skipped
         result2 = run_marketing_agent(
             database_url=db_url_with_edition,
-            generation_strategy=StubGenerationStrategy(responses={"flash": plan_json}),
+            generation_strategy=StubGenerationStrategy(),
             channel=StubChannel(),
             edition_date="2026-03-15",
         )
@@ -451,13 +450,7 @@ class TestRunMarketingAgent:
         assert result2["reason"] == "already_posted"
 
     def test_failed_post_still_saved(self, db_url_with_edition):
-        plan_json = json.dumps({
-            "reasoning": "Will fail",
-            "posts": [
-                {"channel": "stub", "post_type": "teaser", "text": "Fail"},
-            ],
-        })
-        gen = StubGenerationStrategy(responses={"flash": plan_json})
+        gen = StubGenerationStrategy()
         ch = StubChannel(should_fail=True)
 
         result = run_marketing_agent(
@@ -469,8 +462,7 @@ class TestRunMarketingAgent:
 
         assert result["posts_created"] == 0
 
-        # Verify the failed post was persisted to the DB with status=failed.
-        # Open a fresh session to avoid reading from the same transaction.
+        # Verify failed thread posts were persisted to the DB.
         from sqlalchemy import create_engine as _ce
         from sqlalchemy.orm import sessionmaker as _sm
         verify_engine = _ce(db_url_with_edition)
@@ -480,25 +472,19 @@ class TestRunMarketingAgent:
             saved = load_recent_marketing_posts(
                 verify_session, lookback_days=1, current_date="2026-03-15",
             )
-            assert len(saved) == 1
-            assert saved[0].status == "failed"
-            assert saved[0].post_type == "teaser"
+            assert len(saved) == 3  # curator root + 2 newspapers
+            assert all(s.status == "failed" for s in saved)
+            post_types = {s.post_type for s in saved}
+            assert post_types == {"thread_0", "thread_1", "thread_2"}
         finally:
             verify_session.close()
 
     def test_retry_after_all_posts_failed(self, db_url_with_edition):
         """A fully-failed run should NOT block a retry."""
-        plan_json = json.dumps({
-            "reasoning": "Attempt",
-            "posts": [
-                {"channel": "stub", "post_type": "teaser", "text": "Hello"},
-            ],
-        })
-
-        # First run: all posts fail
+        # First run: all thread posts fail
         result1 = run_marketing_agent(
             database_url=db_url_with_edition,
-            generation_strategy=StubGenerationStrategy(responses={"flash": plan_json}),
+            generation_strategy=StubGenerationStrategy(),
             channel=StubChannel(should_fail=True),
             edition_date="2026-03-15",
         )
@@ -508,9 +494,9 @@ class TestRunMarketingAgent:
         ch2 = StubChannel()
         result2 = run_marketing_agent(
             database_url=db_url_with_edition,
-            generation_strategy=StubGenerationStrategy(responses={"flash": plan_json}),
+            generation_strategy=StubGenerationStrategy(),
             channel=ch2,
             edition_date="2026-03-15",
         )
-        assert result2["posts_created"] == 1
-        assert len(ch2.posts) == 1
+        assert result2["posts_created"] == 3
+        assert len(ch2.threads) == 1

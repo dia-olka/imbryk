@@ -35,7 +35,12 @@ from ..db import (
 from ..generation import GenerationStrategy, StubGenerationStrategy, VertexAIStrategy
 from ..logging_config import configure_logging
 from .channels.base import ChannelStrategy, StubChannel
-from .planner import build_edition_summary, plan_marketing
+from .planner import (
+    MarketingPlan,
+    build_edition_summary,
+    build_edition_thread,
+    plan_marketing,
+)
 from .referrers import fetch_referrer_breakdown, format_referrer_text
 
 logger = logging.getLogger(__name__)
@@ -129,13 +134,23 @@ def run_marketing_agent(
 
         # === PLAN ===
         logger.info("Marketing agent: PLAN phase", extra={"step": "plan"})
-        plan = plan_marketing(
-            edition_summary=edition_summary,
-            journal_text=journal_text,
-            referrer_text=referrer_text,
-            gazette_url=gazette_url,
-            generation_strategy=gen,
-        )
+
+        # Build a deterministic edition thread: curator root + newspaper replies.
+        edition_posts = build_edition_thread(articles, gazette_url, today, channel=ch.channel_name)
+        if edition_posts:
+            plan = MarketingPlan(
+                reasoning="Deterministic edition thread",
+                posts=edition_posts,
+            )
+        else:
+            # Fallback to LLM planner if deterministic thread can't be built
+            plan = plan_marketing(
+                edition_summary=edition_summary,
+                journal_text=journal_text,
+                referrer_text=referrer_text,
+                gazette_url=gazette_url,
+                generation_strategy=gen,
+            )
 
         if not plan.posts:
             logger.warning("Marketing planner produced no posts")

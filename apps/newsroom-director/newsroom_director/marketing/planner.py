@@ -171,6 +171,91 @@ def _parse_plan(response: str) -> MarketingPlan:
     )
 
 
+def build_edition_thread(
+    articles: dict[str, str],
+    gazette_url: str,
+    edition_date: str,
+    channel: str = "bluesky",
+) -> list[PlannedPost] | None:
+    """Build a deterministic edition thread from today's content.
+
+    Returns a single ``thread`` PlannedPost with:
+    - Root post: curator synthesis excerpt + edition URL
+    - Reply posts: each newspaper's lead headline + newspaper URL
+
+    Returns ``None`` if there's not enough content.
+    """
+    edition_page = f"{gazette_url}/edition/{edition_date}/"
+
+    # --- Build curator root post ---
+    curator_text = ""
+    curator_json = articles.get("curator")
+    if curator_json:
+        try:
+            parsed = json.loads(curator_json)
+            # Structured format — use first consensus point + first fault line
+            consensus = parsed.get("consensus", [])
+            fault_lines = parsed.get("fault_lines", [])
+            parts = []
+            if consensus:
+                parts.append(consensus[0])
+            if fault_lines:
+                parts.append(fault_lines[0])
+            curator_text = " | ".join(parts) if parts else parsed.get("text", "")[:200]
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    if not curator_text:
+        curator_text = f"Today's edition is live — {edition_date}"
+
+    # Truncate to leave room for URL (300 char limit, ~50 for URL)
+    root_text = curator_text[:240]
+    root_text = f"{root_text}\n{edition_page}"
+
+    # --- Build newspaper reply posts ---
+    thread_texts = [root_text]
+    thread_urls = [edition_page]
+
+    for newspaper_id, content_json in articles.items():
+        if newspaper_id == "curator":
+            continue
+
+        try:
+            parsed = json.loads(content_json)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        name = parsed.get("newspaper_name", newspaper_id)
+        lead_headline = ""
+        for a in parsed.get("articles", []):
+            h = a.get("headline", "")
+            if h:
+                lead_headline = h
+                break
+
+        if not lead_headline:
+            continue
+
+        newspaper_page = f"{gazette_url}/edition/{edition_date}/{newspaper_id}/"
+        reply_text = f"{name}: {lead_headline}"[:240]
+        reply_text = f"{reply_text}\n{newspaper_page}"
+
+        thread_texts.append(reply_text)
+        thread_urls.append(newspaper_page)
+
+    if len(thread_texts) < 2:
+        return None
+
+    # Combine into a single thread PlannedPost
+    return [PlannedPost(
+        channel=channel,
+        post_type="thread",
+        text="\n---\n".join(thread_texts),
+        url=",".join(thread_urls),
+        reasoning="Deterministic edition thread: curator root + newspaper replies",
+    )]
+
+
 def build_edition_summary(
     articles: dict[str, str],
     gazette_url: str,
