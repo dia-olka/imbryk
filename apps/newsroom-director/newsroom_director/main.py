@@ -713,7 +713,7 @@ def run_morning_press(
                 mutation = _parse_mutation(mutation_response)
                 if mutation:
                     ledger = apply_mutation(ledger, mutation)
-                    save_world_ledger(session, ledger_to_dict(ledger))
+                    save_world_ledger(session, ledger_to_dict(ledger), edition_date=today_date)
             except Exception:
                 logger.exception(
                     "World History update failed, skipping history mutation"

@@ -81,6 +81,15 @@ class WorldLedgerRow(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow)
 
 
+class WorldLedgerHistoryRow(Base):
+    __tablename__ = "world_ledger_history"
+
+    id = Column(String(36), primary_key=True, default=_new_uuid)
+    ledger_json = Column(Text, nullable=False)
+    edition_date = Column(String(10), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
 class EditionRow(Base):
     __tablename__ = "editions"
 
@@ -308,8 +317,10 @@ def load_world_ledger(session: Session) -> dict | None:
     return json.loads(row.ledger_json)
 
 
-def save_world_ledger(session: Session, ledger_dict: dict) -> None:
-    """Upsert the canonical WorldLedger JSON."""
+def save_world_ledger(
+    session: Session, ledger_dict: dict, edition_date: str | None = None
+) -> None:
+    """Upsert the canonical WorldLedger JSON and record a history snapshot."""
     row = session.query(WorldLedgerRow).first()
     ledger_json = json.dumps(ledger_dict, ensure_ascii=False)
 
@@ -323,6 +334,15 @@ def save_world_ledger(session: Session, ledger_dict: dict) -> None:
     else:
         row.ledger_json = ledger_json
         row.updated_at = _utcnow()
+
+    # Record snapshot in history
+    history_row = WorldLedgerHistoryRow(
+        id=_new_uuid(),
+        ledger_json=ledger_json,
+        edition_date=edition_date,
+        created_at=_utcnow(),
+    )
+    session.add(history_row)
 
 
 def save_edition(

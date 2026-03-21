@@ -9,6 +9,7 @@ from newsroom_director.db import (
     CategorisedPromptRow,
     PaymentRefRow,
     PromptRow,
+    WorldLedgerHistoryRow,
     fetch_unprocessed_prompts,
     load_world_ledger,
     mark_prompts_processed,
@@ -144,6 +145,21 @@ class TestWorldLedger:
 
         loaded = load_world_ledger(db_session)
         assert loaded["epoch"] == "V2"
+
+    def test_save_records_history(self, db_session):
+        save_world_ledger(db_session, {"epoch": "V1"}, edition_date="2026-03-20")
+        db_session.commit()
+        save_world_ledger(db_session, {"epoch": "V2"}, edition_date="2026-03-21")
+        db_session.commit()
+
+        history = (
+            db_session.query(WorldLedgerHistoryRow)
+            .order_by(WorldLedgerHistoryRow.created_at.asc())
+            .all()
+        )
+        assert len(history) == 2
+        assert history[0].edition_date == "2026-03-20"
+        assert history[1].edition_date == "2026-03-21"
 
 
 class TestSaveEdition:

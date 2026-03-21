@@ -96,6 +96,21 @@ class WorldLedgerRecord(Base):
     )
 
 
+class WorldLedgerHistory(Base):
+    __tablename__ = "world_ledger_history"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid
+    )
+    ledger_json: Mapped[str] = mapped_column(Text, nullable=False)
+    edition_date: Mapped[Optional[str]] = mapped_column(
+        String(10), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
 class Edition(Base):
     __tablename__ = "editions"
 

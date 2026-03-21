@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
@@ -33,6 +34,12 @@ from ingestion_api.config import (
     VERTEX_PROJECT,
     _log_level_int,
     validate_production_config,
+)
+
+logging.basicConfig(
+    stream=sys.stdout,
+    level=_log_level_int,
+    format="%(levelname)s %(name)s: %(message)s",
 )
 
 if SENTRY_DSN:
