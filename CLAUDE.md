@@ -32,6 +32,13 @@ All migrations run against **both SQLite (local) and PostgreSQL (production)**. 
 
 **Rule of thumb:** any DDL that modifies an existing column (rename, change type, change default, add/drop constraint) must be wrapped in `with op.batch_alter_table("table_name") as batch_op: ...`. Adding a new column with `op.add_column` is fine bare.
 
+# Deployment & Environment Variables
+
+When adding, removing, or renaming **environment variables** for any service, always update **both** of these files:
+
+1. **`.github/workflows/cd.yml`** — add the variable to the relevant Cloud Run deploy/update step.
+2. **`DEPLOYMENT.md`** — add the variable to the Environment Variables Reference table for the relevant service, and update any prose sections (e.g. "Enabling Feature X") that reference related variables.
+
 # UI Guidelines
 
 - **Mobile-first design** — all components and layouts must be designed for small screens first, then enhanced for larger viewports via progressive media queries.

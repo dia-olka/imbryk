@@ -216,7 +216,8 @@ jobs:
           JOURNAL_LOOKBACK_DAYS=${{ vars.JOURNAL_LOOKBACK_DAYS || '7' }},\
           ENABLE_READER_METRICS=${{ vars.ENABLE_READER_METRICS || 'false' }} \
           TOPIC_RESEARCH_ENABLED=${{ vars.TOPIC_RESEARCH_ENABLED || 'false' }},\
-          TOPIC_RESEARCH_MAX_QUERIES=${{ vars.TOPIC_RESEARCH_MAX_QUERIES || '3' }} \
+          TOPIC_RESEARCH_MAX_QUERIES=${{ vars.TOPIC_RESEARCH_MAX_QUERIES || '3' }},\
+          TOPIC_RESEARCH_MAX_RETRIES=${{ vars.TOPIC_RESEARCH_MAX_RETRIES || '1' }} \
             --update-secrets=\
           DATABASE_URL=database-url:latest,\
           CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest,\

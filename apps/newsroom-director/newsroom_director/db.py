@@ -81,6 +81,29 @@ class WorldLedgerRow(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow)
 
 
+class PromptResearchLogRow(Base):
+    __tablename__ = "prompt_research_log"
+
+    id = Column(String(36), primary_key=True, default=_new_uuid)
+    prompt_id = Column(
+        String(36), ForeignKey("prompts.id"), nullable=False
+    )
+    edition_date = Column(String(10), nullable=False)
+    queries_json = Column(Text, nullable=False)
+    results_json = Column(Text, nullable=False)
+    status = Column(String(32), nullable=False, default="success")
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
+class WorldLedgerHistoryRow(Base):
+    __tablename__ = "world_ledger_history"
+
+    id = Column(String(36), primary_key=True, default=_new_uuid)
+    ledger_json = Column(Text, nullable=False)
+    edition_date = Column(String(10), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
 class EditionRow(Base):
     __tablename__ = "editions"
 
@@ -300,6 +323,44 @@ def mark_prompts_processed(
     )
 
 
+def save_prompt_research_log(
+    session: Session,
+    prompt_id: str,
+    edition_date: str,
+    queries: list[str],
+    results: list[dict],
+    status: str,
+) -> None:
+    """Record the queries and results of a topic research attempt."""
+    row = PromptResearchLogRow(
+        id=_new_uuid(),
+        prompt_id=prompt_id,
+        edition_date=edition_date,
+        queries_json=json.dumps(queries, ensure_ascii=False),
+        results_json=json.dumps(results, ensure_ascii=False),
+        status=status,
+        created_at=_utcnow(),
+    )
+    session.add(row)
+
+
+def count_prompt_research_attempts(
+    session: Session, prompt_id: str
+) -> int:
+    """Count all research log entries for a prompt across all statuses.
+
+    Counts every row in prompt_research_log for the given prompt_id,
+    regardless of status (success, whisper, no_results, etc.). In practice
+    a successfully researched prompt is marked processed and won't appear in
+    the next run, so this effectively counts prior *failed* attempts.
+    """
+    return (
+        session.query(PromptResearchLogRow)
+        .filter(PromptResearchLogRow.prompt_id == prompt_id)
+        .count()
+    )
+
+
 def load_world_ledger(session: Session) -> dict | None:
     """Read the canonical WorldLedger JSON from the DB."""
     row = session.query(WorldLedgerRow).first()
@@ -308,8 +369,10 @@ def load_world_ledger(session: Session) -> dict | None:
     return json.loads(row.ledger_json)
 
 
-def save_world_ledger(session: Session, ledger_dict: dict) -> None:
-    """Upsert the canonical WorldLedger JSON."""
+def save_world_ledger(
+    session: Session, ledger_dict: dict, edition_date: str | None = None
+) -> None:
+    """Upsert the canonical WorldLedger JSON and record a history snapshot."""
     row = session.query(WorldLedgerRow).first()
     ledger_json = json.dumps(ledger_dict, ensure_ascii=False)
 
@@ -323,6 +386,15 @@ def save_world_ledger(session: Session, ledger_dict: dict) -> None:
     else:
         row.ledger_json = ledger_json
         row.updated_at = _utcnow()
+
+    # Record snapshot in history
+    history_row = WorldLedgerHistoryRow(
+        id=_new_uuid(),
+        ledger_json=ledger_json,
+        edition_date=edition_date,
+        created_at=_utcnow(),
+    )
+    session.add(history_row)
 
 
 def save_edition(

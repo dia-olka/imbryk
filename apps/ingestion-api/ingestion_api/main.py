@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
@@ -34,21 +35,6 @@ from ingestion_api.config import (
     _log_level_int,
     validate_production_config,
 )
-
-if SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=0.1,
-        send_default_pii=False,
-        integrations=[
-            sentry_sdk.integrations.logging.LoggingIntegration(
-                level=_log_level_int,  # Capture logs at configured level or higher
-                event_level=logging.ERROR,  # Send only ERROR logs as Sentry events
-            ),
-        ],
-    )
-    logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
-
 from ingestion_api.database import get_db
 from ingestion_api.models import (
     CategorisedPrompt,
@@ -69,6 +55,26 @@ from ingestion_api.schemas import (
 )
 from ingestion_api.stripe_client import configure_stripe, verify_webhook
 from ingestion_api.taxonomy import route_prompt
+
+logging.basicConfig(
+    stream=sys.stdout,
+    level=_log_level_int,
+    format="%(levelname)s %(name)s: %(message)s",
+)
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+        integrations=[
+            sentry_sdk.integrations.logging.LoggingIntegration(
+                level=_log_level_int,  # Capture logs at configured level or higher
+                event_level=logging.ERROR,  # Send only ERROR logs as Sentry events
+            ),
+        ],
+    )
+    logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
 
 logger = logging.getLogger(__name__)
 

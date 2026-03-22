@@ -52,6 +52,7 @@ NEWS_ITEM_BASE_WEIGHT = float(os.getenv("NEWS_ITEM_BASE_WEIGHT", "0.3"))
 # Topic Research — transforms user prompts into real-world news research
 TOPIC_RESEARCH_ENABLED = os.getenv("TOPIC_RESEARCH_ENABLED", "false").lower() == "true"
 TOPIC_RESEARCH_MAX_QUERIES = int(os.getenv("TOPIC_RESEARCH_MAX_QUERIES", "3"))
+TOPIC_RESEARCH_MAX_RETRIES = int(os.getenv("TOPIC_RESEARCH_MAX_RETRIES", "1"))
 
 # Editorial Journal — persistent per-persona editorial memory
 ENABLE_EDITORIAL_JOURNAL = os.getenv("ENABLE_EDITORIAL_JOURNAL", "true").lower() == "true"

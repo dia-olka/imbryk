@@ -96,6 +96,41 @@ class WorldLedgerRecord(Base):
     )
 
 
+class WorldLedgerHistory(Base):
+    __tablename__ = "world_ledger_history"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid
+    )
+    ledger_json: Mapped[str] = mapped_column(Text, nullable=False)
+    edition_date: Mapped[Optional[str]] = mapped_column(
+        String(10), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
+class PromptResearchLog(Base):
+    __tablename__ = "prompt_research_log"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid
+    )
+    prompt_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("prompts.id"), nullable=False
+    )
+    edition_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    queries_json: Mapped[str] = mapped_column(Text, nullable=False)
+    results_json: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="success"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
 class Edition(Base):
     __tablename__ = "editions"
 

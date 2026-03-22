@@ -192,7 +192,6 @@ def run_morning_press(
 
         if not prompt_records and not news_items:
             logger.info("No prompts or news items found, skipping edition")
-            _run_backfill()
             return {
                 "edition_id": None,
                 "newspaper_count": 0,
@@ -216,6 +215,10 @@ def run_morning_press(
         )
 
         # Step 5: Topic research — replace raw prompts with researched news
+        # Prompts that fail research are left as 'accepted' for retry on the
+        # next pipeline run (up to TOPIC_RESEARCH_MAX_RETRIES attempts).
+        original_prompt_ids = [pr.prompt_id for pr in prompt_records]
+        research_failed_ids: list[str] = []
         if TOPIC_RESEARCH_ENABLED and prompt_records:
             from .config import (
                 TAVILY_API_KEY,
@@ -239,25 +242,30 @@ def run_morning_press(
                     for ni in news_items
                     if hasattr(ni, "source_url") and ni.source_url
                 }
-                researched = research_prompts(
+                research_result = research_prompts(
                     prompt_records, topic_searcher, gen,
                     exclude_urls=news_urls,
+                    session=session,
+                    edition_date=today_date,
                 )
+                research_failed_ids = research_result.failed_prompt_ids
                 logger.info(
-                    "Topic research replaced %d prompts with %d researched items",
+                    "Topic research replaced %d prompts with %d researched items "
+                    "(%d prompts deferred for retry)",
                     len(prompt_records),
-                    len(researched),
+                    len(research_result.researched),
+                    len(research_failed_ids),
                 )
                 # Replace prompt_records with researched items for routing.
                 # ResearchedPrompt has the same interface (prompt_id, text,
                 # payment_amount, category_ids) so routing works unchanged.
-                prompt_records = researched  # type: ignore[assignment]
+                prompt_records = research_result.researched  # type: ignore[assignment]
 
                 if not prompt_records and not news_items:
                     logger.info(
                         "Topic research produced no results and no news items, skipping edition"
                     )
-                    _run_backfill()
+                    session.commit()  # persist research logs
                     return {
                         "edition_id": None,
                         "newspaper_count": 0,
@@ -713,7 +721,7 @@ def run_morning_press(
                 mutation = _parse_mutation(mutation_response)
                 if mutation:
                     ledger = apply_mutation(ledger, mutation)
-                    save_world_ledger(session, ledger_to_dict(ledger))
+                    save_world_ledger(session, ledger_to_dict(ledger), edition_date=today_date)
             except Exception:
                 logger.exception(
                     "World History update failed, skipping history mutation"
@@ -787,8 +795,14 @@ def run_morning_press(
         # Step 11: Write edition to storage
         store.write_edition(edition_id, edition_date, articles)
 
-        # Step 12: Mark prompts and news items as processed
-        prompt_ids = [pr.prompt_id for pr in prompt_records]
+        # Step 12: Mark prompts and news items as processed.
+        # Exclude prompts whose topic research failed — they stay as
+        # 'accepted' so the next pipeline run can retry them.
+        failed_set = set(research_failed_ids)
+        prompt_ids = [
+            pid for pid in original_prompt_ids
+            if pid not in failed_set
+        ]
         mark_prompts_processed(session, prompt_ids)
         if news_items:
             mark_news_items_processed(session, today_date)
