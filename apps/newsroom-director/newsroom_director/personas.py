@@ -29,6 +29,7 @@ class PersonaConfig:
     tone_adjustment: str
     subscribed_categories: list[str]
     model_tier: str  # "pro" | "flash"
+    negative_prompt: str  # Imagen negative prompt (plain nouns)
     system_prompt_template: str
 
 
@@ -39,16 +40,15 @@ def _serialize_exemplars(exemplars: list[dict]) -> str:
     blocks = []
     for ex in exemplars:
         blocks.append(
-            f'<example type="{ex["type"]}">\n'
-            f"  <headline>{ex['headline']}</headline>\n"
-            f"  <lede>{ex['lede']}</lede>\n"
-            f"  <body_excerpt>{ex['bodyExcerpt']}</body_excerpt>\n"
+            f'<example author="{ex["author"]}" source="{ex["source"]}">\n'
+            f"  <passage>{ex['passage']}</passage>\n"
             f"  <note>{ex['note']}</note>\n"
             f"</example>"
         )
     return (
         "<exemplars>\n"
-        "Study these for voice, rhythm, and structure. Absorb the style — do not copy.\n\n"
+        "Each exemplar represents a distinct voice on your editorial team. "
+        "Study the prose style — absorb it, do not copy.\n\n"
         + "\n\n".join(blocks)
         + "\n</exemplars>"
     )
@@ -83,6 +83,7 @@ def _to_persona(raw: dict) -> PersonaConfig:
         tone_adjustment=raw["toneAdjustment"],
         subscribed_categories=subs,
         model_tier=raw["modelTier"],
+        negative_prompt=raw.get("negativePrompt", ""),
         system_prompt_template=_build_prompt(raw),
     )
 

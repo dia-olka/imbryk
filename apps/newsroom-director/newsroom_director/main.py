@@ -411,29 +411,36 @@ def run_morning_press(
                     },
                 )
 
-                # System instruction: persona identity + world context + journal
-                system_instruction = persona.system_prompt_template.replace(
-                    "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
-                ).replace("{{CLUSTER_DIGESTS}}", "[See user content below]")
+                # System instruction: persona identity, voice, rules, exemplars
+                # (no context data — that goes in the user turn for cache efficiency)
+                system_instruction = persona.system_prompt_template
 
-                # Inject editorial journal if enabled; always replace the
-                # placeholder so it never leaks into the LLM prompt as a
-                # literal string when the feature is disabled.
+                # User turn: WorldLedger FIRST (identical across all 6 calls,
+                # so Vertex AI implicit prefix caching gives 90% cost discount),
+                # then editorial journal, then cluster digests, then task.
                 journal_text = (
                     journal_by_persona.get(persona.id, "")
                     if ENABLE_EDITORIAL_JOURNAL
                     else ""
                 )
-                # Append previous edition summary if available
                 prev_summary = prev_edition_by_persona.get(persona.id, "")
                 if prev_summary:
                     journal_text = f"{journal_text}\n\n{prev_summary}" if journal_text else prev_summary
-                system_instruction = system_instruction.replace(
-                    "{{EDITORIAL_JOURNAL}}", journal_text
-                )
 
-                # User content: cluster digests (may contain verbatim user prompts)
-                user_content = f"CLUSTER DIGESTS:\n{digests_text}\n\nGenerate today's edition."
+                user_parts = [f"WORLD HISTORY:\n{synopsis}"]
+                if journal_text:
+                    user_parts.append(
+                        "YOUR EDITORIAL JOURNAL (recent entries — use these to "
+                        "inform your editorial decisions today, but do not "
+                        "reference the journal itself in your articles):\n"
+                        + journal_text
+                    )
+                user_parts.append(f"CLUSTER DIGESTS:\n{digests_text}")
+                user_parts.append(
+                    "<task>\nBased on the context and clusters above, produce "
+                    "today's edition. Follow all rules in your system instruction.\n</task>"
+                )
+                user_content = "\n\n".join(user_parts)
 
                 # Call LLM — response_schema enforces exact field names so the
                 # gazette always receives canonical JSON (no "title"/"content"/
@@ -747,6 +754,11 @@ def run_morning_press(
             front_page_prompt = parsed.get("frontPageImagePrompt")
 
             try:
+                # Look up per-persona negative prompt for Imagen
+                persona_neg = next(
+                    (p.negative_prompt for p in NEWSPAPER_PERSONAS if p.id == newspaper_id),
+                    "",
+                )
                 result = generate_images_for_newspaper(
                     newspaper_id=newspaper_id,
                     articles=article_list,
@@ -756,6 +768,7 @@ def run_morning_press(
                     edition_id=str(
                         datetime.now(timezone.utc).strftime("%Y-%m-%d")
                     ),
+                    negative_prompt=persona_neg,
                 )
 
                 # Embed image URLs into articles

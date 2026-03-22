@@ -59,7 +59,7 @@ describe('buildNewspaperPrompt', () => {
   const worldSynopsis = serializeLedgerToSynopsis(INITIAL_WORLD_LEDGER);
   const clusterDigests = 'Cluster 1: Test digest content';
 
-  it('should produce a valid prompt for each newspaper persona', () => {
+  it('should return systemInstruction and userContent for each persona', () => {
     for (const persona of NEWSPAPER_PERSONAS) {
       const result = buildNewspaperPrompt({
         persona,
@@ -67,12 +67,40 @@ describe('buildNewspaperPrompt', () => {
         clusterDigests,
       });
 
-      expect(result).toContain(persona.paperName);
-      expect(result).toContain(worldSynopsis);
-      expect(result).toContain(clusterDigests);
-      expect(result).not.toContain('{{WORLD_LEDGER_SYNOPSIS}}');
-      expect(result).not.toContain('{{CLUSTER_DIGESTS}}');
+      // System instruction contains persona identity but no context data
+      expect(result.systemInstruction).toContain(persona.paperName);
+      expect(result.systemInstruction).not.toContain('{{WORLD_LEDGER_SYNOPSIS}}');
+      expect(result.systemInstruction).not.toContain('{{CLUSTER_DIGESTS}}');
+
+      // User content contains context data (WorldLedger first for cache)
+      expect(result.userContent).toContain(worldSynopsis);
+      expect(result.userContent).toContain(clusterDigests);
+      expect(result.userContent).toContain('<task>');
     }
+  });
+
+  it('should include editorial journal in userContent when provided', () => {
+    const persona = NEWSPAPER_PERSONAS[0];
+    const journal = 'Previous edition covered water wars extensively.';
+    const result = buildNewspaperPrompt({
+      persona,
+      worldSynopsis,
+      clusterDigests,
+      editorialJournal: journal,
+    });
+
+    expect(result.userContent).toContain(journal);
+  });
+
+  it('should omit editorial journal section when not provided', () => {
+    const persona = NEWSPAPER_PERSONAS[0];
+    const result = buildNewspaperPrompt({
+      persona,
+      worldSynopsis,
+      clusterDigests,
+    });
+
+    expect(result.userContent).not.toContain('EDITORIAL JOURNAL');
   });
 });
 
@@ -90,11 +118,11 @@ describe('buildCuratorPrompt', () => {
   });
 });
 
-describe('every persona template can be interpolated without error', () => {
+describe('every persona template can be built without error', () => {
   const worldSynopsis = 'Test world synopsis';
   const clusterDigests = 'Test cluster digests';
 
-  it('should interpolate all newspaper persona templates', () => {
+  it('should build all newspaper persona prompts', () => {
     for (const persona of NEWSPAPER_PERSONAS) {
       expect(() =>
         buildNewspaperPrompt({ persona, worldSynopsis, clusterDigests })
@@ -102,7 +130,7 @@ describe('every persona template can be interpolated without error', () => {
     }
   });
 
-  it('should interpolate the Curator template', () => {
+  it('should build the Curator prompt', () => {
     expect(() =>
       buildCuratorPrompt({ persona: CURATOR_PERSONA, allArticles: 'test' })
     ).not.toThrow();

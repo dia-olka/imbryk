@@ -19,7 +19,13 @@ class ImageGenerationStrategy(ABC):
     """Abstract base for image generation backends."""
 
     @abstractmethod
-    def generate(self, prompt: str) -> bytes | None:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        negative_prompt: str = "",
+        aspect_ratio: str = "16:9",
+    ) -> bytes | None:
         """Generate an image from a text prompt.
 
         Returns PNG image bytes on success, or None on failure.
@@ -56,7 +62,13 @@ class ImagenClient(ImageGenerationStrategy):
             )
         return self._client
 
-    def generate(self, prompt: str) -> bytes | None:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        negative_prompt: str = "",
+        aspect_ratio: str = "16:9",
+    ) -> bytes | None:
         """Generate an image using the Google Gen AI SDK.
 
         Returns PNG image bytes on success, None on any failure.
@@ -67,15 +79,18 @@ class ImagenClient(ImageGenerationStrategy):
             client = self._get_client()
 
             def _call() -> bytes:
+                img_config_kwargs: dict = {
+                    "number_of_images": 1,
+                    "aspect_ratio": aspect_ratio,
+                    "output_mime_type": "image/png",
+                    "person_generation": "ALLOW_ALL",
+                }
+                if negative_prompt:
+                    img_config_kwargs["negative_prompt"] = negative_prompt
                 response = client.models.generate_images(
                     model=self._model,
                     prompt=prompt,
-                    config=types.GenerateImagesConfig(
-                        number_of_images=1,
-                        aspect_ratio="16:9",
-                        output_mime_type="image/png",
-                        person_generation="ALLOW_ALL",
-                    ),
+                    config=types.GenerateImagesConfig(**img_config_kwargs),
                 )
                 if not response.generated_images:
                     logger.warning(
@@ -134,7 +149,13 @@ class StubImageClient(ImageGenerationStrategy):
         self._should_fail = should_fail
         self._calls: list[str] = []
 
-    def generate(self, prompt: str) -> bytes | None:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        negative_prompt: str = "",
+        aspect_ratio: str = "16:9",
+    ) -> bytes | None:
         self._calls.append(prompt)
         if self._should_fail:
             return None

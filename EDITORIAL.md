@@ -10,7 +10,7 @@ Upgrade newspaper prompts with real-world few-shot examples, named editorial tea
 
 1. [Phase 1 — Few-Shot Exemplar Library](#phase-1--few-shot-exemplar-library)
 2. [Phase 2 — Editorial Teams](#phase-2--editorial-teams)
-3. [Phase 3 — Gemini 2.5 Prompt Restructuring](#phase-3--gemini-25-prompt-restructuring)
+3. [Phase 3 — Gemini 3.1 Prompt Restructuring](#phase-3--gemini-31-prompt-restructuring)
 4. [Phase 4 — Implementation Plan](#phase-4--implementation-plan)
 5. [Phase 5 — Evaluation & Iteration](#phase-5--evaluation--iteration)
 
@@ -184,7 +184,7 @@ Each newspaper gets a named **editorial board** — real writers and journalists
 | Role | Style Anchor | Domain | Why |
 |------|-------------|--------|-----|
 | **Editor-in-Chief** | Walter Lippmann | Political columnist | Father of modern political commentary. *Public Opinion* (1922) defined how elites think about the world. His columns set the register for serious geopolitical analysis: measured, evidence-based, institutional. |
-| **Senior Correspondent** | Christiane Amanpour | Broadcast journalism | CNN's chief international anchor. Her dispatches from conflict zones combine on-the-ground immediacy with strategic framing. The Sovereign needs this "I was there, and here's what it means" authority. |
+| **Senior Correspondent** | Anne Applebaum | Geopolitical essayist | Pulitzer winner (*Gulag*, *Iron Curtain*, *Twilight of Democracy*). Writes about geopolitics with data-grounded, historically sweeping, institutionally authoritative prose. Her Atlantic and Washington Post columns are morally serious without being preachy — the exact Sovereign register. |
 | **Prose Clarity** | George Orwell | Novelist & essayist | Not 1984-Orwell — essay-Orwell. "Politics and the English Language" Orwell. Clear prose, no jargon, every word earns its place. The antidote to bloated institutional writing. |
 | **Gravitas & Rhythm** | John le Carré | Novelist | *Tinker Tailor Soldier Spy*, *The Constant Gardener*. Le Carré wrote about geopolitics the way a great broadsheet should: morally serious, structurally intricate, every sentence loaded with implication. His prose has the weight of institutional knowledge. |
 | **Historical Sweep** | Barbara Tuchman | Historian | *The Guns of August*, *A Distant Mirror*. Pulitzer winner who wrote history as riveting narrative. Her ability to compress decades of geopolitical context into a paragraph is exactly what The Sovereign's analysis pieces need. |
@@ -195,7 +195,7 @@ Each newspaper gets a named **editorial board** — real writers and journalists
 EDITORIAL TEAM TRADITION:
 Your editorial voice draws from these traditions:
 - The measured institutional analysis of Walter Lippmann — weigh evidence, resist hysteria, write for decision-makers
-- The frontline authority of Christiane Amanpour — ground geopolitical abstractions in observed reality
+- The geopolitical prose of Anne Applebaum — historically sweeping, institutionally authoritative, morally serious without being preachy
 - The prose clarity of George Orwell's essays — never use a long word where a short one will do; never use the passive where you can use the active
 - The morally serious intrigue of John le Carré's novels — every sentence loaded with implication, every paragraph a world in miniature
 - The sweeping historical narrative of Barbara Tuchman — compress decades of context into a paragraph that reads like a thriller
@@ -284,10 +284,10 @@ Your editorial voice draws from these traditions:
 | Role | Style Anchor | Domain | Why |
 |------|-------------|--------|-----|
 | **Editor-in-Chief** | I.F. Stone | Independent journalist | *I.F. Stone's Weekly* (1953–1971) was one-man investigative journalism. He read every government document, cross-referenced every claim, and exposed lies through public records alone. The patron saint of accountability journalism. |
-| **Investigative Voice** | Seymour Hersh | Investigative reporter | Broke My Lai, Abu Ghraib, and dozens of national security stories. His method — cultivate sources, verify relentlessly, publish what power wants hidden — is The Radical's DNA. |
+| **Adversarial Stylist** | Christopher Hitchens | Essayist & polemicist | The finest adversarial prose stylist of the last 50 years. His *Vanity Fair* and *Nation* essays are masterclasses in following power, naming names, and building a devastating argument with wit and fury. Declares bias, then makes it a source of authority — The Radical's exact register. |
 | **Gonzo Energy** | Hunter S. Thompson | Novelist & journalist | *Fear and Loathing on the Campaign Trail '72* proved that subjective, angry, vivid reporting can be more truthful than "objective" both-sides-ism. Thompson gives The Radical its fire and irreverence. |
 | **Satirical Blade** | Jonathan Swift | Satirist & essayist | *A Modest Proposal* is the greatest piece of political satire ever written. Swift demonstrated that the most devastating way to expose cruelty is to adopt its logic and follow it to absurd conclusions. The Radical's editors_note should channel this energy. |
-| **Systemic Clarity** | George Carlin | Comedian & social critic | "It's a big club, and you ain't in it." Carlin stripped political language down to expose the machinery underneath. His gift was making systemic critique accessible, furious, and funny in the same sentence — exactly The Radical's target register for a working-class audience. |
+| **Investigative Writer** | Matt Taibbi | Journalist | Rolling Stone's financial and political investigative voice. Direct descendant of Thompson's energy but as a prose writer, not a performer. His Goldman Sachs "vampire squid" piece is a template for The Radical's investigative lede: revelation, then mechanism, then named beneficiary. |
 | **Narrative Exposé** | Roberto Saviano | Author & journalist | *Gomorrah* — Saviano embedded himself inside the Camorra and wrote a book that reads like a novel but is forensic journalism. His method of narrating systemic corruption from the inside is the model for The Radical's long-form investigative pieces. |
 
 **Prompt instruction:**
@@ -295,10 +295,10 @@ Your editorial voice draws from these traditions:
 EDITORIAL TEAM TRADITION:
 Your editorial voice draws from these traditions:
 - The documentary rigour of I.F. Stone — read every document, cross-reference every claim, expose lies through their own words
-- The fearless sourcing of Seymour Hersh — publish what power wants hidden, verify relentlessly
+- The adversarial brilliance of Christopher Hitchens — declare your bias, then make it a source of authority; name names, follow power, build the argument with wit and fury
 - The gonzo energy of Hunter S. Thompson — be vivid, be furious, be funny; "objective" journalism is a myth when the powerful control the narrative
 - The satirical devastation of Jonathan Swift — adopt power's own logic and follow it to its absurd, cruel conclusion
-- The systemic clarity of George Carlin — strip the language, expose the machinery, make the reader laugh and then realise they're angry
+- The investigative prose of Matt Taibbi — revelation, then mechanism, then named beneficiary; accessible rage backed by receipts
 - The embedded narrative of Roberto Saviano — tell the story of corruption from the inside, with the pacing of a novel and the evidence of a court filing
 ```
 
@@ -309,7 +309,7 @@ Your editorial voice draws from these traditions:
 | Role | Style Anchor | Domain | Why |
 |------|-------------|--------|-----|
 | **Editor-in-Chief** | Tom Wolfe | Novelist & journalist | Father of New Journalism. *The Bonfire of the Vanities*, *The Electric Kool-Aid Acid Test*. Wolfe proved you could write about society, scandal, and spectacle with literary ambition. His status-obsessed eye is perfect for The Hedonist's lens. |
-| **Tabloid Instinct** | Kelvin MacKenzie | Tabloid editor | Editor of *The Sun* during its peak circulation (1981–1994). Love him or loathe him, MacKenzie perfected the art of the tabloid headline — punchy, shocking, impossible to ignore. "GOTCHA!" is journalism's most famous one-word headline. |
+| **Tabloid Craft** | Jimmy Breslin | Columnist | Legendary *New York Daily News* and *Newsday* columnist. Covered the Kennedy assassination by interviewing the gravedigger. Short paragraphs, killer details, the working-class perspective — tabloid energy with genuine literary craft. His columns are the bridge between tabloid instinct and sourceable prose. |
 | **Profile & Glamour** | Gay Talese | Literary journalist | "Frank Sinatra Has a Cold" is the greatest celebrity profile ever written. Talese showed how to write about fame with literary depth. The Hedonist's longer pieces should aspire to this: gossip elevated to art. |
 | **Wicked Wit** | Oscar Wilde | Playwright & essayist | "I can resist everything except temptation." Wilde's aphoristic brilliance, his obsession with surfaces and the truths they conceal, and his ability to make the reader feel simultaneously delighted and implicated — this is The Hedonist's editorial DNA. The editor's note should feel like a Wilde epigram. |
 | **Pop Culture Electricity** | Nora Ephron | Screenwriter, novelist & essayist | *When Harry Met Sally*, *Heartburn*, her New Yorker essays. Ephron turned the personal, the romantic, and the trivial into literature. She proved that writing about food, relationships, and celebrity isn't shallow — it's the texture of how people actually live. The Hedonist's "soft" stories need Ephron's voice. |
@@ -320,12 +320,84 @@ Your editorial voice draws from these traditions:
 EDITORIAL TEAM TRADITION:
 Your editorial voice draws from these traditions:
 - The social X-ray vision of Tom Wolfe — status, spectacle, and scandal rendered in vivid, status-conscious prose
-- The headline instinct of Kelvin MacKenzie — if the reader doesn't gasp, the headline has failed
+- The tabloid craft of Jimmy Breslin — short paragraphs, killer details, the working-class perspective; find the gravedigger, not the eulogy
 - The literary celebrity profile of Gay Talese — gossip elevated to art; every famous person is a character in a novel they don't know they're in
 - The wicked aphoristic wit of Oscar Wilde — delight the reader, then make them realise you just said something devastating
 - The personal-is-universal voice of Nora Ephron — food, love, scandal, celebrity; the "trivial" is where people actually live
 - The high-society scandal craft of Dominick Dunne — wealth, crime, celebrity; short paragraphs, devastating details, a gossip's instinct for the killer quote
 ```
+
+---
+
+### 2.7 Sourcing Guide — Best Text Per Team Member
+
+One best sourceable text per person. Each passage gives the model a genuinely distinct voice — no two sound remotely alike.
+
+#### The Sovereign
+
+| Person | Source Text | Passage & Notes |
+|--------|-----------|-----------------|
+| **Walter Lippmann** | *"Today and Tomorrow"* column, Herald Tribune, October 1947 | His first column after the Truman Doctrine speech. Opens cold with a geopolitical thesis, no throat-clearing. Library of Congress Lippmann archive. |
+| **Anne Applebaum** | *"History Will Judge the Complicit"*, The Atlantic, June 2020 | Trim the opening three paragraphs — two men confronted with the same circumstances who took dramatically different paths. Historical parallel as lede is pure Sovereign register. |
+| **George Orwell** | *"Politics and the English Language"* (1946) | The six rules section at the end: *"Never use a long word where a short one will do…"* Public domain. The most teachable prose-clarity specimen in the English language. |
+| **John le Carré** | *"The United States of America Has Gone Mad"*, The Times (London), January 15, 2003 | His only major newspaper essay — a geopolitical broadside against the Iraq War. Pure prose, no fiction scaffolding. Trim paragraphs 2–4. |
+| **Barbara Tuchman** | *The Guns of August* (1962), Chapter 1 "A Funeral" | Opening describing the nine kings riding behind Edward VII's coffin. Three paragraphs, ~150 words, an entire geopolitical era compressed into a procession. |
+| **Ted Sorensen** | JFK's Inaugural Address, January 20, 1961 | Middle section from *"Let every nation know…"* to *"ask what you can do for your country."* Public domain. ~200 words. Every sentence is a lesson in institutional cadence. |
+
+#### The Aspirant
+
+| Person | Source Text | Passage & Notes |
+|--------|-----------|-----------------|
+| **George Monbiot** | *"The Age of Loneliness Is Killing Us"*, The Guardian, October 14, 2014 | Opens with a human, widens to a systemic argument, closes with a demand. Freely available on theguardian.com. Trim the first four paragraphs. |
+| **Naomi Klein** | *The Shock Doctrine* (2007), Introduction "Blank Is Beautiful" | Opening three paragraphs. Sets up a structural argument through a single concrete case study. Captures her method better than any column. |
+| **James Baldwin** | *The Fire Next Time* (1963), letter to his nephew | Opening two paragraphs beginning *"I have begun this letter five times…"* Fourteen sentences, devastatingly controlled fury. |
+| **Eduardo Galeano** | *Open Veins of Latin America* (1971), prologue | The full prologue — only ~180 words. Every sentence is a compression of centuries. The whole prologue is the exemplar. |
+| **Ursula K. Le Guin** | National Book Award acceptance speech, November 19, 2014 | Under 400 words total. The passage beginning *"I think hard times are coming…"* is 90 words and contains her entire worldview. Transcript widely reprinted. |
+| **Svetlana Alexievich** | *Voices from Chernobyl* (1997), opening monologue | "Monologue about What Can Be Heard" — the firefighter's wife. Trim to first three paragraphs. The voice-centred method is fully on display in ~150 words. |
+
+#### The Owner
+
+| Person | Source Text | Passage & Notes |
+|--------|-----------|-----------------|
+| **Martin Wolf** | *"Why I Am Now a Keynesian"*, Financial Times, October 23, 2008 | Written at the peak of the financial crisis. Opens with a personal intellectual admission, pivots to global structural analysis. FT archive (may require subscription). |
+| **Matt Levine** | *"Money Stuff"* newsletter, Bloomberg, January 27, 2021 | The GameStop issue. Opening section explaining the short squeeze through participant logic rather than moral outrage — purest specimen of his voice. |
+| **Michael Lewis** | *The Big Short* (2010), prologue "Poltergeist" | First three paragraphs. Find the contrarian who saw it coming, tell the story through them. ~120 words. Perfect structural model for The Owner's features. |
+| **Nassim Taleb** | *The Black Swan* (2007), prologue | The "Triplet of Opacity" section. Three named cognitive failures, presented with aphoristic precision. Makes a structural argument feel inevitable. |
+| **John Kenneth Galbraith** | *The Great Crash, 1929* (1954), Chapter 1 opening | First three paragraphs. The most elegant understatement in economic writing. Dry wit immediately apparent. |
+| **Gillian Tett** | *Fool's Gold* (2009), prologue | The JP Morgan derivatives team at their 1994 Boca Raton offsite. Opens like a novel, lands like a warning. The anthropological lens: describe the tribe before analysing the numbers. |
+
+#### The Moralist
+
+| Person | Source Text | Passage & Notes |
+|--------|-----------|-----------------|
+| **Peggy Noonan** | *"Welcome Back, Duke"*, Wall Street Journal, October 12, 2001 | Post-9/11 meditation on the return of masculine civic virtue. Warm, patriotic, never preachy. WSJ archive or collection *A Heart, A Cross, and a Flag.* |
+| **Roger Scruton** | *"Why Beauty Matters"* (BBC, 2009), opening monologue | Widely transcribed. Or his essay *"Conservatism Means Conservation"* from *The Meaning of Conservatism*. Both show erudite, non-angry traditionalism. |
+| **Charles Krauthammer** | *Things That Matter* (2013), introduction | Two-page essay arguing politics matters because without ordered society, nothing else is possible. Clean, logical, evidence-first. |
+| **C.S. Lewis** | *Mere Christianity* (1952), Book 1, Ch. 1 "The Law of Human Nature" | Opening three paragraphs, beginning with the quarrelling men. Demonstrates how to make a moral argument feel like common sense. |
+| **Wendell Berry** | *"It All Turns on Affection"* (2012 Jefferson Lecture, NEH) | Opening section. Full text freely available on NEH website. The passage about his uncle's farm and what "local knowledge" means — purest Berry in ~150 words. |
+| **Abraham Lincoln** | Second Inaugural Address, March 4, 1865 | Final paragraph in full: *"With malice toward none, with charity for all…"* 75 words. Public domain. The ceiling for what The Moralist should aspire to. |
+
+#### The Radical
+
+| Person | Source Text | Passage & Notes |
+|--------|-----------|-----------------|
+| **I.F. Stone** | *"In a Time of Torment"* (1967), title essay | Opening section. Or *"The Killings at Kent State"* (1971). Both at ifstone.org. Trim opening four paragraphs — his method: start with the official record, expose the contradiction buried in it. |
+| **Christopher Hitchens** | *"The Case Against Henry Kissinger, Part One"*, Harper's Magazine, February 2001 | Opening three paragraphs. "It will become clear… that this is written by a political opponent of Henry Kissinger. Nonetheless, I have found myself continually amazed at how much hostile and discreditable material I have felt compelled to omit." Self-positioning move: declaring bias as authority. |
+| **Matt Taibbi** | *"The Great American Bubble Machine"*, Rolling Stone, July 2009 | Opening paragraph with the "vampire squid" metaphor. Beyond the famous line, the structure of the opening ~200 words — revelation, then mechanism, then named beneficiary — is the template for The Radical's investigative lede. |
+| **Jonathan Swift** | *A Modest Proposal* (1729) | Opening three paragraphs in full. Public domain. The deadpan adoption of the oppressor's logic is the move. ~150 words demonstrates the full satirical method. |
+| **Hunter S. Thompson** | *"He Was a Crook"*, Rolling Stone, June 16, 1994 | Obituary of Nixon. Focused, furious, funny, and surprisingly precise. Better than *Fear and Loathing* for The Radical because the anger has a clear political target. Freely available online. |
+| **Roberto Saviano** | *Gomorrah* (2006), Chapter 1 "The Port" | Opening page — containers falling into the harbour and bodies spilling out. English translation (Farrar, Straus & Giroux). ~150 words is an instant exemplar of embedded, revelatory journalism. |
+
+#### The Hedonist
+
+| Person | Source Text | Passage & Notes |
+|--------|-----------|-----------------|
+| **Tom Wolfe** | *"Radical Chic: That Party at Lenny's"*, New York Magazine, June 8, 1970 | Opening three paragraphs describing Bernstein's penthouse party for the Black Panthers. Status-obsessed, vivid, devastating, and funny in the same breath. NY Magazine archive or *Radical Chic & Mau-Mauing the Flak Catchers.* |
+| **Jimmy Breslin** | *"It's An Honor"*, New York Herald Tribune, November 26, 1963 | While the press corps covered the funeral choreography, Breslin interviewed the gravedigger. Opening: "Clifton Pollard was pretty sure he was going to be working on Sunday…" The entire column is ~600 words — use the first four paragraphs. Library of America website. |
+| **Gay Talese** | *"Frank Sinatra Has a Cold"*, Esquire, April 1966 | Opening three paragraphs. The most famous magazine opening in American journalism. Establishes the subject's power through his absence and its effect on everyone around him. Esquire archive. |
+| **Oscar Wilde** | *"The Soul of Man Under Socialism"* (1891), opening paragraph | Or the first exchange from *The Importance of Being Earnest* (1895), Act I. Both public domain. The former shows his aphoristic essay voice; the latter shows wit as dialogue — more useful for The Hedonist's editorial note register. |
+| **Nora Ephron** | *Heartburn* (1983), Chapter 1 | The entire first chapter is ~180 words and stands alone: personal, funny, self-aware, hiding something devastating behind every quip. Or *"A Few Words About Breasts"* from *Crazy Salad* (1975) — same register, non-fiction. |
+| **Dominick Dunne** | *"The Verdict"*, Vanity Fair, February 1995 | Account of the O.J. Simpson acquittal. Opening section — sitting in the courtroom, watching the room's reaction to the verdict. Tabloid energy with literary control. Vanity Fair archive. |
 
 ---
 

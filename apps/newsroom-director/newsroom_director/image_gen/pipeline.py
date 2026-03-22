@@ -31,6 +31,7 @@ def generate_images_for_newspaper(
     storage: EditionStorage,
     edition_id: str,
     max_article_images: int = MAX_ARTICLE_IMAGES,
+    negative_prompt: str = "",
 ) -> ImageResult:
     """Generate images for a newspaper's articles and hero.
 
@@ -78,7 +79,11 @@ def generate_images_for_newspaper(
             },
         )
 
-        image_bytes = imagen_client.generate(image_prompt)
+        image_bytes = imagen_client.generate(
+            image_prompt,
+            negative_prompt=negative_prompt,
+            aspect_ratio="4:3",
+        )
         if image_bytes is None:
             logger.warning(
                 "Image generation returned None for %s article %d (%s) "
@@ -133,7 +138,11 @@ def generate_images_for_newspaper(
             },
         )
 
-        hero_bytes = imagen_client.generate(sanitized_hero_prompt)
+        hero_bytes = imagen_client.generate(
+            sanitized_hero_prompt,
+            negative_prompt=negative_prompt,
+            aspect_ratio="16:9",
+        )
         if hero_bytes is not None:
             hero_image_url = storage.write_image(
                 edition_id, newspaper_id, "hero.png", hero_bytes

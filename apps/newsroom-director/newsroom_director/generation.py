@@ -76,9 +76,13 @@ class VertexAIStrategy(GenerationStrategy):
         model_name = MODEL_MAP.get(model_tier, MODEL_MAP["flash"])
         contents = user_content or "Generate today's edition."
 
+        # Gemini 3.x: temperature must be 1.0 (sub-1.0 causes looping).
+        # thinking_level replaces thinking_budget: "high" for pro, "medium" for flash.
+        thinking_level = "high" if model_tier == "pro" else "medium"
         config_kwargs: dict = {
             "system_instruction": system_prompt,
-            "thinking_config": types.ThinkingConfig(thinking_budget=-1),
+            "temperature": 1.0,
+            "thinking_config": types.ThinkingConfig(thinking_level=thinking_level),
         }
         if response_schema is not None:
             config_kwargs["response_mime_type"] = "application/json"

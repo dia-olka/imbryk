@@ -42,10 +42,13 @@ class TestPersonaDefinitions:
                 f"!= taxonomy categories {taxonomy_cats}"
             )
 
-    def test_system_prompts_have_placeholders(self):
+    def test_system_prompts_have_no_context_placeholders(self):
+        """Context data (world state, journal, clusters) now goes in the user turn,
+        not in the system instruction. Verify placeholders are absent."""
         for persona in NEWSPAPER_PERSONAS:
-            assert "{{WORLD_LEDGER_SYNOPSIS}}" in persona.system_prompt_template
-            assert "{{CLUSTER_DIGESTS}}" in persona.system_prompt_template
+            assert "{{WORLD_LEDGER_SYNOPSIS}}" not in persona.system_prompt_template
+            assert "{{CLUSTER_DIGESTS}}" not in persona.system_prompt_template
+            assert "{{EDITORIAL_JOURNAL}}" not in persona.system_prompt_template
 
     def test_curator_prompt_has_articles_placeholder(self):
         assert "{{ALL_ARTICLES}}" in CURATOR_PERSONA.system_prompt_template
@@ -67,16 +70,14 @@ class TestPersonaDefinitions:
 
 class TestPreambleLanguageInstructions:
     def test_preamble_instructs_english_output(self):
-        assert "LANGUAGE:" in _PREAMBLE
         assert "English" in _PREAMBLE
 
     def test_preamble_has_citation_instructions(self):
-        assert "CITATION:" in _PREAMBLE
-        assert "source" in _PREAMBLE.lower()
+        assert "cite" in _PREAMBLE.lower()
 
     def test_newspaper_system_prompts_contain_language_instruction(self):
         for persona in NEWSPAPER_PERSONAS:
-            assert "LANGUAGE:" in persona.system_prompt_template
+            assert "English" in persona.system_prompt_template
 
     def test_curator_prompt_instructs_english_output(self):
         assert "English" in CURATOR_PERSONA.system_prompt_template

@@ -7,25 +7,22 @@ type RawPersona = (typeof PERSONAS_DATA.personas)[number];
 /** Serialize exemplar objects into an XML-tagged block for the prompt. */
 function serializeExemplars(
   exemplars: ReadonlyArray<{
-    type: string;
-    headline: string;
-    lede: string;
-    bodyExcerpt: string;
+    author: string;
+    source: string;
+    passage: string;
     note: string;
   }>
 ): string {
   if (!exemplars || exemplars.length === 0) return '';
   const blocks = exemplars.map(
     (ex) =>
-      `<example type="${ex.type}">
-  <headline>${ex.headline}</headline>
-  <lede>${ex.lede}</lede>
-  <body_excerpt>${ex.bodyExcerpt}</body_excerpt>
+      `<example author="${ex.author}" source="${ex.source}">
+  <passage>${ex.passage}</passage>
   <note>${ex.note}</note>
 </example>`
   );
   return `<exemplars>
-Study these for voice, rhythm, and structure. Absorb the style — do not copy.
+Each exemplar represents a distinct voice on your editorial team. Study the prose style — absorb it, do not copy.
 
 ${blocks.join('\n\n')}
 </exemplars>`;
@@ -66,6 +63,7 @@ function toPersona(raw: RawPersona): NewsroomPersona {
     toneAdjustment: raw.toneAdjustment,
     subscribedCategories: getSubscribedCategories(raw.id),
     modelTier: raw.modelTier,
+    negativePrompt: (raw as Record<string, unknown>).negativePrompt as string ?? '',
     systemPromptTemplate: buildPrompt(raw, PERSONAS_DATA.preamble),
   };
 }

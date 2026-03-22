@@ -1,13 +1,14 @@
 import type { CategoryId } from '@org/taxonomy';
 
-/** A real-world article excerpt used as a few-shot style exemplar. */
+/** A real-world prose excerpt from an editorial team member, used as a voice exemplar. */
 export interface Exemplar {
-  /** Article type: "news_report", "analysis", or "editorial". */
-  type: string;
-  headline: string;
-  lede: string;
-  bodyExcerpt: string;
-  /** Instruction to the model about what to observe in this exemplar. */
+  /** The writer's name (e.g. "George Orwell"). */
+  author: string;
+  /** Source text and year (e.g. "Politics and the English Language (1946)"). */
+  source: string;
+  /** The actual text excerpt (~100-200 words). */
+  passage: string;
+  /** Instruction to the model about what to observe in this exemplar's style. */
   note: string;
 }
 
@@ -24,6 +25,8 @@ export interface NewsroomPersona {
   toneAdjustment: string;
   subscribedCategories: CategoryId[];
   modelTier: 'pro' | 'flash';
+  /** Imagen negative prompt — plain nouns of unwanted visual elements. */
+  negativePrompt: string;
   /** Full system prompt (preamble + persona-specific suffix). Null for non-newspaper personas. */
   systemPromptTemplate: string;
 }

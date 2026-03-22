@@ -193,7 +193,7 @@ class TestGenerateImagesForNewspaper:
         """Some images fail, others succeed — only successful ones returned."""
 
         class PartialClient(StubImageClient):
-            def generate(self, prompt: str) -> bytes | None:
+            def generate(self, prompt: str, *, negative_prompt: str = "", aspect_ratio: str = "16:9") -> bytes | None:
                 self._calls.append(prompt)
                 # Fail for the first call only
                 if len(self._calls) == 1:
