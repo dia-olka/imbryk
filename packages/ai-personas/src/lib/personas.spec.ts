@@ -74,7 +74,7 @@ describe('Personas', () => {
     expect(owner?.modelTier).toBe('pro');
   });
 
-  it('should have Curator as pro tier', () => {
+  it('should have Curator as flash tier', () => {
     expect(CURATOR.modelTier).toBe('flash');
   });
 });

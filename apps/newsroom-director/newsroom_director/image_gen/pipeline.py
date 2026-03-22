@@ -127,7 +127,7 @@ def generate_images_for_newspaper(
             newspaper_id,
             extra={"newspaper_id": newspaper_id},
         )
-    if front_page_image_prompt:
+    else:
         sanitized_hero_prompt = sanitize_prompt_text(front_page_image_prompt)
         logger.info(
             "Generating hero image for %s",

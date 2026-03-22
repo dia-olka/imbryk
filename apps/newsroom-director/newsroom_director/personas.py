@@ -11,8 +11,7 @@ from dataclasses import dataclass
 from newsroom_director._generated_data import PERSONAS_DATA as _raw_file
 from newsroom_director.taxonomy import NEWSPAPER_SUBSCRIPTIONS
 
-_raw = _raw_file
-_PREAMBLE: str = _raw["preamble"]
+_PREAMBLE: str = _raw_file["preamble"]
 
 
 @dataclass
@@ -88,16 +87,26 @@ def _to_persona(raw: dict) -> PersonaConfig:
     )
 
 
-_ALL = [_to_persona(p) for p in _raw["personas"]]
+def _find_persona(by_id: dict[str, "PersonaConfig"], persona_id: str) -> "PersonaConfig":
+    try:
+        return by_id[persona_id]
+    except KeyError:
+        raise ValueError(
+            f"Persona '{persona_id}' not found in personas.json. "
+            "Run `npx nx run newsroom-director:generate-data` to regenerate."
+        ) from None
+
+
+_ALL = [_to_persona(p) for p in _raw_file["personas"]]
 _BY_ID: dict[str, PersonaConfig] = {p.id: p for p in _ALL}
 
-SOVEREIGN = _BY_ID["sovereign"]
-ASPIRANT = _BY_ID["aspirant"]
-OWNER = _BY_ID["owner"]
-MORALIST = _BY_ID["moralist"]
-RADICAL = _BY_ID["radical"]
-HEDONIST = _BY_ID["hedonist"]
-CURATOR = _BY_ID["curator"]
+SOVEREIGN = _find_persona(_BY_ID, "sovereign")
+ASPIRANT = _find_persona(_BY_ID, "aspirant")
+OWNER = _find_persona(_BY_ID, "owner")
+MORALIST = _find_persona(_BY_ID, "moralist")
+RADICAL = _find_persona(_BY_ID, "radical")
+HEDONIST = _find_persona(_BY_ID, "hedonist")
+CURATOR = _find_persona(_BY_ID, "curator")
 
 NEWSPAPER_PERSONAS: list[PersonaConfig] = [
     SOVEREIGN,

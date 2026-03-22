@@ -33,7 +33,7 @@ function buildPrompt(raw: RawPersona, preamble: string): string {
   if (raw.curatorPrompt) return raw.curatorPrompt;
   if (!raw.promptSuffix) return '';
   const exemplarsBlock = serializeExemplars(
-    (raw as Record<string, unknown>).exemplars as Exemplar[] ?? []
+    (raw as { exemplars?: Exemplar[] }).exemplars ?? []
   );
   const suffix = exemplarsBlock
     ? raw.promptSuffix.replace('{{EXEMPLARS}}', exemplarsBlock)
@@ -63,7 +63,7 @@ function toPersona(raw: RawPersona): NewsroomPersona {
     toneAdjustment: raw.toneAdjustment,
     subscribedCategories: getSubscribedCategories(raw.id),
     modelTier: raw.modelTier,
-    negativePrompt: (raw as Record<string, unknown>).negativePrompt as string ?? '',
+    negativePrompt: (raw as { negativePrompt?: string }).negativePrompt ?? '',
     systemPromptTemplate: buildPrompt(raw, PERSONAS_DATA.preamble),
   };
 }

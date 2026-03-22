@@ -78,7 +78,7 @@ class ImagenClient(ImageGenerationStrategy):
 
             client = self._get_client()
 
-            def _call() -> bytes:
+            def _call() -> bytes | None:
                 img_config_kwargs: dict = {
                     "number_of_images": 1,
                     "aspect_ratio": aspect_ratio,
@@ -130,24 +130,18 @@ class ImagenClient(ImageGenerationStrategy):
 class StubImageClient(ImageGenerationStrategy):
     """Returns canned image bytes for testing."""
 
-    # Minimal valid WebP header (RIFF + WEBP + VP8 chunk)
-    STUB_WEBP = (
-        b"RIFF"
-        b"\x24\x00\x00\x00"  # file size
-        b"WEBP"
-        b"VP8 "
-        b"\x18\x00\x00\x00"  # chunk size
-        b"\x30\x01\x00\x9d"
-        b"\x01\x2a\x01\x00"
-        b"\x01\x00\x01\x40"
-        b"\x25\xa4\x00\x03"
-        b"\x70\x00\xfe\xfb"
-        b"\x94\x00\x00"
+    # Minimal 1×1 white PNG (matches the .png extension used by the pipeline)
+    STUB_PNG = (
+        b"\x89PNG\r\n\x1a\n"
+        b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde"
+        b"\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
     )
 
     def __init__(self, should_fail: bool = False) -> None:
         self._should_fail = should_fail
-        self._calls: list[str] = []
+        self._calls: list[dict[str, str]] = []
 
     def generate(
         self,
@@ -156,7 +150,9 @@ class StubImageClient(ImageGenerationStrategy):
         negative_prompt: str = "",
         aspect_ratio: str = "16:9",
     ) -> bytes | None:
-        self._calls.append(prompt)
+        self._calls.append(
+            {"prompt": prompt, "negative_prompt": negative_prompt, "aspect_ratio": aspect_ratio}
+        )
         if self._should_fail:
             return None
-        return self.STUB_WEBP
+        return self.STUB_PNG

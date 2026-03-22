@@ -198,7 +198,7 @@ class TestGenerateImagesForNewspaper:
                 # Fail for the first call only
                 if len(self._calls) == 1:
                     return None
-                return self.STUB_WEBP
+                return self.STUB_PNG
 
         client = PartialClient()
         storage = StubEditionStorage()

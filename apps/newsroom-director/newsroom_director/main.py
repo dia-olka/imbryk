@@ -110,7 +110,7 @@ _MONITOR_CONFIG = {
     "schedule": {"type": "crontab", "value": "0 6 * * *"},  # Every day at 6am UTC
     "timezone": "UTC",
     "checkin_margin": 120,  # 2 minutes
-    "max_runtime": 60*60*60,  # 1 hour
+    "max_runtime": 60*60,  # 1 hour
     "failure_issue_threshold": 1,
     "recovery_threshold": 1,
 }
@@ -330,15 +330,15 @@ def run_morning_press(
             datetime.strptime(today_date, "%Y-%m-%d") - _td(days=1)
         ).strftime("%Y-%m-%d")
         prev_edition = load_edition_by_date(session, prev_date_str)
-        prev_metrics: dict[str, list[ArticleMetric]] = {}
+        prev_edition_metrics_by_persona: dict[str, list[ArticleMetric]] = {}
         if ENABLE_READER_METRICS:
-            prev_metrics = load_edition_metrics(session, prev_date_str)
+            prev_edition_metrics_by_persona = load_edition_metrics(session, prev_date_str)
 
         prev_edition_by_persona: dict[str, str] = {}
         if prev_edition:
             for persona in NEWSPAPER_PERSONAS:
                 content_json = prev_edition.get(persona.id)
-                persona_metrics = prev_metrics.get(persona.id)
+                persona_metrics = prev_edition_metrics_by_persona.get(persona.id)
                 summary = format_previous_edition_summary(
                     persona.id,
                     prev_date_str,
@@ -516,6 +516,10 @@ def run_morning_press(
         if articles:
             try:
                 all_articles_text = _format_all_articles(articles)
+                # Prefix-caching: articles go in the user turn, not the system prompt,
+                # so the static system prompt can be cached across retries.
+                # The TypeScript buildCuratorPrompt inlines articles directly; here we
+                # substitute a placeholder and pass articles as user content instead.
                 curator_system = CURATOR_PERSONA.system_prompt_template.replace(
                     "{{ALL_ARTICLES}}", "[See user content below]"
                 )

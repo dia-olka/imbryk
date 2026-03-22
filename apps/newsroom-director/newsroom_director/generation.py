@@ -74,7 +74,7 @@ class VertexAIStrategy(GenerationStrategy):
 
         client = self._get_client()
         model_name = MODEL_MAP.get(model_tier, MODEL_MAP["flash"])
-        contents = user_content or "Generate today's edition."
+        contents = user_content
 
         # Gemini 3.x: temperature must be 1.0 (sub-1.0 causes looping).
         # thinking_level replaces thinking_budget: "high" for pro, "medium" for flash.
