@@ -88,7 +88,7 @@ _expiry_task: asyncio.Task | None = None
 
 
 def _do_expire_sync() -> int:
-    """Synchronous DB work for the expiry job; runs in a thread pool."""
+    """Synchronous DB work for the expiry job; runs in a thread pool. """
     from ingestion_api.database import SessionLocal
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=QUOTE_EXPIRY_HOURS)

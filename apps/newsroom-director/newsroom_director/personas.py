@@ -87,7 +87,7 @@ def _to_persona(raw: dict) -> PersonaConfig:
     )
 
 
-def _find_persona(by_id: dict[str, "PersonaConfig"], persona_id: str) -> "PersonaConfig":
+def _find_persona(by_id: dict[str, PersonaConfig], persona_id: str) -> PersonaConfig:
     try:
         return by_id[persona_id]
     except KeyError:

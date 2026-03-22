@@ -1,7 +1,7 @@
 /* Auto-generated from data/world-state.json
  * DO NOT EDIT — run `npx nx run world-state:generate-data` to regenerate. */
 
-/* eslint-disable */
+ 
 
 import type { WorldLedger } from './world-ledger.types.js';
 
