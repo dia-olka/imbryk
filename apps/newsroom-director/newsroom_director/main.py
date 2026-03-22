@@ -110,7 +110,7 @@ _MONITOR_CONFIG = {
     "schedule": {"type": "crontab", "value": "0 6 * * *"},  # Every day at 6am UTC
     "timezone": "UTC",
     "checkin_margin": 120,  # 2 minutes
-    "max_runtime": 60*60*60,  # 1 hour
+    "max_runtime": 60*60,  # 1 hour
     "failure_issue_threshold": 1,
     "recovery_threshold": 1,
 }
@@ -330,15 +330,15 @@ def run_morning_press(
             datetime.strptime(today_date, "%Y-%m-%d") - _td(days=1)
         ).strftime("%Y-%m-%d")
         prev_edition = load_edition_by_date(session, prev_date_str)
-        prev_metrics: dict[str, list[ArticleMetric]] = {}
+        prev_edition_metrics_by_persona: dict[str, list[ArticleMetric]] = {}
         if ENABLE_READER_METRICS:
-            prev_metrics = load_edition_metrics(session, prev_date_str)
+            prev_edition_metrics_by_persona = load_edition_metrics(session, prev_date_str)
 
         prev_edition_by_persona: dict[str, str] = {}
         if prev_edition:
             for persona in NEWSPAPER_PERSONAS:
                 content_json = prev_edition.get(persona.id)
-                persona_metrics = prev_metrics.get(persona.id)
+                persona_metrics = prev_edition_metrics_by_persona.get(persona.id)
                 summary = format_previous_edition_summary(
                     persona.id,
                     prev_date_str,
@@ -411,29 +411,36 @@ def run_morning_press(
                     },
                 )
 
-                # System instruction: persona identity + world context + journal
-                system_instruction = persona.system_prompt_template.replace(
-                    "{{WORLD_LEDGER_SYNOPSIS}}", synopsis
-                ).replace("{{CLUSTER_DIGESTS}}", "[See user content below]")
+                # System instruction: persona identity, voice, rules, exemplars
+                # (no context data — that goes in the user turn for cache efficiency)
+                system_instruction = persona.system_prompt_template
 
-                # Inject editorial journal if enabled; always replace the
-                # placeholder so it never leaks into the LLM prompt as a
-                # literal string when the feature is disabled.
+                # User turn: WorldLedger FIRST (identical across all 6 calls,
+                # so Vertex AI implicit prefix caching gives 90% cost discount),
+                # then editorial journal, then cluster digests, then task.
                 journal_text = (
                     journal_by_persona.get(persona.id, "")
                     if ENABLE_EDITORIAL_JOURNAL
                     else ""
                 )
-                # Append previous edition summary if available
                 prev_summary = prev_edition_by_persona.get(persona.id, "")
                 if prev_summary:
                     journal_text = f"{journal_text}\n\n{prev_summary}" if journal_text else prev_summary
-                system_instruction = system_instruction.replace(
-                    "{{EDITORIAL_JOURNAL}}", journal_text
-                )
 
-                # User content: cluster digests (may contain verbatim user prompts)
-                user_content = f"CLUSTER DIGESTS:\n{digests_text}\n\nGenerate today's edition."
+                user_parts = [f"WORLD HISTORY:\n{synopsis}"]
+                if journal_text:
+                    user_parts.append(
+                        "YOUR EDITORIAL JOURNAL (recent entries — use these to "
+                        "inform your editorial decisions today, but do not "
+                        "reference the journal itself in your articles):\n"
+                        + journal_text
+                    )
+                user_parts.append(f"CLUSTER DIGESTS:\n{digests_text}")
+                user_parts.append(
+                    "<task>\nBased on the context and clusters above, produce "
+                    "today's edition. Follow all rules in your system instruction.\n</task>"
+                )
+                user_content = "\n\n".join(user_parts)
 
                 # Call LLM — response_schema enforces exact field names so the
                 # gazette always receives canonical JSON (no "title"/"content"/
@@ -509,6 +516,10 @@ def run_morning_press(
         if articles:
             try:
                 all_articles_text = _format_all_articles(articles)
+                # Prefix-caching: articles go in the user turn, not the system prompt,
+                # so the static system prompt can be cached across retries.
+                # The TypeScript buildCuratorPrompt inlines articles directly; here we
+                # substitute a placeholder and pass articles as user content instead.
                 curator_system = CURATOR_PERSONA.system_prompt_template.replace(
                     "{{ALL_ARTICLES}}", "[See user content below]"
                 )
@@ -747,6 +758,11 @@ def run_morning_press(
             front_page_prompt = parsed.get("frontPageImagePrompt")
 
             try:
+                # Look up per-persona negative prompt for Imagen
+                persona_neg = next(
+                    (p.negative_prompt for p in NEWSPAPER_PERSONAS if p.id == newspaper_id),
+                    "",
+                )
                 result = generate_images_for_newspaper(
                     newspaper_id=newspaper_id,
                     articles=article_list,
@@ -756,6 +772,7 @@ def run_morning_press(
                     edition_id=str(
                         datetime.now(timezone.utc).strftime("%Y-%m-%d")
                     ),
+                    negative_prompt=persona_neg,
                 )
 
                 # Embed image URLs into articles

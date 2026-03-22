@@ -11,8 +11,7 @@ from dataclasses import dataclass
 from newsroom_director._generated_data import PERSONAS_DATA as _raw_file
 from newsroom_director.taxonomy import NEWSPAPER_SUBSCRIPTIONS
 
-_raw = _raw_file
-_PREAMBLE: str = _raw["preamble"]
+_PREAMBLE: str = _raw_file["preamble"]
 
 
 @dataclass
@@ -29,6 +28,7 @@ class PersonaConfig:
     tone_adjustment: str
     subscribed_categories: list[str]
     model_tier: str  # "pro" | "flash"
+    negative_prompt: str  # Imagen negative prompt (plain nouns)
     system_prompt_template: str
 
 
@@ -39,16 +39,15 @@ def _serialize_exemplars(exemplars: list[dict]) -> str:
     blocks = []
     for ex in exemplars:
         blocks.append(
-            f'<example type="{ex["type"]}">\n'
-            f"  <headline>{ex['headline']}</headline>\n"
-            f"  <lede>{ex['lede']}</lede>\n"
-            f"  <body_excerpt>{ex['bodyExcerpt']}</body_excerpt>\n"
+            f'<example author="{ex["author"]}" source="{ex["source"]}">\n'
+            f"  <passage>{ex['passage']}</passage>\n"
             f"  <note>{ex['note']}</note>\n"
             f"</example>"
         )
     return (
         "<exemplars>\n"
-        "Study these for voice, rhythm, and structure. Absorb the style — do not copy.\n\n"
+        "Each exemplar represents a distinct voice on your editorial team. "
+        "Study the prose style — absorb it, do not copy.\n\n"
         + "\n\n".join(blocks)
         + "\n</exemplars>"
     )
@@ -83,20 +82,31 @@ def _to_persona(raw: dict) -> PersonaConfig:
         tone_adjustment=raw["toneAdjustment"],
         subscribed_categories=subs,
         model_tier=raw["modelTier"],
+        negative_prompt=raw.get("negativePrompt", ""),
         system_prompt_template=_build_prompt(raw),
     )
 
 
-_ALL = [_to_persona(p) for p in _raw["personas"]]
+def _find_persona(by_id: dict[str, "PersonaConfig"], persona_id: str) -> "PersonaConfig":
+    try:
+        return by_id[persona_id]
+    except KeyError:
+        raise ValueError(
+            f"Persona '{persona_id}' not found in personas.json. "
+            "Run `npx nx run newsroom-director:generate-data` to regenerate."
+        ) from None
+
+
+_ALL = [_to_persona(p) for p in _raw_file["personas"]]
 _BY_ID: dict[str, PersonaConfig] = {p.id: p for p in _ALL}
 
-SOVEREIGN = _BY_ID["sovereign"]
-ASPIRANT = _BY_ID["aspirant"]
-OWNER = _BY_ID["owner"]
-MORALIST = _BY_ID["moralist"]
-RADICAL = _BY_ID["radical"]
-HEDONIST = _BY_ID["hedonist"]
-CURATOR = _BY_ID["curator"]
+SOVEREIGN = _find_persona(_BY_ID, "sovereign")
+ASPIRANT = _find_persona(_BY_ID, "aspirant")
+OWNER = _find_persona(_BY_ID, "owner")
+MORALIST = _find_persona(_BY_ID, "moralist")
+RADICAL = _find_persona(_BY_ID, "radical")
+HEDONIST = _find_persona(_BY_ID, "hedonist")
+CURATOR = _find_persona(_BY_ID, "curator")
 
 NEWSPAPER_PERSONAS: list[PersonaConfig] = [
     SOVEREIGN,

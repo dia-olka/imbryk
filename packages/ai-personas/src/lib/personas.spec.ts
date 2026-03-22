@@ -48,9 +48,11 @@ describe('Personas', () => {
     }
   });
 
-  it('should have newspaper personas use {{CLUSTER_DIGESTS}} in system prompts', () => {
+  it('should have no context placeholders in system prompts (moved to user turn)', () => {
     for (const persona of NEWSPAPER_PERSONAS) {
-      expect(persona.systemPromptTemplate).toContain('{{CLUSTER_DIGESTS}}');
+      expect(persona.systemPromptTemplate).not.toContain('{{CLUSTER_DIGESTS}}');
+      expect(persona.systemPromptTemplate).not.toContain('{{WORLD_LEDGER_SYNOPSIS}}');
+      expect(persona.systemPromptTemplate).not.toContain('{{EDITORIAL_JOURNAL}}');
       expect(persona.systemPromptTemplate).not.toContain(
         '{{EVENT_DESCRIPTION}}',
       );
@@ -72,7 +74,7 @@ describe('Personas', () => {
     expect(owner?.modelTier).toBe('pro');
   });
 
-  it('should have Curator as pro tier', () => {
+  it('should have Curator as flash tier', () => {
     expect(CURATOR.modelTier).toBe('flash');
   });
 });

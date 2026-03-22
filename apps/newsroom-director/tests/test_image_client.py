@@ -9,27 +9,31 @@ from newsroom_director.image_gen.client import (
 
 
 class TestStubImageClient:
-    def test_returns_webp_bytes_by_default(self):
+    def test_returns_png_bytes_by_default(self):
         client = StubImageClient()
         result = client.generate("A photo of a cat")
 
         assert result is not None
-        assert result.startswith(b"RIFF")
-        assert b"WEBP" in result
+        assert result.startswith(b"\x89PNG")
 
     def test_tracks_calls(self):
         client = StubImageClient()
-        client.generate("prompt 1")
+        client.generate("prompt 1", negative_prompt="no blur", aspect_ratio="4:3")
         client.generate("prompt 2")
 
-        assert client._calls == ["prompt 1", "prompt 2"]
+        assert client._calls == [
+            {"prompt": "prompt 1", "negative_prompt": "no blur", "aspect_ratio": "4:3"},
+            {"prompt": "prompt 2", "negative_prompt": "", "aspect_ratio": "16:9"},
+        ]
 
     def test_returns_none_when_should_fail(self):
         client = StubImageClient(should_fail=True)
         result = client.generate("A photo of a cat")
 
         assert result is None
-        assert client._calls == ["A photo of a cat"]
+        assert client._calls == [
+            {"prompt": "A photo of a cat", "negative_prompt": "", "aspect_ratio": "16:9"}
+        ]
 
 
 class TestImagenClient:

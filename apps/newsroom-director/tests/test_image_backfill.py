@@ -632,13 +632,13 @@ class TestPromptRewriting:
         call_count = [0]
         original_fail = StubImageClient()
 
-        def _selective_generate(prompt: str) -> bytes | None:
-            original_fail._calls.append(prompt)
+        def _selective_generate(prompt: str, *, negative_prompt: str = "", aspect_ratio: str = "16:9") -> bytes | None:
+            original_fail._calls.append({"prompt": prompt, "negative_prompt": negative_prompt, "aspect_ratio": aspect_ratio})
             call_count[0] += 1
             # Fail the first call (original prompt), succeed the second (rewritten)
             if call_count[0] == 1:
                 return None
-            return StubImageClient.STUB_WEBP
+            return StubImageClient.STUB_PNG
 
         original_fail.generate = _selective_generate
 
@@ -728,12 +728,12 @@ class TestPromptRewriting:
         call_count = [0]
         client = StubImageClient()
 
-        def _selective_generate(prompt: str) -> bytes | None:
-            client._calls.append(prompt)
+        def _selective_generate(prompt: str, *, negative_prompt: str = "", aspect_ratio: str = "16:9") -> bytes | None:
+            client._calls.append({"prompt": prompt, "negative_prompt": negative_prompt, "aspect_ratio": aspect_ratio})
             call_count[0] += 1
             if call_count[0] == 1:
                 return None
-            return StubImageClient.STUB_WEBP
+            return StubImageClient.STUB_PNG
 
         client.generate = _selective_generate
 
