@@ -1,5 +1,16 @@
 import type { CategoryId } from '@org/taxonomy';
 
+/** A real-world article excerpt used as a few-shot style exemplar. */
+export interface Exemplar {
+  /** Article type: "news_report", "analysis", or "editorial". */
+  type: string;
+  headline: string;
+  lede: string;
+  bodyExcerpt: string;
+  /** Instruction to the model about what to observe in this exemplar. */
+  note: string;
+}
+
 export interface NewsroomPersona {
   id: string;
   paperName: string;

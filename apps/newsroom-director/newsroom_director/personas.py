@@ -32,14 +32,38 @@ class PersonaConfig:
     system_prompt_template: str
 
 
+def _serialize_exemplars(exemplars: list[dict]) -> str:
+    """Serialize exemplar objects into an XML-tagged block for the prompt."""
+    if not exemplars:
+        return ""
+    blocks = []
+    for ex in exemplars:
+        blocks.append(
+            f'<example type="{ex["type"]}">\n'
+            f"  <headline>{ex['headline']}</headline>\n"
+            f"  <lede>{ex['lede']}</lede>\n"
+            f"  <body_excerpt>{ex['bodyExcerpt']}</body_excerpt>\n"
+            f"  <note>{ex['note']}</note>\n"
+            f"</example>"
+        )
+    return (
+        "<exemplars>\n"
+        "Study these for voice, rhythm, and structure. Absorb the style — do not copy.\n\n"
+        + "\n\n".join(blocks)
+        + "\n</exemplars>"
+    )
+
+
 def _build_prompt(raw: dict) -> str:
-    """Build the full system prompt from preamble + persona suffix."""
+    """Build the full system prompt from preamble + persona suffix + exemplars."""
     curator_prompt = raw.get("curatorPrompt")
     if curator_prompt:
         return curator_prompt
     suffix = raw.get("promptSuffix")
     if not suffix:
         return ""
+    exemplars_block = _serialize_exemplars(raw.get("exemplars", []))
+    suffix = suffix.replace("{{EXEMPLARS}}", exemplars_block)
     return f"{_PREAMBLE}\n\n{suffix}"
 
 

@@ -1,14 +1,47 @@
 import { PERSONAS_DATA, SUBSCRIPTIONS_DATA } from './_generated_data.js';
 import type { CategoryId } from '@org/taxonomy';
-import type { NewsroomPersona } from './persona.types.js';
+import type { Exemplar, NewsroomPersona } from './persona.types.js';
 
 type RawPersona = (typeof PERSONAS_DATA.personas)[number];
 
-/** Build the full system prompt from preamble + persona suffix. */
+/** Serialize exemplar objects into an XML-tagged block for the prompt. */
+function serializeExemplars(
+  exemplars: ReadonlyArray<{
+    type: string;
+    headline: string;
+    lede: string;
+    bodyExcerpt: string;
+    note: string;
+  }>
+): string {
+  if (!exemplars || exemplars.length === 0) return '';
+  const blocks = exemplars.map(
+    (ex) =>
+      `<example type="${ex.type}">
+  <headline>${ex.headline}</headline>
+  <lede>${ex.lede}</lede>
+  <body_excerpt>${ex.bodyExcerpt}</body_excerpt>
+  <note>${ex.note}</note>
+</example>`
+  );
+  return `<exemplars>
+Study these for voice, rhythm, and structure. Absorb the style — do not copy.
+
+${blocks.join('\n\n')}
+</exemplars>`;
+}
+
+/** Build the full system prompt from preamble + persona suffix + exemplars. */
 function buildPrompt(raw: RawPersona, preamble: string): string {
   if (raw.curatorPrompt) return raw.curatorPrompt;
   if (!raw.promptSuffix) return '';
-  return `${preamble}\n\n${raw.promptSuffix}`;
+  const exemplarsBlock = serializeExemplars(
+    (raw as Record<string, unknown>).exemplars as Exemplar[] ?? []
+  );
+  const suffix = exemplarsBlock
+    ? raw.promptSuffix.replace('{{EXEMPLARS}}', exemplarsBlock)
+    : raw.promptSuffix.replace('{{EXEMPLARS}}', '');
+  return `${preamble}\n\n${suffix}`;
 }
 
 /** Resolve a persona's subscribed categories from the taxonomy data. */

@@ -1,4 +1,5 @@
 export type {
+  Exemplar,
   NewsroomPersona,
   Article,
   InBriefItem,
