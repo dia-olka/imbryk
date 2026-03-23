@@ -733,6 +733,19 @@ def run_morning_press(
                 if mutation:
                     ledger = apply_mutation(ledger, mutation)
                     save_world_ledger(session, ledger_to_dict(ledger), edition_date=today_date)
+                    logger.info(
+                        "World Ledger updated for %s | mutation: %s",
+                        today_date,
+                        mutation_response[:500],
+                        extra={"step": "world_ledger_update", "edition_date": today_date},
+                    )
+                else:
+                    logger.warning(
+                        "World Ledger mutation was empty/unparseable for %s | raw: %s",
+                        today_date,
+                        mutation_response[:500],
+                        extra={"step": "world_ledger_update", "edition_date": today_date},
+                    )
             except Exception:
                 logger.exception(
                     "World History update failed, skipping history mutation"
