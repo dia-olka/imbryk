@@ -748,7 +748,8 @@ def run_morning_press(
                     )
             except Exception:
                 logger.exception(
-                    "World History update failed, skipping history mutation"
+                    "World History update failed, skipping history mutation",
+                    extra={"step": "world_ledger_update", "edition_date": today_date},
                 )
 
         # Step 9b: Image generation — parse article JSON, generate images,
