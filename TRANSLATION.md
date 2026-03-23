@@ -405,16 +405,16 @@ Adding a new system language = add an entry to `system` array + add UI strings +
 
 ### Phase A1: Translation Framework + Azure Provider
 
-- [ ] Create `newsroom_director/translation/` package
-- [ ] Implement `TranslationStrategy` ABC + `StubTranslationClient` + `TranslationResult` (`client.py`)
-- [ ] Implement `AzureTranslationClient` (`azure.py`)
-- [ ] Implement `TranslationBudget` (`budget.py`)
-- [ ] Implement orchestrator `run_translation()` + `cli_main()` (`main.py`)
-- [ ] Add `JOB_MODE=translate` to `__main__.py`
-- [ ] Add translation env vars to `config.py`
-- [ ] Create `data/languages.json` (es, fr, ar + UI strings + dir)
+- [x] Create `newsroom_director/translation/` package
+- [x] Implement `TranslationStrategy` ABC + `StubTranslationClient` + `TranslationResult` (`client.py`)
+- [x] Implement `AzureTranslationClient` (`azure.py`)
+- [x] Implement `TranslationBudget` (`budget.py`)
+- [x] Implement orchestrator `run_translation()` + `cli_main()` (`main.py`)
+- [x] Add `JOB_MODE=translate` to `__main__.py`
+- [x] Add translation env vars to `config.py`
+- [x] Create `data/languages.json` (es, fr, ar + UI strings + dir)
 - [ ] `--backfill` mode for historical editions
-- [ ] Write tests (mock API, R2 read/write, budget tracking, pipeline orchestrator)
+- [x] Write tests (mock API, R2 read/write, budget tracking, pipeline orchestrator)
 
 ### Phase A2: Additional Providers (when needed)
 
@@ -424,24 +424,24 @@ Adding a new system language = add an entry to `system` array + add UI strings +
 
 ### Phase B: Gazette Integration
 
-- [ ] Add `translations.js` data file — fetch translation JSONs from R2
-- [ ] Add `translatedArticlePages.js` — suffix URL scheme (`/.../{lang}/`)
-- [ ] Add `translatedNewspaperPages.js`
-- [ ] Create `language-switcher.njk` component
-- [ ] Update `article.njk` — render `hreflang` links, include language switcher
-- [ ] Update `base.njk` — dynamic `lang`/`dir` attributes, locale-aware `og:locale`
-- [ ] Add RTL CSS rules (`[dir="rtl"]` overrides)
-- [ ] Add locale-aware date formatting filters
+- [x] Add `translations.js` data file — fetch translation JSONs from R2
+- [x] Add `translatedArticlePages.js` — suffix URL scheme (`/.../{lang}/`)
+- [x] Add `translatedNewspaperPages.js`
+- [x] Create `language-switcher.njk` component
+- [x] Update `article.njk` — render `hreflang` links, include language switcher
+- [x] Update `base.njk` — dynamic `lang`/`dir` attributes, locale-aware `og:locale`
+- [x] Add RTL CSS rules (`[dir="rtl"]` overrides)
+- [x] Add locale-aware date formatting filters
 - [ ] Add Zod schema for translation JSON validation
 - [ ] Write tests (translated page generation, language switcher, RTL rendering, missing translations)
 
 ### Phase C: Automation
 
-- [ ] Add `newsroom-director-translate` Cloud Run Job to `cd.yml`
-- [ ] Add Cloud Scheduler (`0 7 * * *` UTC — between morning press and marketing)
-- [ ] Add translation secrets to GCP Secret Manager
-- [ ] Update `DEPLOYMENT.md` — translation job setup, env vars, scheduling
-- [ ] Chain: morning press (06:00) -> translate (07:00) -> marketing (08:00)
+- [x] Add `newsroom-director-translate` Cloud Run Job to `cd.yml`
+- [x] Add Cloud Scheduler (`0 7 * * *` UTC — between morning press and marketing)
+- [x] Add translation secrets to GCP Secret Manager
+- [x] Update `DEPLOYMENT.md` — translation job setup, env vars, scheduling
+- [x] Chain: morning press (06:00) -> translate (07:00) -> marketing (08:00)
 
 ### Phase D: Paid Translations (deferred)
 

@@ -19,6 +19,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how the system works and [PLAN.md](PL
 8. [Step 6 — Set Up the Daily Schedule](#step-6--set-up-the-daily-schedule)
 9. [Day-to-Day Operations](#day-to-day-operations)
    - [Enabling Topic Research](#enabling-topic-research)
+   - [Enabling Translation](#enabling-translation)
 10. [Monthly Costs](#monthly-costs)
 11. [Monitoring & Alerts](#monitoring--alerts)
 12. [Troubleshooting](#troubleshooting)
@@ -675,7 +676,7 @@ The CD workflow (`.github/workflows/cd.yml`) runs after CI passes on `main`:
 1. Detects which services changed (ingestion-api, newsroom-director, or both)
 2. Builds and pushes Docker images to Artifact Registry
 3. Deploys the ingestion-api to Cloud Run and runs database migrations
-4. Updates the newsroom-director Cloud Run job
+4. Updates the newsroom-director Cloud Run jobs (morning press, news scout, translation, marketing)
 
 The newsroom-director build uses GitHub Actions cache for Docker layers, which significantly speeds up builds of the ~2 GB image.
 
@@ -843,11 +844,38 @@ gcloud run jobs create newsroom-director-marketing \
   --max-retries=1
 ```
 
-> **Three jobs, one image.** All Cloud Run Jobs use the same Docker image. The `JOB_MODE` env var selects the entry point via `newsroom_director/__main__.py`: `morning-press` (default) runs the full newspaper generation pipeline, `news-scout` runs the Tavily collection pre-batch job, and `marketing` runs the autonomous social media promotion agent.
+Then create the **Translation** job (same image, `JOB_MODE=translate`):
+
+```sh
+gcloud run jobs create newsroom-director-translate \
+  --image=$REPO/newsroom-director:latest \
+  --region=us-central1 \
+  --service-account=$SA \
+  --set-cloudsql-instances="${PROJECT_ID}:us-central1:imbryk-db" \
+  --set-secrets=DATABASE_URL=database-url:latest \
+  --set-secrets=R2_ACCOUNT_ID=r2-account-id:latest \
+  --set-secrets=R2_ACCESS_KEY_ID=r2-access-key-id:latest \
+  --set-secrets=R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest \
+  --set-secrets=CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest \
+  --set-secrets=AZURE_TRANSLATOR_KEY=azure-translator-key:latest \
+  --set-env-vars=JOB_MODE=translate \
+  --set-env-vars=TRANSLATION_ENABLED=true \
+  --set-env-vars=TRANSLATION_PROVIDER=azure \
+  --set-env-vars=AZURE_TRANSLATOR_REGION=eastus \
+  --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
+  --set-env-vars=R2_PUBLIC_URL=https://editions.yourdomain.com \
+  --set-env-vars=SENTRY_DSN="" \
+  --memory=1Gi \
+  --cpu=1 \
+  --task-timeout=10m \
+  --max-retries=1
+```
+
+> **Four jobs, one image.** All Cloud Run Jobs use the same Docker image. The `JOB_MODE` env var selects the entry point via `newsroom_director/__main__.py`: `morning-press` (default) runs the full newspaper generation pipeline, `news-scout` runs the Tavily collection pre-batch job, `marketing` runs the autonomous social media promotion agent, and `translate` translates articles into system languages via an external translation API.
 
 > **Why 4 GB memory?** The newsroom director loads an AI text-processing model into memory. This needs more memory than the API.
 
-> **Subsequent updates are automatic.** After setting up the CD workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions)), pushing changes to `main` will automatically build a new image and update both Cloud Run jobs.
+> **Subsequent updates are automatic.** After setting up the CD workflow ([Step 4.5](#45-set-up-automatic-deployment-github-actions)), pushing changes to `main` will automatically build a new image and update all Cloud Run jobs.
 
 ---
 
@@ -911,6 +939,22 @@ gcloud scheduler jobs create http marketing-agent \
 ```
 
 This runs at 08:00 UTC — two hours after the morning press — so the edition is published and available before the marketing agent promotes it.
+
+### 6.5 Create the Translation Schedule
+
+The Translation job runs ~1 hour after the morning press to translate the freshly published edition into system languages (Spanish, French, Arabic). It triggers a gazette rebuild when translations are written so translated pages appear shortly after the English edition:
+
+```sh
+gcloud scheduler jobs create http translation \
+  --location=us-central1 \
+  --schedule="0 7 * * *" \
+  --time-zone="UTC" \
+  --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/newsroom-director-translate:run" \
+  --http-method=POST \
+  --oauth-service-account-email=$SA
+```
+
+This runs at 07:00 UTC — one hour after the morning press and one hour before marketing — so translations are available before social media promotion begins.
 
 > **Tip:** `0 6 * * *` is a "cron expression." The five parts mean: minute (0), hour (6), any day of month (_), any month (_), any day of week (_). If you want a different time, change the hour number. For example, `0 14 _ \* \*` would be 2:00 PM UTC.
 
@@ -985,6 +1029,42 @@ Or set the `TOPIC_RESEARCH_ENABLED` GitHub Actions variable to `false` and push 
 
 **Tavily credit usage:** With the default `TOPIC_RESEARCH_MAX_QUERIES=3` and `TAVILY_MAX_RESULTS_PER_QUERY=5`, each paid prompt consumes up to 3 Tavily API calls. Factor this into your Tavily plan alongside the News Scout's daily usage (~60-90 calls/day).
 
+### Enabling Translation
+
+Translation is **disabled by default** (`TRANSLATION_ENABLED=false`). When enabled, the translation job runs daily at 07:00 UTC and translates all articles into the system languages defined in `data/languages.json` (Spanish, French, Arabic).
+
+**Prerequisites:**
+
+1. Create an [Azure Translator](https://portal.azure.com/#create/Microsoft.CognitiveServicesTextTranslation) resource (free tier: 2M chars/month)
+2. Store the subscription key in Secret Manager:
+   ```sh
+   echo -n "YOUR_AZURE_KEY" | gcloud secrets create azure-translator-key --data-file=-
+   ```
+3. Grant the pipeline service account access:
+   ```sh
+   gcloud secrets add-iam-policy-binding azure-translator-key \
+     --member="serviceAccount:imbryk-pipeline@${PROJECT_ID}.iam.gserviceaccount.com" \
+     --role="roles/secretmanager.secretAccessor"
+   ```
+
+**How to enable on an existing Cloud Run job:**
+
+```sh
+gcloud run jobs update newsroom-director-translate \
+  --region=us-central1 \
+  --update-env-vars=TRANSLATION_ENABLED=true,TRANSLATION_PROVIDER=azure,AZURE_TRANSLATOR_REGION=eastus
+```
+
+**How to enable via GitHub Actions (recommended):**
+
+1. Go to your GitHub repository **Settings > Secrets and variables > Actions > Variables**
+2. Add: **Name:** `TRANSLATION_ENABLED` — **Value:** `true`
+3. Push any change to `main` to trigger the CD workflow
+
+**Budget:** With 3 system languages and all articles, expect ~2.7M chars/month. This slightly exceeds Azure's free tier (2M chars/month). Set `TRANSLATION_CHAR_BUDGET` to cap usage, or upgrade to Azure's S1 tier (~$10/M chars). The job auto-stops when the budget is exhausted and resumes next month.
+
+**Daily schedule:** News Scout (03:00) → Morning Press (06:00) → Translation (07:00) → Marketing (08:00).
+
 ### Switching Stripe from Test to Live
 
 When you are ready to accept real payments:
@@ -1015,9 +1095,10 @@ With the Google Cloud free trial, you will not pay anything for the first 90 day
 | Gazette website (Cloudflare Pages)          | $0                | Free                                                            |
 | Container image storage (Artifact Registry) | ~$0.50            | Storing the two application images                              |
 | News Scout search (Tavily)                  | ~$0-14            | Free tier: 1,000 calls/month; paid plan if more are needed      |
-| Daily schedule (Cloud Scheduler)            | $0                | Free for up to 3 jobs                                           |
+| Translation (Azure Translator)              | ~$0-7             | Free tier: 2M chars/month; 3 languages may exceed (~2.7M chars) |
+| Daily schedule (Cloud Scheduler)            | $0                | Free for up to 3 jobs (4th job costs ~$0.10/month)              |
 | Secret storage (Secret Manager)             | ~$0.06            | A few secrets, rarely accessed                                  |
-| **Total**                                   | **~$45-79/month** |                                                                 |
+| **Total**                                   | **~$45-86/month** |                                                                 |
 
 The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, proportional to number of active newspapers and images), followed by the database (~$8/month, always on). Tavily is free for up to 1,000 API calls/month (the News Scout uses ~60-90 calls/day, well within the free tier). Everything on Cloudflare is free. The Editorial Journal and Reader Metrics features add negligible cost — journal reflections use Gemini Flash (~$0.50/month extra), Cloudflare Web Analytics is free, and the metrics DB table uses minimal storage.
 
@@ -1033,6 +1114,7 @@ The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, p
 | --------------------- | ------------------------------------------- | ----------------------------------------------------- |
 | **API server**        | Is it responding? How fast? Any errors?     | Cloud Run > ingestion-api > Metrics tab               |
 | **Newsroom Director** | Did the daily job complete successfully?    | Cloud Run > Jobs > newsroom-director > Executions tab |
+| **Translation**       | Did translations complete? Budget remaining? | Cloud Run > Jobs > newsroom-director-translate > Executions tab |
 | **Database**          | How much storage is used? Is it connecting? | SQL > imbryk-db > Overview                            |
 | **AI usage**          | How many tokens are being used?             | Vertex AI > Dashboard                                 |
 | **File storage**      | Are edition files being written?            | Cloudflare R2 > imbryk-editions bucket                |
@@ -1158,6 +1240,11 @@ These are all the configuration values used by the backend services. Most are st
 | `MARKETING_ENABLED`           | Env var | `false`                      | Enable the Marketing Agent — set to `true` on the `newsroom-director-marketing` job                              |
 | `BLUESKY_HANDLE`              | Env var | _(empty)_                    | Bluesky account handle (e.g. `imbryk-gazette.bsky.social`) for the marketing agent                                       |
 | `BLUESKY_APP_PASSWORD`        | Secret  | —                            | Bluesky App Password for the marketing agent (generate at bsky.app Settings > App Passwords)                     |
+| `TRANSLATION_ENABLED`         | Env var | `false`                      | Enable the Translation job — set to `true` on the `newsroom-director-translate` job                               |
+| `TRANSLATION_PROVIDER`        | Env var | `azure`                      | Translation backend: `azure`, `deepl`, or `google` (only `azure` is currently implemented)                        |
+| `AZURE_TRANSLATOR_KEY`        | Secret  | —                            | Azure Translator subscription key (required when `TRANSLATION_PROVIDER=azure`)                                    |
+| `AZURE_TRANSLATOR_REGION`     | Env var | _(empty)_                    | Azure region for the Translator resource (e.g. `eastus`; required when `TRANSLATION_PROVIDER=azure`)              |
+| `TRANSLATION_CHAR_BUDGET`     | Env var | _(provider default)_         | Monthly character budget override — auto-throttles when reached. Leave empty to use the provider's default limit   |
 | `LOG_LEVEL`                   | Env var | `INFO`                       | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                               |
 | `SENTRY_DSN`                  | Env var | _(empty)_                    | Sentry error tracking URL — leave empty to disable                                                                |
 

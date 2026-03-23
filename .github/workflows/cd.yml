@@ -244,6 +244,27 @@ jobs:
           DATABASE_URL=database-url:latest,\
           TAVILY_API_KEY=tavily-api-key:latest
 
+      - name: Update Translation Cloud Run job
+        run: |
+          gcloud run jobs update newsroom-director-translate \
+            --image=${{ env.IMAGE_REGISTRY }}/newsroom-director:${{ env.DEPLOY_SHA }} \
+            --region=${{ env.GCP_REGION }} \
+            --update-env-vars=\
+          JOB_MODE=translate,\
+          SENTRY_DSN=${{ vars.SENTRY_DSN }},\
+          R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }},\
+          TRANSLATION_ENABLED=${{ vars.TRANSLATION_ENABLED || 'true' }},\
+          TRANSLATION_PROVIDER=${{ vars.TRANSLATION_PROVIDER || 'azure' }},\
+          AZURE_TRANSLATOR_REGION=${{ vars.AZURE_TRANSLATOR_REGION || 'eastus' }},\
+          TRANSLATION_CHAR_BUDGET=${{ vars.TRANSLATION_CHAR_BUDGET || '' }} \
+            --update-secrets=\
+          DATABASE_URL=database-url:latest,\
+          R2_ACCOUNT_ID=r2-account-id:latest,\
+          R2_ACCESS_KEY_ID=r2-access-key-id:latest,\
+          R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest,\
+          CF_DEPLOY_HOOK_URL=cf-deploy-hook-url:latest,\
+          AZURE_TRANSLATOR_KEY=azure-translator-key:latest
+
       - name: Update Marketing Agent Cloud Run job
         run: |
           gcloud run jobs update newsroom-director-marketing \
