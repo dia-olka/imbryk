@@ -1,8 +1,17 @@
 ---
+pagination:
+  data: translatedTimeline
+  size: 1
+  alias: tl
+permalink: "timeline/{{ tl.lang }}/index.html"
 layout: layouts/base.njk
-title: "World History — Imbryk Gazette"
-description: "A chronological record of real-world events tracked by Imbryk — the factual history that informs each edition's coverage."
 ogType: website
+eleventyComputed:
+  title: "{{ tl.title }} — Imbryk Gazette"
+  description: "{{ tl.synopsis | truncateChars(155) }}"
+  pageLang: "{{ tl.lang }}"
+  pageDir: "{{ tl.langDir }}"
+  pageLocale: "{{ tl.langLocale }}"
 ---
 
 {% set switcherLangs = [
@@ -11,34 +20,42 @@ ogType: website
   {code: "fr", nativeName: "Français", dir: "ltr", url: "/timeline/fr/"},
   {code: "ar", nativeName: "العربية", dir: "rtl", url: "/timeline/ar/"}
 ] %}
-{% set switcherCurrentLang = "en" %}
+{% set switcherCurrentLang = tl.lang %}
 {% include "language-switcher.njk" %}
 
 <div class="page-header">
-  <h1>World History</h1>
-  <p class="subtitle">{{ worldState.epoch }}</p>
+  <h1>{{ tl.title }}</h1>
+  {% if tl.epoch %}
+  <p class="subtitle">{{ tl.epoch }}</p>
+  {% endif %}
 </div>
 
+{% if tl.synopsis %}
 <section aria-label="World synopsis">
-  <p>{{ worldState.synopsis }}</p>
+  <p>{{ tl.synopsis }}</p>
 </section>
 
 <hr class="section-divider">
+{% endif %}
 
 <section aria-labelledby="history-heading">
-  <h2 id="history-heading">Historical Events</h2>
+  <h2 id="history-heading">{{ tl.ui.archive | default("Historical Events") }}</h2>
 
-  {% for event in worldState.history %}
+  {% for event in tl.history %}
     <article class="timeline-event">
       <p class="event-date">{{ event.date }}</p>
       <h3>{{ event.headline }}</h3>
       <p class="event-description">{{ event.description }}</p>
+      {% if event.impact %}
       <p class="event-impact">{{ event.impact }}</p>
+      {% endif %}
+      {% if event.sectors %}
       <ul class="event-sectors" aria-label="Affected sectors" role="list">
         {% for sector in event.sectors %}
           <li class="category-tag">{{ sector }}</li>
         {% endfor %}
       </ul>
+      {% endif %}
     </article>
   {% endfor %}
 </section>

@@ -32,6 +32,21 @@ class EditionStorage(ABC):
     def write_index(self, editions: list[dict]) -> None:
         """Write an index manifest listing all editions."""
 
+    def read_json(self, key: str) -> dict | list | None:
+        """Read a JSON object from storage by key.
+
+        Returns ``None`` if the key does not exist.  Subclasses may override;
+        the default implementation raises ``NotImplementedError``.
+        """
+        raise NotImplementedError
+
+    def write_raw(self, key: str, data: bytes, content_type: str = "application/octet-stream") -> None:
+        """Write raw bytes to storage at *key*.
+
+        Subclasses may override; the default raises ``NotImplementedError``.
+        """
+        raise NotImplementedError
+
 
 class StubEditionStorage(EditionStorage):
     """In-memory storage for testing."""
@@ -40,6 +55,7 @@ class StubEditionStorage(EditionStorage):
         self._editions: list[dict] = []
         self._images: dict[str, bytes] = {}
         self._index: list[dict] | None = None
+        self._raw: dict[str, bytes] = {}
 
     def write_edition(
         self, edition_id: str, date: str, articles: dict[str, str]
@@ -68,3 +84,14 @@ class StubEditionStorage(EditionStorage):
 
     def write_index(self, editions: list[dict]) -> None:
         self._index = list(editions)
+
+    def read_json(self, key: str) -> dict | list | None:
+        import json
+
+        data = self._raw.get(key)
+        if data is None:
+            return None
+        return json.loads(data)
+
+    def write_raw(self, key: str, data: bytes, content_type: str = "application/octet-stream") -> None:
+        self._raw[key] = data

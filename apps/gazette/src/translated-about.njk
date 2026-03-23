@@ -1,0 +1,53 @@
+---
+pagination:
+  data: staticPageTranslations.about
+  size: 1
+  alias: sp
+permalink: "about/{{ sp.lang }}/index.html"
+layout: layouts/base.njk
+ogType: website
+eleventyComputed:
+  title: "{{ sp.content.title }}"
+  description: "{{ sp.content.intro | truncateChars(155) }}"
+  pageLang: "{{ sp.lang }}"
+  pageDir: "{{ sp.langDir }}"
+  pageLocale: "{{ sp.langLocale }}"
+---
+
+{% set switcherLangs = [
+  {code: "en", nativeName: "English", dir: "ltr", url: "/about/"},
+  {code: "es", nativeName: "Español", dir: "ltr", url: "/about/es/"},
+  {code: "fr", nativeName: "Français", dir: "ltr", url: "/about/fr/"},
+  {code: "ar", nativeName: "العربية", dir: "rtl", url: "/about/ar/"}
+] %}
+{% set switcherCurrentLang = sp.lang %}
+{% include "language-switcher.njk" %}
+
+<article>
+  <h1>{{ sp.content.heading }}</h1>
+
+  <p>{{ sp.content.intro }}</p>
+
+  <h2>{{ sp.content.selfPublish }}</h2>
+  <p>{{ sp.content.selfPublishP1 }}</p>
+  <p>{{ sp.content.selfPublishP2 }}</p>
+
+  <h2>{{ sp.content.submissions }}</h2>
+  <p>{{ sp.content.submissionsP1 }}</p>
+  <p>{{ sp.content.submissionsP2 }}</p>
+
+  <h2>{{ sp.content.newspapers }}</h2>
+  <p>{{ sp.content.newspapersP }}</p>
+  <ul>
+    {% for paper in sp.content.newspapersList %}
+      <li><strong>{{ paper.name }}</strong> — {{ paper.desc }}</li>
+    {% endfor %}
+  </ul>
+  <p>{{ sp.content.curatorP }}</p>
+
+  <h2>{{ sp.content.why }}</h2>
+  <p>{{ sp.content.whyP }}</p>
+
+  <h2>{{ sp.content.request }}</h2>
+  <p>{{ sp.content.requestP }}</p>
+</article>

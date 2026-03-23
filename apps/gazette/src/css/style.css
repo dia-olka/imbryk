@@ -3017,3 +3017,110 @@ main:has(.newspaper) {
   margin-right: auto;
   border-top-color: var(--color-border-light);
 }
+
+/* ─── Language Switcher ──────────────────────────────────────────────────── */
+
+.language-switcher {
+  margin-bottom: var(--space-md);
+}
+
+.language-switcher ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-sm);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.language-switcher__link {
+  color: var(--color-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: var(--type-sm);
+}
+
+.language-switcher__link:hover {
+  color: var(--color-accent-hover);
+}
+
+.language-switcher__current {
+  font-weight: 700;
+  font-size: var(--type-sm);
+  color: var(--color-text);
+}
+
+/* ─── RTL Overrides ──────────────────────────────────────────────────────── */
+
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .breadcrumb ol {
+  direction: rtl;
+}
+
+/* Editors note: flip border side */
+[dir="rtl"] .editors-note {
+  border-left: none;
+  border-right: var(--np-border-style, 3px solid) var(--np-primary, var(--color-accent));
+  padding-left: 0;
+  padding-right: var(--space-lg);
+}
+
+/* Blockquotes: flip border side */
+[dir="rtl"] .article-full__body blockquote {
+  border-left: none;
+  border-right: 4px solid var(--np-accent, var(--np-primary, var(--color-accent)));
+  padding-left: 0;
+  padding-right: var(--space-lg);
+}
+
+/* Article nav: flip arrows */
+[dir="rtl"] .article-nav__prev .article-nav__arrow {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .article-nav__next-col .article-nav__arrow {
+  transform: scaleX(-1);
+}
+
+/* Back link: flip arrow */
+[dir="rtl"] .back-link {
+  direction: rtl;
+}
+
+/* In-brief section: flip border */
+[dir="rtl"] .in-brief {
+  border-left: none;
+}
+
+/* Persona-specific border overrides */
+[dir="rtl"] .newspaper[data-persona="sovereign"] .article-full__body blockquote {
+  border-left: none;
+  border-right: 3px double var(--np-primary);
+}
+
+[dir="rtl"] .newspaper[data-persona="sovereign"] .editors-note {
+  border-left: none;
+  border-right: 3px double var(--np-primary);
+}
+
+/* Anchor links: flip margin */
+[dir="rtl"] .anchor-link {
+  margin-left: 0;
+  margin-right: 0.35em;
+}
+
+/* Site header: keep LTR for brand/nav — these are English-only chrome */
+[dir="rtl"] .site-header,
+[dir="rtl"] .site-footer {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Language switcher stays LTR even in RTL pages */
+[dir="rtl"] .language-switcher {
+  direction: ltr;
+  text-align: left;
+}

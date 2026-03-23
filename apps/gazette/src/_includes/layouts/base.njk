@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ pageLang | default('en') }}" dir="{{ pageDir | default('ltr') }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +7,13 @@
   <meta name="description" content="{{ description | default(site.description) }}">
   <meta name="theme-color" content="#1a1a2e">
   <link rel="canonical" href="{{ canonicalUrl | default(site.url + page.url) }}">
+
+  {% if hreflangAlternates %}
+  {% for alt in hreflangAlternates %}
+  <link rel="alternate" hreflang="{{ alt.code }}" href="{{ site.url }}{{ alt.url }}">
+  {% endfor %}
+  <link rel="alternate" hreflang="x-default" href="{{ site.url }}{{ hreflangDefault | default(page.url) }}">
+  {% endif %}
 
   <!-- Open Graph -->
   <meta property="og:site_name" content="{{ site.name }}">
@@ -21,7 +28,7 @@
   {% if ogImageAlt %}
   <meta property="og:image:alt" content="{{ ogImageAlt }}">
   {% endif %}
-  <meta property="og:locale" content="{{ site.locale }}">
+  <meta property="og:locale" content="{{ pageLocale | default(site.locale) }}">
 
   <!-- Twitter / X card -->
   <meta name="twitter:card" content="summary_large_image">

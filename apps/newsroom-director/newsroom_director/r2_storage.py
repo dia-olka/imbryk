@@ -119,3 +119,23 @@ class R2EditionStorage(EditionStorage):
             "Index manifest written to R2",
             extra={"edition_count": len(editions)},
         )
+
+    def read_json(self, key: str) -> dict | list | None:
+        """Read a JSON object from R2 by key. Returns None if missing."""
+        try:
+            resp = self._client.get_object(Bucket=self._bucket, Key=key)
+            return json.loads(resp["Body"].read().decode("utf-8"))
+        except self._client.exceptions.NoSuchKey:
+            return None
+        except Exception:
+            logger.warning("Failed to read %s from R2", key, exc_info=True)
+            return None
+
+    def write_raw(self, key: str, data: bytes, content_type: str = "application/octet-stream") -> None:
+        """Write raw bytes to R2 at *key*."""
+        self._client.put_object(
+            Bucket=self._bucket,
+            Key=key,
+            Body=data,
+            ContentType=content_type,
+        )

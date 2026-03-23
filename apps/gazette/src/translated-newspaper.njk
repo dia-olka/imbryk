@@ -1,0 +1,123 @@
+---
+pagination:
+  data: translatedNewspaperPages
+  size: 1
+  alias: tnp
+permalink: "edition/{{ tnp.editionDate }}/{{ tnp.newspaperId }}/{{ tnp.lang }}/index.html"
+layout: layouts/base.njk
+ogType: website
+eleventyComputed:
+  title: "{{ tnp.newspaperName }} — {{ tnp.editionDate | dateDisplay }} — Imbryk Gazette"
+  description: "{{ tnp.newspaperName }} — {{ tnp.editionDate | dateDisplay }} edition ({{ tnp.langName }})."
+  ogImage: "{% if tnp.heroImageUrl %}{{ tnp.heroImageUrl }}{% endif %}"
+  ogImageAlt: "{{ tnp.newspaperName }} front page — {{ tnp.editionDate | dateDisplay }}"
+  googleFontsUrl: "{{ tnp.googleFontsUrl }}"
+  pageLang: "{{ tnp.lang }}"
+  pageDir: "{{ tnp.langDir }}"
+  pageLocale: "{{ tnp.langLocale }}"
+  hreflangAlternates: "{{ tnp.availableLangs }}"
+  hreflangDefault: "/edition/{{ tnp.editionDate }}/{{ tnp.newspaperId }}/"
+---
+
+{% set persona = personas.newspapers | findPersona(tnp.newspaperId) %}
+
+{% set breadcrumbs = [
+  {label: tnp.ui.home | default("Home"), url: "/"},
+  {label: tnp.editionDate | dateDisplay, url: "/edition/" + tnp.editionDate + "/"},
+  {label: tnp.newspaperName, url: ""}
+] %}
+{% include "breadcrumb.njk" %}
+
+{% set switcherLangs = tnp.availableLangs %}
+{% set switcherCurrentLang = tnp.lang %}
+{% include "language-switcher.njk" %}
+
+{% set siblingNewspaperIds = tnp.allNewspaperIds %}
+{% set currentNewspaperId = tnp.newspaperId %}
+{% set siblingEditionDate = tnp.editionDate %}
+{% include "sibling-nav.njk" %}
+
+<a href="/edition/{{ tnp.editionDate }}/" class="back-link" aria-label="{{ tnp.ui.backToEdition | default('Back to edition overview') }}">&larr; {{ tnp.ui.backToEdition | default("Back to edition overview") }}</a>
+
+<div class="newspaper" data-persona="{{ tnp.newspaperId }}" style="{{ tnp.cssVars }}">
+
+  {% set mastheadName = tnp.newspaperName %}
+  {% set mastheadTagline = persona.tagline if persona else "" %}
+  {% set mastheadDate = tnp.editionDate %}
+  {% include "newspaper-masthead.njk" %}
+
+  {% if tnp.heroImageUrl %}
+    <figure class="newspaper__hero">
+      <img src="{{ tnp.heroImageUrl }}"
+           alt="{{ tnp.frontPageImagePrompt }}"
+           loading="eager"
+           decoding="async"
+           fetchpriority="high"
+           width="800"
+           height="450"
+           srcset="{{ tnp.heroImageUrl }} 800w"
+           sizes="(max-width: 800px) 100vw, 800px"
+           class="newspaper__hero-img">
+      <figcaption>{{ tnp.frontPageImagePrompt }}</figcaption>
+    </figure>
+  {% endif %}
+
+  <section id="articles" aria-labelledby="articles-heading">
+    <h2 id="articles-heading" class="section-label">
+      {{ tnp.ui.newspapers | default("Articles") }}
+      <a href="#articles" class="anchor-link" aria-label="Link to Articles section">#</a>
+    </h2>
+
+    <div class="newspaper-articles">
+      {% for article in tnp.articles %}
+        {% set previewArticle = article %}
+        {% set previewEditionDate = tnp.editionDate %}
+        {% set previewNewspaperId = tnp.newspaperId %}
+        {% set previewLangSuffix = tnp.lang %}
+        {% if loop.first %}
+          {% set previewIsLead = true %}
+          {% set previewTruncate = 80 %}
+        {% elif loop.index <= 3 %}
+          {% set previewIsLead = false %}
+          {% set previewTruncate = 50 %}
+        {% else %}
+          {% set previewIsLead = false %}
+          {% set previewTruncate = 30 %}
+        {% endif %}
+        {% include "article-preview-translated.njk" %}
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if tnp.inBrief.length %}
+    <section id="in-brief" class="in-brief" aria-labelledby="in-brief-heading">
+      <h2 id="in-brief-heading">
+        {{ tnp.ui.inBrief | default("In Brief") }}
+        <a href="#in-brief" class="anchor-link" aria-label="Link to In Brief section">#</a>
+      </h2>
+
+      {% for item in tnp.inBrief %}
+        <div class="in-brief-item">
+          <h3>{{ item.headline }}</h3>
+          <p>{{ item.summary }}</p>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  {% if tnp.editorsNote %}
+    <aside id="editors-note" class="editors-note" aria-label="{{ tnp.ui.editorsNote | default('Editor\'s note') }}">
+      <h2>
+        {{ tnp.ui.editorsNote | default("Editor's Note") }}
+        <a href="#editors-note" class="anchor-link" aria-label="Link to Editor's Note">#</a>
+      </h2>
+      <p>{{ tnp.editorsNote }}</p>
+    </aside>
+  {% endif %}
+
+  {% set siblingNewspaperIds = tnp.allNewspaperIds %}
+  {% set currentNewspaperId = tnp.newspaperId %}
+  {% set siblingEditionDate = tnp.editionDate %}
+  {% include "sibling-nav.njk" %}
+
+</div>

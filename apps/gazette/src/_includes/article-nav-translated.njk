@@ -1,0 +1,45 @@
+{# Translated article prev/next navigation
+   Same as article-nav.njk but with language suffix on URLs.
+   Expects:
+     - prevArticle, nextArticle, articleEditionDate, articleNewspaperId
+     - articleLangSuffix: language code for URL suffix
+#}
+
+<nav class="article-nav" aria-label="Article navigation">
+  <div class="article-nav__inner">
+
+    <div class="article-nav__prev">
+      {% if prevArticle %}
+        <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ prevArticle.slug }}/{{ articleLangSuffix }}/"
+           class="article-nav__link">
+          <span class="article-nav__arrow" aria-hidden="true">←</span>
+          <span class="article-nav__info">
+            <span class="article-nav__label">Previous</span>
+            <span class="article-nav__headline">{{ prevArticle.headline }}</span>
+          </span>
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="article-nav__center">
+      <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ articleLangSuffix }}/"
+         class="article-nav__back">
+        All articles
+      </a>
+    </div>
+
+    <div class="article-nav__next-col">
+      {% if nextArticle %}
+        <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ nextArticle.slug }}/{{ articleLangSuffix }}/"
+           class="article-nav__link article-nav__link--next">
+          <span class="article-nav__info">
+            <span class="article-nav__label">Next</span>
+            <span class="article-nav__headline">{{ nextArticle.headline }}</span>
+          </span>
+          <span class="article-nav__arrow" aria-hidden="true">→</span>
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+</nav>

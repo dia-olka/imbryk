@@ -26,6 +26,12 @@ eleventyComputed:
 ] %}
 {% include "breadcrumb.njk" %}
 
+{% if ap.availableLangs and ap.availableLangs.length > 1 %}
+{% set switcherLangs = ap.availableLangs %}
+{% set switcherCurrentLang = "en" %}
+{% include "language-switcher.njk" %}
+{% endif %}
+
 {# Article JSON-LD structured data #}
 <script type="application/ld+json">
 {

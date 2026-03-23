@@ -2,46 +2,87 @@
 
 ## Overview
 
-Translate gazette articles into additional languages using the [Azure Translator](https://learn.microsoft.com/en-us/azure/ai-services/translator/) free tier (2M characters/month). Translations are stored in R2 alongside editions, fetched by 11ty at build time, and rendered as static pages with a language prefix in the URL.
+Translate gazette articles into additional languages using a configurable translation provider (Azure Translator, DeepL, or Google Translate). The provider is selected at deploy time via environment variables, following the same Strategy pattern used throughout the codebase. Translations are stored in R2 alongside editions, fetched by 11ty at build time, and rendered as static pages with a language suffix in the URL.
 
 ## Language Tiers
 
 | Tier | What gets translated | Languages | Trigger | Budget source |
 |------|---------------------|-----------|---------|---------------|
-| **System** | Lead articles (top 1–2 per newspaper by cluster weight) — headline + body | All enabled system languages | Automatic, after each edition | Free tier (2M chars/month) |
-| **Paid** | Any article, any language | User-selected language | User pays for translation | Paid tier (deferred) |
+| **System** | All articles (headline + body + imageAlt) + world history timeline | All enabled system languages | Automatic, after each edition | Provider free tier / budget cap |
+| **Paid** | All articles, user-selected language | Subscriber-selected language | Monthly subscription via Stripe | Subscriber revenue |
 
 ### System Languages
 
-System languages are always translated for lead articles. Configured in `data/languages.json`. Chosen for audience size and purchasing power:
+System languages translate all articles automatically. Configured in `data/languages.json`. Chosen for audience size and purchasing power:
 
-| Code | Language | Speakers | Rationale |
-|------|----------|----------|-----------|
-| `es` | Spanish | 550M+ | Largest non-English internet audience, Latin America + Spain |
-| `fr` | French | 300M+ | West Africa + Europe + Canada, growing digital economy |
+| Code | Language | Dir | Speakers | Rationale |
+|------|----------|-----|----------|-----------|
+| `es` | Spanish | LTR | 550M+ | Largest non-English internet audience, Latin America + Spain |
+| `fr` | French | LTR | 300M+ | West Africa + Europe + Canada, growing digital economy |
+| `ar` | Arabic | RTL | 400M+ | MENA region, growing digital economy |
 
-**Two system languages fit the free tier.** With ~12 lead articles/day (2 per newspaper x 6 newspapers) at ~2,500 chars each:
+**Budget estimate** with 3 system languages, 2 leads per newspaper:
 
 ```
-12 articles × 2,500 chars × 2 languages = 60,000 chars/day
-60,000 × 30 days = 1,800,000 chars/month ✓ (under 2M limit)
+12 articles x 2,500 chars x 3 languages = 90,000 chars/day
+90,000 x 30 days = 2,700,000 chars/month
 ```
 
-Adding a third system language requires upgrading to the S1 paid tier ($10/M characters).
+This exceeds Azure's free tier (2M chars/month). Options: reduce to 1 lead per newspaper (1.35M/month, fits free tier), upgrade to S1 paid tier ($10/M chars), or mix providers. The budget tracker auto-throttles when the monthly cap is reached.
 
 ### Paid Languages (deferred)
 
-A future feature allowing users to pay for article translation into any supported Azure Translate language. The translation pipeline is identical — only the trigger differs (payment event instead of automatic). Design details deferred to a later phase.
+Users subscribe to a language via Stripe recurring billing (e.g. $3/month for German translations). When a language has active subscribers, the translation job translates **all** articles for that edition (not just leads). The translation provider and pipeline remain the same — only the scope changes.
+
+## Multi-Provider Architecture
+
+Translation uses the same Strategy pattern as image generation, LLM generation, and social channels.
+
+```
+TranslationStrategy (ABC)
+    |
+    +-- AzureTranslationClient   (azure.py)
+    +-- DeepLTranslationClient   (deepl.py, future)
+    +-- GoogleTranslationClient  (google.py, future)
+    +-- StubTranslationClient    (client.py, testing)
+```
+
+### Provider Selection
+
+The `TRANSLATION_PROVIDER` env var selects the backend. Provider-specific credentials are validated at startup.
+
+| Provider | Selection | Free tier |
+|----------|-----------|-----------|
+| Azure | `TRANSLATION_PROVIDER=azure` + `AZURE_TRANSLATOR_KEY` | 2M chars/month |
+| DeepL | `TRANSLATION_PROVIDER=deepl` + `DEEPL_API_KEY` | 500K chars/month |
+| Google | `TRANSLATION_PROVIDER=google` + `GOOGLE_TRANSLATE_KEY` | $10 credit, then $20/M chars |
+
+### Provider Batch Limits
+
+| Provider | Max texts/request | Max chars/request |
+|----------|-------------------|-------------------|
+| Azure | 25 | 50,000 |
+| DeepL | 50 | 128,000 |
+| Google | 1,024 | 30,000 codepoints |
+
+The orchestrator reads `max_batch_size` and `max_chars_per_request` from the strategy and chunks automatically.
 
 ## URL Scheme
 
-Language is part of the URL path. English (the original) has no prefix.
+Language is a **suffix** on the existing URL path. English (the original) has no suffix.
 
 | Language | Article URL |
 |----------|-------------|
 | English (default) | `/edition/2026-03-01/sovereign/my-article/` |
-| Spanish | `/es/edition/2026-03-01/sovereign/my-article/` |
-| French | `/fr/edition/2026-03-01/sovereign/my-article/` |
+| Spanish | `/edition/2026-03-01/sovereign/my-article/es/` |
+| Arabic | `/edition/2026-03-01/sovereign/my-article/ar/` |
+
+Newspaper pages follow the same pattern:
+
+| Language | Newspaper URL |
+|----------|---------------|
+| English | `/edition/2026-03-01/sovereign/` |
+| French | `/edition/2026-03-01/sovereign/fr/` |
 
 The language switcher on each article page renders `<a>` links pointing to the same article in other available languages. No JavaScript content swapping — each translation is a fully static HTML page generated by 11ty.
 
@@ -49,28 +90,39 @@ The language switcher on each article page renders `<a>` links pointing to the s
 
 Each translated page includes:
 
-- `<html lang="{code}">` attribute
+- `<html lang="{code}" dir="{ltr|rtl}">` attributes
 - `<link rel="alternate" hreflang="{code}" href="...">` for all available translations including English
 - `<link rel="alternate" hreflang="x-default" href="...">` pointing to the English version
 - `<meta property="og:locale" content="{locale}">` for social sharing
 
 Translated pages use `<link rel="canonical">` pointing to themselves (not to the English version), following Google's guidelines for translated content that is not duplicate content.
 
+### RTL Support
+
+For Arabic and any future RTL language:
+
+- `<html lang="ar" dir="rtl">` on translated pages
+- CSS `[dir="rtl"]` overrides for text alignment, flex-direction, margins/padding
+- `data/languages.json` includes a `"dir"` field per language (`"ltr"` or `"rtl"`)
+- Language switcher component reads `dir` from language config
+
 ## Translation Scope
 
-What gets translated per tier:
+System languages translate **all articles** for every newspaper in each edition, plus the world history timeline. Static pages (About, Policies) have hardcoded translations in `staticPageTranslations.js`. UI chrome uses static strings from `data/languages.json`.
 
-| Content | System tier (leads) | Paid tier (future) |
-|---------|--------------------|--------------------|
-| Article headline | Yes | Yes |
-| Article body | Yes | Yes |
-| Article image alt text | Yes | Yes |
-| In Brief items | No | Yes |
-| Editor's Note | No | Yes |
-| Curator synthesis | No | Yes |
-| UI chrome (nav, footer, labels) | Static strings in `data/languages.json` | Same |
+| Content | Translation method |
+|---------|-------------------|
+| Article headline | Translation API (daily, all articles) |
+| Article body | Translation API (daily, all articles) |
+| Article image alt text | Translation API (daily, all articles) |
+| World history timeline (epoch, synopsis, events) | Translation API (daily, written to `translations/_meta/timeline-{lang}.json`) |
+| Static pages (About, Policies) | Hardcoded in `staticPageTranslations.js` |
+| In Brief items | No (static UI strings cover labels) |
+| Editor's Note | No |
+| Curator synthesis | No |
+| UI chrome (nav, footer, labels) | Static strings in `data/languages.json` |
 
-UI chrome (navigation labels, date formats, "Read more", "Language", etc.) is translated once per language as static strings in the language config, not via Azure Translate.
+UI chrome (navigation labels, date formats, "Read more", "Language", etc.) is translated once per language as static strings in the language config, not via the translation provider.
 
 ## R2 Storage
 
@@ -78,29 +130,38 @@ Translations are stored as separate files alongside the English edition. This ke
 
 ```
 editions/
-  index.json                                  ← edition manifest (unchanged)
+  index.json                                  <- edition manifest (unchanged)
   2026-03-01/
-    yz-d2-001.json                            ← English original (unchanged)
+    yz-d2-001.json                            <- English original (unchanged)
     yz-d2-001/
       sovereign/
-        0.webp                                ← article image (unchanged)
-        hero.webp                             ← front-page image (unchanged)
+        0.webp                                <- article image (unchanged)
+        hero.webp                             <- front-page image (unchanged)
     translations/
       es/
-        yz-d2-001.json                        ← Spanish translations for leads
+        yz-d2-001.json                        <- Spanish article translations
       fr/
-        yz-d2-001.json                        ← French translations for leads
+        yz-d2-001.json                        <- French article translations
+      ar/
+        yz-d2-001.json                        <- Arabic article translations
+translations/
+  _meta/
+    timeline-es.json                          <- Spanish world history timeline
+    timeline-fr.json                          <- French world history timeline
+    timeline-ar.json                          <- Arabic world history timeline
+    usage-azure-2026-03.json                  <- budget tracking
 ```
 
 ### Translation JSON Schema
 
-Each translation file mirrors the edition structure but contains only translated articles:
+Each translation file mirrors the edition structure with all translated articles:
 
 ```json
 {
   "edition_id": "yz-d2-001",
   "date": "2026-03-01",
   "lang": "es",
+  "provider": "azure",
   "translated_at": "2026-03-01T07:30:00Z",
   "articles": {
     "sovereign": [
@@ -123,64 +184,71 @@ Each translation file mirrors the edition structure but contains only translated
 }
 ```
 
-Only lead articles (by cluster weight) are included in system-tier translation files. The `original_index` field links back to the article's position in the English edition JSON.
+The `provider` field records which translation backend produced the translations. All articles are included. The `original_index` field links back to the article's position in the English edition JSON.
 
 Images are **not** duplicated — translated pages reference the same image URLs as the English originals.
 
 ## Translation Pipeline
 
-A standalone script, decoupled from the newsroom-director critical path. Translation failures never block edition publishing.
+A Cloud Run Job (`JOB_MODE=translate`), decoupled from the newsroom-director critical path. Translation failures never block edition publishing.
 
 ```
 Edition published to R2
     |
     v
-Translation script (Cloud Run Job or local)
+Translation job (Cloud Run Job, ~07:00 UTC)
     |
-    1. List editions missing translations (compare index.json vs translations/)
-    2. For each (edition, language) pair:
-    |     a. Fetch English edition JSON from R2
-    |     b. Identify lead articles (top N by weight per newspaper)
-    |     c. Concatenate headline + body + imageAlt text
-    |     d. Call Azure Translator API (batch endpoint)
-    |     e. Write translation JSON to R2
-    3. Log character usage (track free tier budget)
+    1. Load system languages from data/languages.json
+    2. Load today's edition from DB
+    3. Extract all articles per newspaper (skip curator)
+    4. For each (edition, language) pair:
+    |     a. Check if translation already exists in R2
+    |     b. Check remaining budget
+    |     c. Batch texts (headline + body + imageAlt)
+    |     d. Call translator.translate_batch()
+    |     e. Write translation JSON to R2 (including provider name)
+    5. Translate world history timeline:
+    |     a. Load world ledger from DB (or fallback to initial world state)
+    |     b. For each language, translate epoch, synopsis, and all history events
+    |     c. Write to translations/_meta/timeline-{lang}.json
+    6. Update budget tracker
     |
     v
-R2 (translations available for next gazette build)
+Trigger gazette rebuild (deploy hook)
 ```
-
-### Azure Translate Integration
-
-- **Endpoint:** `api.cognitive.microsofttranslator.com/translate`
-- **Auth:** subscription key (`AZURE_TRANSLATOR_KEY` env var)
-- **Region:** `AZURE_TRANSLATOR_REGION` env var
-- **Batch mode:** send multiple text segments in one request (up to 25 segments or 50K chars per request)
-- **Rate limiting:** free tier allows 2M chars/month, track cumulative usage to avoid overages
-- **Error handling:** if translation fails for an article, skip it — partial translations are acceptable
 
 ### Budget Tracking
 
-The script tracks cumulative character usage per calendar month to stay within the free tier:
+The translation job tracks cumulative character usage per provider per calendar month:
 
 ```
 translations/
   _meta/
-    usage-2026-03.json    ← { "chars_used": 1_423_000, "month": "2026-03" }
+    usage-azure-2026-03.json
+    usage-deepl-2026-03.json
 ```
 
-Before translating, the script checks remaining budget. If a translation batch would exceed the limit, it logs a warning and skips.
+```json
+{
+  "provider": "azure",
+  "month": "2026-03",
+  "chars_used": 1423000,
+  "char_budget": 2000000
+}
+```
+
+Before translating, the job checks remaining budget. If a translation batch would exceed the limit, it logs a warning and skips. The `TRANSLATION_CHAR_BUDGET` env var overrides the default budget (useful when upgrading provider tiers).
 
 ## Backfill
 
-The same translation script handles backfill. When a new system language is added:
+The same translation job handles backfill via a `--backfill` flag. When a new system language is added:
 
 1. Add the language entry to `data/languages.json`
-2. Run the translation script with `--backfill` flag
-3. The script scans all editions in the R2 index, identifies missing translation files for the new language, and translates them
+2. Run the translation job with `--backfill` flag
+3. The job scans all editions in the R2 index, identifies missing translation files for the new language, and translates them
 4. Budget-aware: processes editions newest-first, stops when the monthly character budget is exhausted, resumes next month
 
-For a large backfill (many historical editions), the script can be run monthly until all editions are translated, or the S1 paid tier can be used temporarily.
+For a large backfill (many historical editions), the job can be run monthly until all editions are translated, or the provider budget can be increased temporarily.
 
 ## 11ty Integration (Gazette)
 
@@ -198,29 +266,32 @@ A new `translations.js` data file in `src/_data/` that:
 11ty generates translated article pages using pagination, similar to how `articlePages.js` works for English:
 
 - A new `translatedArticlePages.js` data file produces one entry per `(article, language)` pair
-- Each entry specifies `permalink: /{lang}/edition/{date}/{newspaper}/{slug}/`
+- Each entry specifies `permalink: /edition/{date}/{newspaper}/{slug}/{lang}/`
 - The template merges the translated headline/body with the original article's metadata (images, persona, date, navigation)
+
+Translated newspaper pages: `permalink: /edition/{date}/{newspaper}/{lang}/`
 
 ### Language Switcher Component
 
 A new `language-switcher.njk` include, rendered on every article page:
 
 - Lists all languages for which this article has a translation
-- English is always listed (links to the unprefixed URL)
+- English is always listed (links to the base URL without suffix)
 - Current language is visually indicated but not a link
 - Rendered as a `<nav aria-label="Language">` with a `<ul>` of links
-- Uses native language names ("Español", "Français") not English names
+- Uses native language names ("Español", "Français", "العربية") not English names
 
 ### Translated Article Template
 
 Translated pages reuse the existing `article.njk` layout with:
 
-- `<html lang="{code}">` instead of `en`
+- `<html lang="{code}" dir="{dir}">` instead of `en`
 - Translated headline and body
 - Original images (same URLs, translated `alt` text)
 - Original newspaper persona styling (colours, fonts)
 - `hreflang` alternate links in `<head>`
 - Date formatting respects the target locale
+- RTL CSS overrides applied when `dir="rtl"`
 
 ## Configuration
 
@@ -234,6 +305,7 @@ Translated pages reuse the existing `article.njk` layout with:
       "locale": "es_ES",
       "name": "Spanish",
       "nativeName": "Español",
+      "dir": "ltr",
       "dateLocale": "es-ES"
     },
     {
@@ -241,7 +313,16 @@ Translated pages reuse the existing `article.njk` layout with:
       "locale": "fr_FR",
       "name": "French",
       "nativeName": "Français",
+      "dir": "ltr",
       "dateLocale": "fr-FR"
+    },
+    {
+      "code": "ar",
+      "locale": "ar_SA",
+      "name": "Arabic",
+      "nativeName": "العربية",
+      "dir": "rtl",
+      "dateLocale": "ar-SA"
     }
   ],
   "ui": {
@@ -268,9 +349,20 @@ Translated pages reuse the existing `article.njk` layout with:
       "about": "À propos",
       "backToEdition": "Retour à l'édition",
       "publishedOn": "Publié le"
+    },
+    "ar": {
+      "readMore": "اقرأ المزيد",
+      "inBrief": "باختصار",
+      "editorsNote": "ملاحظة المحرر",
+      "language": "اللغة",
+      "home": "الرئيسية",
+      "archive": "الأرشيف",
+      "newspapers": "الصحف",
+      "about": "حول",
+      "backToEdition": "العودة إلى الإصدار",
+      "publishedOn": "نُشر في"
     }
   },
-  "leadsPerNewspaper": 2
 }
 ```
 
@@ -280,66 +372,81 @@ Adding a new system language = add an entry to `system` array + add UI strings +
 
 | Variable | Service | Purpose |
 |----------|---------|---------|
-| `AZURE_TRANSLATOR_KEY` | Translation script | Azure Translator subscription key |
-| `AZURE_TRANSLATOR_REGION` | Translation script | Azure region (e.g., `westeurope`) |
-| `TRANSLATION_ENABLED` | Translation script | Feature flag (default: `false`) |
-| `LEADS_PER_NEWSPAPER` | Translation script | Number of lead articles to translate per newspaper (default: 2, overrides `languages.json`) |
+| `TRANSLATION_ENABLED` | Translation job | Feature flag (default: `false`) |
+| `TRANSLATION_PROVIDER` | Translation job | Backend: `azure`, `deepl`, `google` (default: `azure`) |
+| `AZURE_TRANSLATOR_KEY` | Translation job | Azure Translator subscription key (when provider=azure) |
+| `AZURE_TRANSLATOR_REGION` | Translation job | Azure region (when provider=azure) |
+| `DEEPL_API_KEY` | Translation job | DeepL API key (when provider=deepl) |
+| `GOOGLE_TRANSLATE_KEY` | Translation job | Google Translate API key (when provider=google) |
+| `TRANSLATION_CHAR_BUDGET` | Translation job | Monthly character budget override (default: provider-specific) |
 
 ## Failure Behaviour
 
 | Failure | Behaviour |
 |---------|-----------|
-| Azure Translate API unavailable | Translation script exits with warning. No translations written. Gazette builds without translated pages — English-only, as before. |
+| Translation API unavailable | Translation job exits with warning. No translations written. Gazette builds without translated pages — English-only, as before. |
 | Translation fails for one article | Skip that article. Partial translation file is still written. Gazette renders available translations. |
 | Translation file missing in R2 | Gazette generates English page only. Language switcher omits that language. No error. |
-| Free tier budget exceeded | Script logs warning and stops. Remaining editions queued for next month. |
+| Budget exceeded | Job logs warning and stops. Remaining editions queued for next run / next month. |
 | Malformed translation JSON in R2 | Gazette validates with Zod (same pattern as editions). Invalid translations skipped with Sentry warning. |
+| Provider credentials missing | Job falls back to StubTranslationClient with warning. No real translations produced. |
 
 ## Cost
 
-| Component | Monthly (free tier) | Monthly (S1 paid tier) |
+| Component | Monthly (free tier) | Monthly (paid tier) |
 |-----------|--------------------|-----------------------|
-| Azure Translator (2 system languages, leads only) | $0 (within 2M chars) | — |
-| Azure Translator (3+ languages or all articles) | — | ~$10/M chars |
+| Azure Translator (2 languages, leads only) | $0 (within 2M chars) | — |
+| Azure Translator (3 languages, leads only) | ~$7 (2.7M chars at $10/M) | ~$7 |
+| DeepL (1 language, leads only) | $0 (within 500K chars) | — |
 | R2 storage (translation JSONs, ~1KB each) | $0 (negligible) | $0 |
-| Compute (translation script, ~30s/run) | ~$0 | ~$0 |
+| Compute (translation job, ~30s/run) | ~$0 | ~$0 |
 
 ## Implementation Phases
 
-### Phase A: Translation Script + R2 Storage
+### Phase A1: Translation Framework + Azure Provider
 
-- [ ] Create `data/languages.json` with initial system languages (Spanish, French)
-- [ ] Implement translation script (`scripts/translate_editions.py`):
-  - [ ] Fetch edition from R2, identify lead articles
-  - [ ] Call Azure Translator batch endpoint
-  - [ ] Write translation JSON to R2
-  - [ ] Budget tracking (chars used per month)
-  - [ ] `--backfill` mode for historical editions
-- [ ] Add `AZURE_TRANSLATOR_KEY` and `AZURE_TRANSLATOR_REGION` to secrets
-- [ ] Write tests (mock Azure API, R2 read/write, budget tracking)
+- [ ] Create `newsroom_director/translation/` package
+- [ ] Implement `TranslationStrategy` ABC + `StubTranslationClient` + `TranslationResult` (`client.py`)
+- [ ] Implement `AzureTranslationClient` (`azure.py`)
+- [ ] Implement `TranslationBudget` (`budget.py`)
+- [ ] Implement orchestrator `run_translation()` + `cli_main()` (`main.py`)
+- [ ] Add `JOB_MODE=translate` to `__main__.py`
+- [ ] Add translation env vars to `config.py`
+- [ ] Create `data/languages.json` (es, fr, ar + UI strings + dir)
+- [ ] `--backfill` mode for historical editions
+- [ ] Write tests (mock API, R2 read/write, budget tracking, pipeline orchestrator)
+
+### Phase A2: Additional Providers (when needed)
+
+- [ ] Implement `DeepLTranslationClient` (`deepl.py`)
+- [ ] Implement `GoogleTranslationClient` (`google.py`)
+- [ ] Provider-specific tests
 
 ### Phase B: Gazette Integration
 
 - [ ] Add `translations.js` data file — fetch translation JSONs from R2
-- [ ] Add `translatedArticlePages.js` — pagination data for translated pages
+- [ ] Add `translatedArticlePages.js` — suffix URL scheme (`/.../{lang}/`)
+- [ ] Add `translatedNewspaperPages.js`
 - [ ] Create `language-switcher.njk` component
 - [ ] Update `article.njk` — render `hreflang` links, include language switcher
-- [ ] Update `base.njk` — dynamic `lang` attribute, locale-aware `og:locale`
+- [ ] Update `base.njk` — dynamic `lang`/`dir` attributes, locale-aware `og:locale`
+- [ ] Add RTL CSS rules (`[dir="rtl"]` overrides)
 - [ ] Add locale-aware date formatting filters
 - [ ] Add Zod schema for translation JSON validation
-- [ ] Write tests (translated page generation, language switcher rendering, missing translations)
+- [ ] Write tests (translated page generation, language switcher, RTL rendering, missing translations)
 
 ### Phase C: Automation
 
-- [ ] Add Cloud Run Job for translation script (runs after morning press deploy hook)
-- [ ] Update `cd.yml` — deploy translation job, add secrets
-- [ ] Update `DEPLOYMENT.md` — Azure Translator setup, env vars, translation job scheduling
-- [ ] Chain: morning press → deploy hook → translation script → gazette rebuild
+- [ ] Add `newsroom-director-translate` Cloud Run Job to `cd.yml`
+- [ ] Add Cloud Scheduler (`0 7 * * *` UTC — between morning press and marketing)
+- [ ] Add translation secrets to GCP Secret Manager
+- [ ] Update `DEPLOYMENT.md` — translation job setup, env vars, scheduling
+- [ ] Chain: morning press (06:00) -> translate (07:00) -> marketing (08:00)
 
 ### Phase D: Paid Translations (deferred)
 
-- [ ] Design payment model (per-article, per-language)
-- [ ] Add translation request endpoint to ingestion-api
-- [ ] Integrate with Stripe for payment
-- [ ] On-demand translation trigger (skip waiting for batch)
-- [ ] Extend language switcher to show available paid languages
+- [ ] Add `translation_subscriptions` table (language, stripe_subscription_id, status)
+- [ ] Add subscription webhook handler to ingestion-api
+- [ ] Extend translation job: active subscribers -> translate ALL articles for that language
+- [ ] Stripe product: one product per language, recurring monthly billing
+- [ ] Extend gazette language switcher to show paid languages

@@ -68,3 +68,12 @@ GAZETTE_FALLBACK_URL = os.getenv("GAZETTE_FALLBACK_URL", "https://imbryk.news")
 ENABLE_READER_METRICS = os.getenv("ENABLE_READER_METRICS", "false").lower() == "true"
 CF_ANALYTICS_ZONE_ID = os.getenv("CF_ANALYTICS_ZONE_ID", "")
 CF_ANALYTICS_API_TOKEN = os.getenv("CF_ANALYTICS_API_TOKEN", "")
+
+# Translation — multi-provider article translation
+TRANSLATION_ENABLED = os.getenv("TRANSLATION_ENABLED", "false").lower() == "true"
+TRANSLATION_PROVIDER = os.getenv("TRANSLATION_PROVIDER", "azure")
+AZURE_TRANSLATOR_KEY = os.getenv("AZURE_TRANSLATOR_KEY", "")
+AZURE_TRANSLATOR_REGION = os.getenv("AZURE_TRANSLATOR_REGION", "")
+DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")
+GOOGLE_TRANSLATE_KEY = os.getenv("GOOGLE_TRANSLATE_KEY", "")
+TRANSLATION_CHAR_BUDGET = os.getenv("TRANSLATION_CHAR_BUDGET", "")  # empty = provider default
