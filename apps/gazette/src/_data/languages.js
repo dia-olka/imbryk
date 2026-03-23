@@ -9,7 +9,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * Returns { system: [...], ui: {...} } for use in templates.
  */
 export default function () {
-  const langPath = join(__dirname, '..', '..', '..', '..', 'data', 'languages.json');
+  const langPath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    'data',
+    'languages.json',
+  );
   try {
     const raw = readFileSync(langPath, 'utf-8');
     return JSON.parse(raw);

@@ -11,19 +11,14 @@
       "headline": "El Gran Colapso",
       "description": "Los mercados financieros mundiales se derrumban en cascada.",
       "impact": "Colapso del orden mundial basado en reglas.",
-      "sectors": [
-        "geopolitics",
-        "economy"
-      ]
+      "sectors": ["geopolitics", "economy"]
     },
     {
       "date": "2030-06-01",
       "headline": "Formación de los bloques de poder",
       "description": "Seis facciones emergen de las cenizas del viejo orden.",
       "impact": "Nuevo equilibrio multipolar.",
-      "sectors": [
-        "geopolitics"
-      ]
+      "sectors": ["geopolitics"]
     }
   ]
 }

@@ -38,7 +38,15 @@ const TranslationSchema = z.object({
  * Load language config from data/languages.json.
  */
 function loadLanguages() {
-  const langPath = join(__dirname, '..', '..', '..', '..', 'data', 'languages.json');
+  const langPath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    'data',
+    'languages.json',
+  );
   try {
     const raw = readFileSync(langPath, 'utf-8');
     return JSON.parse(raw);
@@ -77,7 +85,7 @@ export default async function () {
         if (!result.success) {
           console.warn(
             `Invalid translation JSON for ${edition.edition_id}/${lang.code}:`,
-            result.error.flatten()
+            result.error.flatten(),
           );
           continue;
         }
@@ -116,7 +124,10 @@ function loadFixtureTranslations() {
       const data = JSON.parse(raw);
       const result = TranslationSchema.safeParse(data);
       if (!result.success) {
-        console.warn(`Invalid fixture translation for ${lang.code}:`, result.error.flatten());
+        console.warn(
+          `Invalid fixture translation for ${lang.code}:`,
+          result.error.flatten(),
+        );
         continue;
       }
       // The fixture has a single edition_id — replicate it for all 3 dev editions

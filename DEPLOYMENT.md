@@ -49,12 +49,12 @@ You do not need to understand how these work internally. Just follow the steps t
 
 You will create accounts on four services. All have free tiers or trial credits.
 
-| Service          | What it's for                           | Cost to start                                                      |
-| ---------------- | --------------------------------------- | ------------------------------------------------------------------ |
-| **Google Cloud** | Runs the backend (API, database, AI)    | **Free — $300 credit for 90 days** (no charge until you use it up) |
-| **Cloudflare**   | Hosts the two websites and stores files | **Free** (the free plan covers everything Imbryk needs)            |
-| **Stripe**       | Processes payments from users           | **Free to set up** — Stripe charges per transaction (2.9% + 30¢)  |
-| **Tavily**       | Searches real-world news for gap filling| **Free tier: 1,000 API calls/month** (the News Scout uses ~60-90/day) |
+| Service          | What it's for                            | Cost to start                                                         |
+| ---------------- | ---------------------------------------- | --------------------------------------------------------------------- |
+| **Google Cloud** | Runs the backend (API, database, AI)     | **Free — $300 credit for 90 days** (no charge until you use it up)    |
+| **Cloudflare**   | Hosts the two websites and stores files  | **Free** (the free plan covers everything Imbryk needs)               |
+| **Stripe**       | Processes payments from users            | **Free to set up** — Stripe charges per transaction (2.9% + 30¢)      |
+| **Tavily**       | Searches real-world news for gap filling | **Free tier: 1,000 API calls/month** (the News Scout uses ~60-90/day) |
 
 You will need a credit or debit card for Google Cloud, but you will not be charged right away.
 
@@ -371,10 +371,10 @@ When you are ready to accept real money (not just test transactions):
 
 Go to **Secret Manager** in the Google Cloud Console and create two secrets:
 
-| Secret Name              | Value                              |
-| ------------------------ | ---------------------------------- |
-| `stripe-secret-key`      | Your Secret Key from Step 2.2      |
-| `stripe-webhook-secret`  | Your Webhook Signing Secret (2.5)  |
+| Secret Name             | Value                             |
+| ----------------------- | --------------------------------- |
+| `stripe-secret-key`     | Your Secret Key from Step 2.2     |
+| `stripe-webhook-secret` | Your Webhook Signing Secret (2.5) |
 
 > **Note:** Create the `stripe-webhook-secret` placeholder now (you can update its value after completing Step 2.5). Both secrets must exist in Secret Manager before deploying the Ingestion API.
 
@@ -639,20 +639,20 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 
 **Variables** (Settings > Variables > New repository variable):
 
-| Variable                 | Value                                                     | Example                                                                                  |
-| ------------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `GCP_PROJECT_ID`         | Your Google Cloud project ID                              | `imbryk-123456`                                                                          |
-| `GCP_WIF_PROVIDER`       | The full Workload Identity provider resource name         | `projects/123456/locations/global/workloadIdentityPools/github/providers/github-actions` |
-| `GCP_SERVICE_ACCOUNT`    | The service account email                                 | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com`                                  |
-| `GCP_REGION`             | Google Cloud region (optional, defaults to `us-central1`) | `us-central1`                                                                            |
-| `VERTEX_AI_LOCATION`     | Vertex AI region for Gemini models (optional, defaults to `global`) | `global`                                                                           |
-| `CATEGORISER_MODEL`      | Gemini model used to categorise prompts in ingestion-api  | `gemini-3.1-flash-lite-preview`                                                          |
-| `GENERATION_MODEL_PRO`   | Gemini Pro model for The Sovereign, The Owner, Curator, validation, and ledger mutation | `gemini-3.1-pro-preview`              |
-| `GENERATION_MODEL_FLASH` | Gemini Flash model for The Aspirant, The Moralist, The Radical, The Hedonist            | `gemini-3-flash-preview`              |
-| `IMAGE_GENERATION_MODEL` | Vertex AI Imagen model for article and hero images        | `imagen-4.0-generate-001`                                                             |
-| `IMAGE_GENERATION_LOCATION` | Region for Imagen (optional, defaults to `us-central1`; Imagen does not support `global`) | `us-central1`                                        |
-| `SENTRY_DSN`             | Sentry error tracking URL (leave empty to disable)        | `https://abc123@o0.ingest.sentry.io/0`                                                   |
-| `R2_PUBLIC_URL`          | Custom domain URL for the R2 bucket                       | `https://editions.yourdomain.com`                                                        |
+| Variable                    | Value                                                                                     | Example                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `GCP_PROJECT_ID`            | Your Google Cloud project ID                                                              | `imbryk-123456`                                                                          |
+| `GCP_WIF_PROVIDER`          | The full Workload Identity provider resource name                                         | `projects/123456/locations/global/workloadIdentityPools/github/providers/github-actions` |
+| `GCP_SERVICE_ACCOUNT`       | The service account email                                                                 | `imbryk-pipeline@imbryk-123456.iam.gserviceaccount.com`                                  |
+| `GCP_REGION`                | Google Cloud region (optional, defaults to `us-central1`)                                 | `us-central1`                                                                            |
+| `VERTEX_AI_LOCATION`        | Vertex AI region for Gemini models (optional, defaults to `global`)                       | `global`                                                                                 |
+| `CATEGORISER_MODEL`         | Gemini model used to categorise prompts in ingestion-api                                  | `gemini-3.1-flash-lite-preview`                                                          |
+| `GENERATION_MODEL_PRO`      | Gemini Pro model for The Sovereign, The Owner, Curator, validation, and ledger mutation   | `gemini-3.1-pro-preview`                                                                 |
+| `GENERATION_MODEL_FLASH`    | Gemini Flash model for The Aspirant, The Moralist, The Radical, The Hedonist              | `gemini-3-flash-preview`                                                                 |
+| `IMAGE_GENERATION_MODEL`    | Vertex AI Imagen model for article and hero images                                        | `imagen-4.0-generate-001`                                                                |
+| `IMAGE_GENERATION_LOCATION` | Region for Imagen (optional, defaults to `us-central1`; Imagen does not support `global`) | `us-central1`                                                                            |
+| `SENTRY_DSN`                | Sentry error tracking URL (leave empty to disable)                                        | `https://abc123@o0.ingest.sentry.io/0`                                                   |
+| `R2_PUBLIC_URL`             | Custom domain URL for the R2 bucket                                                       | `https://editions.yourdomain.com`                                                        |
 
 To find the full `GCP_WIF_PROVIDER` value:
 
@@ -1110,14 +1110,14 @@ The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, p
 
 ### What to Watch
 
-| Service               | What to check                               | Where                                                 |
-| --------------------- | ------------------------------------------- | ----------------------------------------------------- |
-| **API server**        | Is it responding? How fast? Any errors?     | Cloud Run > ingestion-api > Metrics tab               |
-| **Newsroom Director** | Did the daily job complete successfully?    | Cloud Run > Jobs > newsroom-director > Executions tab |
+| Service               | What to check                                | Where                                                           |
+| --------------------- | -------------------------------------------- | --------------------------------------------------------------- |
+| **API server**        | Is it responding? How fast? Any errors?      | Cloud Run > ingestion-api > Metrics tab                         |
+| **Newsroom Director** | Did the daily job complete successfully?     | Cloud Run > Jobs > newsroom-director > Executions tab           |
 | **Translation**       | Did translations complete? Budget remaining? | Cloud Run > Jobs > newsroom-director-translate > Executions tab |
-| **Database**          | How much storage is used? Is it connecting? | SQL > imbryk-db > Overview                            |
-| **AI usage**          | How many tokens are being used?             | Vertex AI > Dashboard                                 |
-| **File storage**      | Are edition files being written?            | Cloudflare R2 > imbryk-editions bucket                |
+| **Database**          | How much storage is used? Is it connecting?  | SQL > imbryk-db > Overview                                      |
+| **AI usage**          | How many tokens are being used?              | Vertex AI > Dashboard                                           |
+| **File storage**      | Are edition files being written?             | Cloudflare R2 > imbryk-editions bucket                          |
 
 ### Setting Up Email Alerts
 
@@ -1186,85 +1186,85 @@ These are all the configuration values used by the backend services. Most are st
 
 ### Ingestion API
 
-| Variable                | Storage | Default                        | What it is                                                          |
-| ----------------------- | ------- | ------------------------------ | ------------------------------------------------------------------- |
-| `DATABASE_URL`          | Secret  | —                              | PostgreSQL connection string                                        |
-| `STRIPE_SECRET_KEY`     | Secret  | —                              | Stripe secret API key (`sk_test_...` or `sk_live_...`)              |
-| `STRIPE_WEBHOOK_SECRET` | Secret  | —                              | Stripe webhook signing secret (`whsec_...`)                         |
-| `VERTEX_PROJECT`        | Env var | —                              | Your Google Cloud project ID                                        |
-| `VERTEX_LOCATION`       | Env var | `global`                       | Google Cloud region for Vertex AI                                   |
-| `CATEGORISER_MODEL`     | Env var | `gemini-3.1-flash-lite-preview`| Vertex AI model used to categorise prompts                          |
-| `CORS_ALLOWED_ORIGINS`  | Env var | `http://localhost:4200`        | Comma-separated list of allowed origins (set to your prompt UI URL) |
-| `RATE_LIMIT_QUOTE`      | Env var | `10/minute`                    | Rate limit on the `/prompts/quote` endpoint per IP                  |
-| `LOG_LEVEL`             | Env var | `INFO`                         | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                 |
-| `SENTRY_DSN`            | Env var | _(empty)_                      | Sentry error tracking URL — leave empty to disable                  |
+| Variable                | Storage | Default                         | What it is                                                          |
+| ----------------------- | ------- | ------------------------------- | ------------------------------------------------------------------- |
+| `DATABASE_URL`          | Secret  | —                               | PostgreSQL connection string                                        |
+| `STRIPE_SECRET_KEY`     | Secret  | —                               | Stripe secret API key (`sk_test_...` or `sk_live_...`)              |
+| `STRIPE_WEBHOOK_SECRET` | Secret  | —                               | Stripe webhook signing secret (`whsec_...`)                         |
+| `VERTEX_PROJECT`        | Env var | —                               | Your Google Cloud project ID                                        |
+| `VERTEX_LOCATION`       | Env var | `global`                        | Google Cloud region for Vertex AI                                   |
+| `CATEGORISER_MODEL`     | Env var | `gemini-3.1-flash-lite-preview` | Vertex AI model used to categorise prompts                          |
+| `CORS_ALLOWED_ORIGINS`  | Env var | `http://localhost:4200`         | Comma-separated list of allowed origins (set to your prompt UI URL) |
+| `RATE_LIMIT_QUOTE`      | Env var | `10/minute`                     | Rate limit on the `/prompts/quote` endpoint per IP                  |
+| `LOG_LEVEL`             | Env var | `INFO`                          | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                 |
+| `SENTRY_DSN`            | Env var | _(empty)_                       | Sentry error tracking URL — leave empty to disable                  |
 
 ### Newsroom Director
 
-| Variable                      | Storage | Default                      | What it is                                                                                                        |
-| ----------------------------- | ------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                | Secret  | —                            | PostgreSQL connection string                                                                                      |
-| `R2_ACCOUNT_ID`               | Secret  | —                            | Your Cloudflare account ID                                                                                        |
-| `R2_ACCESS_KEY_ID`            | Secret  | —                            | R2 API access key ID                                                                                              |
-| `R2_SECRET_ACCESS_KEY`        | Secret  | —                            | R2 API secret key                                                                                                 |
-| `CF_DEPLOY_HOOK_URL`          | Secret  | —                            | Cloudflare Pages deploy hook URL — triggers gazette rebuild after each edition                                    |
-| `TAVILY_API_KEY`              | Secret  | —                            | Tavily API key for News Scout web searches                                                                        |
-| `VERTEX_AI_PROJECT`           | Env var | —                            | Your Google Cloud project ID                                                                                      |
-| `VERTEX_AI_LOCATION`          | Env var | `global`                     | Google Cloud region for Gemini text generation models                                                             |
-| `IMAGE_GENERATION_LOCATION`   | Env var | `us-central1`                | Google Cloud region for Imagen image generation (Imagen does not support `global`)                                |
-| `GENERATION_MODEL_PRO`        | Env var | `gemini-3.1-pro-preview`     | Gemini model used for Pro-tier newspapers (The Sovereign, The Owner, Curator, validation, ledger mutation)        |
-| `GENERATION_MODEL_FLASH`      | Env var | `gemini-3-flash-preview`     | Gemini model used for Flash-tier newspapers (The Aspirant, The Moralist, The Radical, The Hedonist)              |
-| `IMAGE_GENERATION_MODEL`      | Env var | `imagen-4.0-generate-001` | Vertex AI Imagen model for article and hero images                                                                |
-| `R2_BUCKET_NAME`              | Env var | `imbryk-editions`            | R2 bucket where editions and images are stored                                                                    |
-| `R2_PUBLIC_URL`               | Env var | _(empty)_                    | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to build public image URLs   |
-| `ENABLE_IMAGES`               | Env var | `true`                       | Set to `false` to skip Imagen calls (useful when testing)                                                         |
-| `ENABLE_VALIDATION`           | Env var | `true`                       | Set to `false` to skip world-coherence validation of prompts                                                      |
-| `TOTAL_BUDGET_TOKENS`         | Env var | `800000`                     | Total AI token budget allocated across all topic clusters per newspaper                                           |
-| `MAX_CLUSTERS`                | Env var | `30`                         | Maximum number of topic clusters per newspaper before low-weight ones are merged                                  |
-| `MAX_BACKFILL_IMAGES_PER_RUN` | Env var | `20`                         | Max images to generate during the end-of-run backfill step for previously failed image generations                |
-| `NEWS_SCOUT_ENABLED`          | Env var | `true`                       | Set to `false` to disable the News Scout (no real-world news gap filling)                                         |
-| `TOPIC_RESEARCH_ENABLED`      | Env var | `false`                      | Enable Topic Research — transforms paid user prompts into Tavily news searches before distillation. Requires `TAVILY_API_KEY`. See [Enabling Topic Research](#enabling-topic-research). |
-| `TOPIC_RESEARCH_MAX_QUERIES`  | Env var | `3`                          | Maximum Tavily search queries generated per user prompt when Topic Research is enabled. Higher values improve coverage at the cost of more Tavily credits. |
-| `TOPIC_RESEARCH_MAX_RETRIES`  | Env var | `1`                          | Maximum number of pipeline runs a prompt can be retried if topic research yields no results. After this many failed attempts, the prompt is marked as processed and skipped. |
-| `TAVILY_RPM`                  | Env var | `99`                         | Maximum Tavily API requests per minute                                                                            |
-| `TAVILY_MONTHLY_LIMIT`        | Env var | `999`                        | Maximum Tavily API requests per month. **Production note:** the counter is stored in `/tmp` and resets on each Cloud Run container start, so this does not enforce a hard monthly cap in production. Use Tavily's own dashboard alerts for billing protection.                                                           |
-| `TAVILY_SEARCH_DEPTH`         | Env var | `basic`                      | Tavily search depth: `basic` (1 credit/query) or `advanced` (2 credits/query). Use `basic` to stay within the free-tier 1,000 credits/month budget. |
-| `TAVILY_MAX_QUERIES_PER_CATEGORY` | Env var | `1`                     | Maximum search queries per taxonomy category per News Scout run. Default `1` yields 30 queries/day (30 categories × 1). Set to `2` or `3` if your Tavily plan allows more credits. |
-| `NEWS_ITEM_BASE_WEIGHT`       | Env var | `0.3`                        | Priority weight for news items in distillation (user prompts are 0.5–1.0+)                                       |
-| `NEWS_MUTATES_LEDGER`         | Env var | `true`                       | Whether news-only editions update the WorldLedger (set `true` at launch so the world evolves even with no users) |
-| `ENABLE_EDITORIAL_JOURNAL`    | Env var | `true`                       | Enable Editorial Journal — each AI editor reflects on its output and writes notes for future runs                 |
-| `JOURNAL_LOOKBACK_DAYS`       | Env var | `7`                          | Number of past days of journal entries to load into the generation prompt                                          |
-| `ENABLE_READER_METRICS`       | Env var | `false`                      | Enable Reader Metrics — fetch Cloudflare page-view data and feed into editorial reflections                       |
-| `CF_ANALYTICS_ZONE_ID`        | Secret  | —                            | Cloudflare Zone ID for the gazette domain (required when `ENABLE_READER_METRICS=true`; see Step 3.4b)            |
-| `CF_ANALYTICS_API_TOKEN`      | Secret  | —                            | Cloudflare API token with `Analytics:Read` permission (required when `ENABLE_READER_METRICS=true`; see Step 3.4b)|
-| `MARKETING_ENABLED`           | Env var | `false`                      | Enable the Marketing Agent — set to `true` on the `newsroom-director-marketing` job                              |
-| `BLUESKY_HANDLE`              | Env var | _(empty)_                    | Bluesky account handle (e.g. `imbryk-gazette.bsky.social`) for the marketing agent                                       |
-| `BLUESKY_APP_PASSWORD`        | Secret  | —                            | Bluesky App Password for the marketing agent (generate at bsky.app Settings > App Passwords)                     |
-| `TRANSLATION_ENABLED`         | Env var | `false`                      | Enable the Translation job — set to `true` on the `newsroom-director-translate` job                               |
-| `TRANSLATION_PROVIDER`        | Env var | `azure`                      | Translation backend: `azure`, `deepl`, or `google` (only `azure` is currently implemented)                        |
-| `AZURE_TRANSLATOR_KEY`        | Secret  | —                            | Azure Translator subscription key (required when `TRANSLATION_PROVIDER=azure`)                                    |
-| `AZURE_TRANSLATOR_REGION`     | Env var | _(empty)_                    | Azure region for the Translator resource (e.g. `eastus`; required when `TRANSLATION_PROVIDER=azure`)              |
-| `TRANSLATION_CHAR_BUDGET`     | Env var | _(provider default)_         | Monthly character budget override — auto-throttles when reached. Leave empty to use the provider's default limit   |
-| `LOG_LEVEL`                   | Env var | `INFO`                       | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                               |
-| `SENTRY_DSN`                  | Env var | _(empty)_                    | Sentry error tracking URL — leave empty to disable                                                                |
+| Variable                          | Storage | Default                   | What it is                                                                                                                                                                                                                                                     |
+| --------------------------------- | ------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                    | Secret  | —                         | PostgreSQL connection string                                                                                                                                                                                                                                   |
+| `R2_ACCOUNT_ID`                   | Secret  | —                         | Your Cloudflare account ID                                                                                                                                                                                                                                     |
+| `R2_ACCESS_KEY_ID`                | Secret  | —                         | R2 API access key ID                                                                                                                                                                                                                                           |
+| `R2_SECRET_ACCESS_KEY`            | Secret  | —                         | R2 API secret key                                                                                                                                                                                                                                              |
+| `CF_DEPLOY_HOOK_URL`              | Secret  | —                         | Cloudflare Pages deploy hook URL — triggers gazette rebuild after each edition                                                                                                                                                                                 |
+| `TAVILY_API_KEY`                  | Secret  | —                         | Tavily API key for News Scout web searches                                                                                                                                                                                                                     |
+| `VERTEX_AI_PROJECT`               | Env var | —                         | Your Google Cloud project ID                                                                                                                                                                                                                                   |
+| `VERTEX_AI_LOCATION`              | Env var | `global`                  | Google Cloud region for Gemini text generation models                                                                                                                                                                                                          |
+| `IMAGE_GENERATION_LOCATION`       | Env var | `us-central1`             | Google Cloud region for Imagen image generation (Imagen does not support `global`)                                                                                                                                                                             |
+| `GENERATION_MODEL_PRO`            | Env var | `gemini-3.1-pro-preview`  | Gemini model used for Pro-tier newspapers (The Sovereign, The Owner, Curator, validation, ledger mutation)                                                                                                                                                     |
+| `GENERATION_MODEL_FLASH`          | Env var | `gemini-3-flash-preview`  | Gemini model used for Flash-tier newspapers (The Aspirant, The Moralist, The Radical, The Hedonist)                                                                                                                                                            |
+| `IMAGE_GENERATION_MODEL`          | Env var | `imagen-4.0-generate-001` | Vertex AI Imagen model for article and hero images                                                                                                                                                                                                             |
+| `R2_BUCKET_NAME`                  | Env var | `imbryk-editions`         | R2 bucket where editions and images are stored                                                                                                                                                                                                                 |
+| `R2_PUBLIC_URL`                   | Env var | _(empty)_                 | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to build public image URLs                                                                                                                                                 |
+| `ENABLE_IMAGES`                   | Env var | `true`                    | Set to `false` to skip Imagen calls (useful when testing)                                                                                                                                                                                                      |
+| `ENABLE_VALIDATION`               | Env var | `true`                    | Set to `false` to skip world-coherence validation of prompts                                                                                                                                                                                                   |
+| `TOTAL_BUDGET_TOKENS`             | Env var | `800000`                  | Total AI token budget allocated across all topic clusters per newspaper                                                                                                                                                                                        |
+| `MAX_CLUSTERS`                    | Env var | `30`                      | Maximum number of topic clusters per newspaper before low-weight ones are merged                                                                                                                                                                               |
+| `MAX_BACKFILL_IMAGES_PER_RUN`     | Env var | `20`                      | Max images to generate during the end-of-run backfill step for previously failed image generations                                                                                                                                                             |
+| `NEWS_SCOUT_ENABLED`              | Env var | `true`                    | Set to `false` to disable the News Scout (no real-world news gap filling)                                                                                                                                                                                      |
+| `TOPIC_RESEARCH_ENABLED`          | Env var | `false`                   | Enable Topic Research — transforms paid user prompts into Tavily news searches before distillation. Requires `TAVILY_API_KEY`. See [Enabling Topic Research](#enabling-topic-research).                                                                        |
+| `TOPIC_RESEARCH_MAX_QUERIES`      | Env var | `3`                       | Maximum Tavily search queries generated per user prompt when Topic Research is enabled. Higher values improve coverage at the cost of more Tavily credits.                                                                                                     |
+| `TOPIC_RESEARCH_MAX_RETRIES`      | Env var | `1`                       | Maximum number of pipeline runs a prompt can be retried if topic research yields no results. After this many failed attempts, the prompt is marked as processed and skipped.                                                                                   |
+| `TAVILY_RPM`                      | Env var | `99`                      | Maximum Tavily API requests per minute                                                                                                                                                                                                                         |
+| `TAVILY_MONTHLY_LIMIT`            | Env var | `999`                     | Maximum Tavily API requests per month. **Production note:** the counter is stored in `/tmp` and resets on each Cloud Run container start, so this does not enforce a hard monthly cap in production. Use Tavily's own dashboard alerts for billing protection. |
+| `TAVILY_SEARCH_DEPTH`             | Env var | `basic`                   | Tavily search depth: `basic` (1 credit/query) or `advanced` (2 credits/query). Use `basic` to stay within the free-tier 1,000 credits/month budget.                                                                                                            |
+| `TAVILY_MAX_QUERIES_PER_CATEGORY` | Env var | `1`                       | Maximum search queries per taxonomy category per News Scout run. Default `1` yields 30 queries/day (30 categories × 1). Set to `2` or `3` if your Tavily plan allows more credits.                                                                             |
+| `NEWS_ITEM_BASE_WEIGHT`           | Env var | `0.3`                     | Priority weight for news items in distillation (user prompts are 0.5–1.0+)                                                                                                                                                                                     |
+| `NEWS_MUTATES_LEDGER`             | Env var | `true`                    | Whether news-only editions update the WorldLedger (set `true` at launch so the world evolves even with no users)                                                                                                                                               |
+| `ENABLE_EDITORIAL_JOURNAL`        | Env var | `true`                    | Enable Editorial Journal — each AI editor reflects on its output and writes notes for future runs                                                                                                                                                              |
+| `JOURNAL_LOOKBACK_DAYS`           | Env var | `7`                       | Number of past days of journal entries to load into the generation prompt                                                                                                                                                                                      |
+| `ENABLE_READER_METRICS`           | Env var | `false`                   | Enable Reader Metrics — fetch Cloudflare page-view data and feed into editorial reflections                                                                                                                                                                    |
+| `CF_ANALYTICS_ZONE_ID`            | Secret  | —                         | Cloudflare Zone ID for the gazette domain (required when `ENABLE_READER_METRICS=true`; see Step 3.4b)                                                                                                                                                          |
+| `CF_ANALYTICS_API_TOKEN`          | Secret  | —                         | Cloudflare API token with `Analytics:Read` permission (required when `ENABLE_READER_METRICS=true`; see Step 3.4b)                                                                                                                                              |
+| `MARKETING_ENABLED`               | Env var | `false`                   | Enable the Marketing Agent — set to `true` on the `newsroom-director-marketing` job                                                                                                                                                                            |
+| `BLUESKY_HANDLE`                  | Env var | _(empty)_                 | Bluesky account handle (e.g. `imbryk-gazette.bsky.social`) for the marketing agent                                                                                                                                                                             |
+| `BLUESKY_APP_PASSWORD`            | Secret  | —                         | Bluesky App Password for the marketing agent (generate at bsky.app Settings > App Passwords)                                                                                                                                                                   |
+| `TRANSLATION_ENABLED`             | Env var | `false`                   | Enable the Translation job — set to `true` on the `newsroom-director-translate` job                                                                                                                                                                            |
+| `TRANSLATION_PROVIDER`            | Env var | `azure`                   | Translation backend: `azure`, `deepl`, or `google` (only `azure` is currently implemented)                                                                                                                                                                     |
+| `AZURE_TRANSLATOR_KEY`            | Secret  | —                         | Azure Translator subscription key (required when `TRANSLATION_PROVIDER=azure`)                                                                                                                                                                                 |
+| `AZURE_TRANSLATOR_REGION`         | Env var | _(empty)_                 | Azure region for the Translator resource (e.g. `eastus`; required when `TRANSLATION_PROVIDER=azure`)                                                                                                                                                           |
+| `TRANSLATION_CHAR_BUDGET`         | Env var | _(provider default)_      | Monthly character budget override — auto-throttles when reached. Leave empty to use the provider's default limit                                                                                                                                               |
+| `LOG_LEVEL`                       | Env var | `INFO`                    | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                                                                                                                                                                            |
+| `SENTRY_DSN`                      | Env var | _(empty)_                 | Sentry error tracking URL — leave empty to disable                                                                                                                                                                                                             |
 
 ### Prompt UI (Cloudflare Pages)
 
-| Variable           | Default                           | What it is                                                              |
-| ------------------ | --------------------------------- | ----------------------------------------------------------------------- |
-| `NODE_VERSION`     | —                                 | Node.js version to use for the build (set to `20`)                      |
-| `VITE_API_URL`     | —                                 | URL of your deployed Ingestion API (e.g. `https://api.yourdomain.com`)  |
-| `VITE_APP_URL`     | `https://whisper.imbryk.news`        | The prompt UI's own public URL — used in meta tags and redirects        |
-| `VITE_GAZETTE_URL` | `https://imbryk.news`| URL of the gazette — linked from the confirmation screen                |
-| `VITE_SENTRY_DSN`  | _(empty)_                         | Sentry error tracking URL — leave empty to disable                      |
+| Variable           | Default                       | What it is                                                             |
+| ------------------ | ----------------------------- | ---------------------------------------------------------------------- |
+| `NODE_VERSION`     | —                             | Node.js version to use for the build (set to `20`)                     |
+| `VITE_API_URL`     | —                             | URL of your deployed Ingestion API (e.g. `https://api.yourdomain.com`) |
+| `VITE_APP_URL`     | `https://whisper.imbryk.news` | The prompt UI's own public URL — used in meta tags and redirects       |
+| `VITE_GAZETTE_URL` | `https://imbryk.news`         | URL of the gazette — linked from the confirmation screen               |
+| `VITE_SENTRY_DSN`  | _(empty)_                     | Sentry error tracking URL — leave empty to disable                     |
 
 ### Gazette (Cloudflare Pages)
 
-| Variable          | Default                           | What it is                                                                                                                |
-| ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_VERSION`    | —                                 | Node.js version to use for the build (set to `20`)                                                                        |
-| `R2_PUBLIC_URL`   | _(empty)_                         | Custom domain URL of the R2 bucket — when set, the gazette fetches live editions from R2 instead of the local fixture     |
-| `GAZETTE_URL`     | `https://imbryk.news`| The gazette's own public URL — used in canonical links and the sitemap                                                    |
-| `IMBRYK_APP_URL`  | `https://whisper.imbryk.news`        | URL of the prompt UI — used in the "Submit a prompt" call-to-action link                                                  |
-| `CF_WEB_ANALYTICS_TOKEN` | _(empty)_                  | Cloudflare Web Analytics beacon token — enables privacy-first reader tracking when set (see Step 3.7)                     |
-| `SENTRY_DSN`      | _(empty)_                         | Sentry error tracking URL — leave empty to disable                                                                        |
+| Variable                 | Default                       | What it is                                                                                                            |
+| ------------------------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `NODE_VERSION`           | —                             | Node.js version to use for the build (set to `20`)                                                                    |
+| `R2_PUBLIC_URL`          | _(empty)_                     | Custom domain URL of the R2 bucket — when set, the gazette fetches live editions from R2 instead of the local fixture |
+| `GAZETTE_URL`            | `https://imbryk.news`         | The gazette's own public URL — used in canonical links and the sitemap                                                |
+| `IMBRYK_APP_URL`         | `https://whisper.imbryk.news` | URL of the prompt UI — used in the "Submit a prompt" call-to-action link                                              |
+| `CF_WEB_ANALYTICS_TOKEN` | _(empty)_                     | Cloudflare Web Analytics beacon token — enables privacy-first reader tracking when set (see Step 3.7)                 |
+| `SENTRY_DSN`             | _(empty)_                     | Sentry error tracking URL — leave empty to disable                                                                    |

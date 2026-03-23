@@ -13,7 +13,7 @@ env:
 
 permissions:
   contents: read
-  id-token: write  # Required for Workload Identity Federation
+  id-token: write # Required for Workload Identity Federation
 
 jobs:
   # Only run if CI succeeded
@@ -284,4 +284,3 @@ jobs:
           DATABASE_URL=database-url:latest,\
           CF_ANALYTICS_ZONE_ID=cf-analytics-zone-id:latest,\
           CF_ANALYTICS_API_TOKEN=cf-analytics-api-token:latest
-

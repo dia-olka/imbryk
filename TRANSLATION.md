@@ -6,20 +6,20 @@ Translate gazette articles into additional languages using a configurable transl
 
 ## Language Tiers
 
-| Tier | What gets translated | Languages | Trigger | Budget source |
-|------|---------------------|-----------|---------|---------------|
-| **System** | All articles (headline + body + imageAlt) + world history timeline | All enabled system languages | Automatic, after each edition | Provider free tier / budget cap |
-| **Paid** | All articles, user-selected language | Subscriber-selected language | Monthly subscription via Stripe | Subscriber revenue |
+| Tier       | What gets translated                                               | Languages                    | Trigger                         | Budget source                   |
+| ---------- | ------------------------------------------------------------------ | ---------------------------- | ------------------------------- | ------------------------------- |
+| **System** | All articles (headline + body + imageAlt) + world history timeline | All enabled system languages | Automatic, after each edition   | Provider free tier / budget cap |
+| **Paid**   | All articles, user-selected language                               | Subscriber-selected language | Monthly subscription via Stripe | Subscriber revenue              |
 
 ### System Languages
 
 System languages translate all articles automatically. Configured in `data/languages.json`. Chosen for audience size and purchasing power:
 
-| Code | Language | Dir | Speakers | Rationale |
-|------|----------|-----|----------|-----------|
-| `es` | Spanish | LTR | 550M+ | Largest non-English internet audience, Latin America + Spain |
-| `fr` | French | LTR | 300M+ | West Africa + Europe + Canada, growing digital economy |
-| `ar` | Arabic | RTL | 400M+ | MENA region, growing digital economy |
+| Code | Language | Dir | Speakers | Rationale                                                    |
+| ---- | -------- | --- | -------- | ------------------------------------------------------------ |
+| `es` | Spanish  | LTR | 550M+    | Largest non-English internet audience, Latin America + Spain |
+| `fr` | French   | LTR | 300M+    | West Africa + Europe + Canada, growing digital economy       |
+| `ar` | Arabic   | RTL | 400M+    | MENA region, growing digital economy                         |
 
 **Budget estimate** with 3 system languages, 2 leads per newspaper:
 
@@ -51,19 +51,19 @@ TranslationStrategy (ABC)
 
 The `TRANSLATION_PROVIDER` env var selects the backend. Provider-specific credentials are validated at startup.
 
-| Provider | Selection | Free tier |
-|----------|-----------|-----------|
-| Azure | `TRANSLATION_PROVIDER=azure` + `AZURE_TRANSLATOR_KEY` | 2M chars/month |
-| DeepL | `TRANSLATION_PROVIDER=deepl` + `DEEPL_API_KEY` | 500K chars/month |
-| Google | `TRANSLATION_PROVIDER=google` + `GOOGLE_TRANSLATE_KEY` | $10 credit, then $20/M chars |
+| Provider | Selection                                              | Free tier                    |
+| -------- | ------------------------------------------------------ | ---------------------------- |
+| Azure    | `TRANSLATION_PROVIDER=azure` + `AZURE_TRANSLATOR_KEY`  | 2M chars/month               |
+| DeepL    | `TRANSLATION_PROVIDER=deepl` + `DEEPL_API_KEY`         | 500K chars/month             |
+| Google   | `TRANSLATION_PROVIDER=google` + `GOOGLE_TRANSLATE_KEY` | $10 credit, then $20/M chars |
 
 ### Provider Batch Limits
 
 | Provider | Max texts/request | Max chars/request |
-|----------|-------------------|-------------------|
-| Azure | 25 | 50,000 |
-| DeepL | 50 | 128,000 |
-| Google | 1,024 | 30,000 codepoints |
+| -------- | ----------------- | ----------------- |
+| Azure    | 25                | 50,000            |
+| DeepL    | 50                | 128,000           |
+| Google   | 1,024             | 30,000 codepoints |
 
 The orchestrator reads `max_batch_size` and `max_chars_per_request` from the strategy and chunks automatically.
 
@@ -71,18 +71,18 @@ The orchestrator reads `max_batch_size` and `max_chars_per_request` from the str
 
 Language is a **suffix** on the existing URL path. English (the original) has no suffix.
 
-| Language | Article URL |
-|----------|-------------|
-| English (default) | `/edition/2026-03-01/sovereign/my-article/` |
-| Spanish | `/edition/2026-03-01/sovereign/my-article/es/` |
-| Arabic | `/edition/2026-03-01/sovereign/my-article/ar/` |
+| Language          | Article URL                                    |
+| ----------------- | ---------------------------------------------- |
+| English (default) | `/edition/2026-03-01/sovereign/my-article/`    |
+| Spanish           | `/edition/2026-03-01/sovereign/my-article/es/` |
+| Arabic            | `/edition/2026-03-01/sovereign/my-article/ar/` |
 
 Newspaper pages follow the same pattern:
 
-| Language | Newspaper URL |
-|----------|---------------|
-| English | `/edition/2026-03-01/sovereign/` |
-| French | `/edition/2026-03-01/sovereign/fr/` |
+| Language | Newspaper URL                       |
+| -------- | ----------------------------------- |
+| English  | `/edition/2026-03-01/sovereign/`    |
+| French   | `/edition/2026-03-01/sovereign/fr/` |
 
 The language switcher on each article page renders `<a>` links pointing to the same article in other available languages. No JavaScript content swapping — each translation is a fully static HTML page generated by 11ty.
 
@@ -110,17 +110,17 @@ For Arabic and any future RTL language:
 
 System languages translate **all articles** for every newspaper in each edition, plus the world history timeline. Static pages (About, Policies) have hardcoded translations in `staticPageTranslations.js`. UI chrome uses static strings from `data/languages.json`.
 
-| Content | Translation method |
-|---------|-------------------|
-| Article headline | Translation API (daily, all articles) |
-| Article body | Translation API (daily, all articles) |
-| Article image alt text | Translation API (daily, all articles) |
+| Content                                          | Translation method                                                            |
+| ------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Article headline                                 | Translation API (daily, all articles)                                         |
+| Article body                                     | Translation API (daily, all articles)                                         |
+| Article image alt text                           | Translation API (daily, all articles)                                         |
 | World history timeline (epoch, synopsis, events) | Translation API (daily, written to `translations/_meta/timeline-{lang}.json`) |
-| Static pages (About, Policies) | Hardcoded in `staticPageTranslations.js` |
-| In Brief items | No (static UI strings cover labels) |
-| Editor's Note | No |
-| Curator synthesis | No |
-| UI chrome (nav, footer, labels) | Static strings in `data/languages.json` |
+| Static pages (About, Policies)                   | Hardcoded in `staticPageTranslations.js`                                      |
+| In Brief items                                   | No (static UI strings cover labels)                                           |
+| Editor's Note                                    | No                                                                            |
+| Curator synthesis                                | No                                                                            |
+| UI chrome (nav, footer, labels)                  | Static strings in `data/languages.json`                                       |
 
 UI chrome (navigation labels, date formats, "Read more", "Language", etc.) is translated once per language as static strings in the language config, not via the translation provider.
 
@@ -362,7 +362,7 @@ Translated pages reuse the existing `article.njk` layout with:
       "backToEdition": "العودة إلى الإصدار",
       "publishedOn": "نُشر في"
     }
-  },
+  }
 }
 ```
 
@@ -370,36 +370,36 @@ Adding a new system language = add an entry to `system` array + add UI strings +
 
 ### Environment Variables
 
-| Variable | Service | Purpose |
-|----------|---------|---------|
-| `TRANSLATION_ENABLED` | Translation job | Feature flag (default: `false`) |
-| `TRANSLATION_PROVIDER` | Translation job | Backend: `azure`, `deepl`, `google` (default: `azure`) |
-| `AZURE_TRANSLATOR_KEY` | Translation job | Azure Translator subscription key (when provider=azure) |
-| `AZURE_TRANSLATOR_REGION` | Translation job | Azure region (when provider=azure) |
-| `DEEPL_API_KEY` | Translation job | DeepL API key (when provider=deepl) |
-| `GOOGLE_TRANSLATE_KEY` | Translation job | Google Translate API key (when provider=google) |
+| Variable                  | Service         | Purpose                                                        |
+| ------------------------- | --------------- | -------------------------------------------------------------- |
+| `TRANSLATION_ENABLED`     | Translation job | Feature flag (default: `false`)                                |
+| `TRANSLATION_PROVIDER`    | Translation job | Backend: `azure`, `deepl`, `google` (default: `azure`)         |
+| `AZURE_TRANSLATOR_KEY`    | Translation job | Azure Translator subscription key (when provider=azure)        |
+| `AZURE_TRANSLATOR_REGION` | Translation job | Azure region (when provider=azure)                             |
+| `DEEPL_API_KEY`           | Translation job | DeepL API key (when provider=deepl)                            |
+| `GOOGLE_TRANSLATE_KEY`    | Translation job | Google Translate API key (when provider=google)                |
 | `TRANSLATION_CHAR_BUDGET` | Translation job | Monthly character budget override (default: provider-specific) |
 
 ## Failure Behaviour
 
-| Failure | Behaviour |
-|---------|-----------|
-| Translation API unavailable | Translation job exits with warning. No translations written. Gazette builds without translated pages — English-only, as before. |
-| Translation fails for one article | Skip that article. Partial translation file is still written. Gazette renders available translations. |
-| Translation file missing in R2 | Gazette generates English page only. Language switcher omits that language. No error. |
-| Budget exceeded | Job logs warning and stops. Remaining editions queued for next run / next month. |
-| Malformed translation JSON in R2 | Gazette validates with Zod (same pattern as editions). Invalid translations skipped with Sentry warning. |
-| Provider credentials missing | Job falls back to StubTranslationClient with warning. No real translations produced. |
+| Failure                           | Behaviour                                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Translation API unavailable       | Translation job exits with warning. No translations written. Gazette builds without translated pages — English-only, as before. |
+| Translation fails for one article | Skip that article. Partial translation file is still written. Gazette renders available translations.                           |
+| Translation file missing in R2    | Gazette generates English page only. Language switcher omits that language. No error.                                           |
+| Budget exceeded                   | Job logs warning and stops. Remaining editions queued for next run / next month.                                                |
+| Malformed translation JSON in R2  | Gazette validates with Zod (same pattern as editions). Invalid translations skipped with Sentry warning.                        |
+| Provider credentials missing      | Job falls back to StubTranslationClient with warning. No real translations produced.                                            |
 
 ## Cost
 
-| Component | Monthly (free tier) | Monthly (paid tier) |
-|-----------|--------------------|-----------------------|
-| Azure Translator (2 languages, leads only) | $0 (within 2M chars) | — |
-| Azure Translator (3 languages, leads only) | ~$7 (2.7M chars at $10/M) | ~$7 |
-| DeepL (1 language, leads only) | $0 (within 500K chars) | — |
-| R2 storage (translation JSONs, ~1KB each) | $0 (negligible) | $0 |
-| Compute (translation job, ~30s/run) | ~$0 | ~$0 |
+| Component                                  | Monthly (free tier)       | Monthly (paid tier) |
+| ------------------------------------------ | ------------------------- | ------------------- |
+| Azure Translator (2 languages, leads only) | $0 (within 2M chars)      | —                   |
+| Azure Translator (3 languages, leads only) | ~$7 (2.7M chars at $10/M) | ~$7                 |
+| DeepL (1 language, leads only)             | $0 (within 500K chars)    | —                   |
+| R2 storage (translation JSONs, ~1KB each)  | $0 (negligible)           | $0                  |
+| Compute (translation job, ~30s/run)        | ~$0                       | ~$0                 |
 
 ## Implementation Phases
 

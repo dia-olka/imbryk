@@ -11,19 +11,14 @@
       "headline": "Le Grand Effondrement",
       "description": "Les marchés financiers mondiaux s'effondrent en cascade.",
       "impact": "Effondrement de l'ordre mondial fondé sur des règles.",
-      "sectors": [
-        "geopolitics",
-        "economy"
-      ]
+      "sectors": ["geopolitics", "economy"]
     },
     {
       "date": "2030-06-01",
       "headline": "Formation des blocs de pouvoir",
       "description": "Six factions émergent des cendres de l'ancien ordre.",
       "impact": "Nouvel équilibre multipolaire.",
-      "sectors": [
-        "geopolitics"
-      ]
+      "sectors": ["geopolitics"]
     }
   ]
 }

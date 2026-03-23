@@ -186,8 +186,8 @@ a:hover {
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas:
-    "brand submit"
-    "nav   nav";
+    'brand submit'
+    'nav   nav';
   align-items: start;
   gap: var(--space-xs) var(--space-sm);
 }
@@ -232,7 +232,7 @@ a:hover {
 @media (min-width: 56rem) {
   .site-header__inner {
     grid-template-columns: auto 1fr auto;
-    grid-template-areas: "brand nav submit";
+    grid-template-areas: 'brand nav submit';
     align-items: center;
   }
 
@@ -490,7 +490,9 @@ main:has(.newspaper) {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border: 2px solid var(--color-accent);
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
   white-space: nowrap;
 }
 
@@ -556,15 +558,22 @@ main:has(.newspaper) {
   margin: 0 var(--space-md) var(--space-sm);
   background: var(--np-secondary, var(--color-surface));
   border: 1px solid var(--np-primary, var(--color-border));
-  border-left: 4px solid var(--np-accent, var(--np-primary, var(--color-accent)));
+  border-left: 4px solid
+    var(--np-accent, var(--np-primary, var(--color-accent)));
   border-radius: var(--radius);
   text-decoration: none;
   color: var(--color-text);
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .curator-banner:hover {
-  background: color-mix(in srgb, var(--np-secondary, var(--color-surface)) 85%, var(--np-primary, var(--color-border)));
+  background: color-mix(
+    in srgb,
+    var(--np-secondary, var(--color-surface)) 85%,
+    var(--np-primary, var(--color-border))
+  );
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -574,7 +583,13 @@ main:has(.newspaper) {
 }
 
 .curator-banner__label {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-xs);
   font-weight: 700;
   text-transform: uppercase;
@@ -769,7 +784,8 @@ main:has(.newspaper) {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--color-text-muted);
-  border-bottom: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border-light));
+  border-bottom: var(--np-border-style, 1px solid)
+    var(--np-primary, var(--color-border-light));
   padding-bottom: var(--space-sm);
   margin-bottom: var(--space-lg);
 }
@@ -807,7 +823,7 @@ main:has(.newspaper) {
   text-decoration: underline;
 }
 
-.breadcrumb [aria-current="page"] {
+.breadcrumb [aria-current='page'] {
   color: var(--color-text);
   font-weight: 600;
 }
@@ -835,13 +851,21 @@ main:has(.newspaper) {
 .sibling-nav__list a {
   display: inline-block;
   padding: var(--space-xs) var(--space-sm);
-  font-family: var(--np-font-body, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-body,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-sm);
   text-decoration: none;
   color: var(--np-primary, var(--color-text));
   border: 1px solid transparent;
   border-radius: var(--radius);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .sibling-nav__list a:hover {
@@ -850,7 +874,7 @@ main:has(.newspaper) {
   color: var(--np-primary, var(--color-text));
 }
 
-.sibling-nav__list a[aria-current="page"] {
+.sibling-nav__list a[aria-current='page'] {
   background: var(--np-primary, var(--color-text));
   color: #fff;
   font-weight: 600;
@@ -876,11 +900,18 @@ main:has(.newspaper) {
   padding: var(--space-lg) var(--space-md);
   margin-bottom: var(--space-xl);
   background: var(--np-secondary, var(--color-surface));
-  border-bottom: var(--np-border-style, 2px solid) var(--np-primary, var(--color-border));
+  border-bottom: var(--np-border-style, 2px solid)
+    var(--np-primary, var(--color-border));
 }
 
 .newspaper-masthead__name {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-2xl);
   color: var(--np-primary, var(--color-text));
   margin-bottom: var(--space-xs);
@@ -934,7 +965,8 @@ main:has(.newspaper) {
 .article-preview {
   position: relative;
   padding: var(--space-lg) 0;
-  border-bottom: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border-light));
+  border-bottom: var(--np-border-style, 1px solid)
+    var(--np-primary, var(--color-border-light));
   transition: background-color 0.15s ease;
 }
 
@@ -986,7 +1018,13 @@ main:has(.newspaper) {
 }
 
 .article-preview__title {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-lg);
   color: var(--np-primary, var(--color-text));
   margin-bottom: var(--space-xs);
@@ -1052,7 +1090,8 @@ main:has(.newspaper) {
 
   /* Right border on left-column items (odd, non-lead) */
   .article-preview:not(.article-preview--lead):nth-child(odd) {
-    border-right: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border-light));
+    border-right: var(--np-border-style, 1px solid)
+      var(--np-primary, var(--color-border-light));
     padding-right: var(--space-lg);
   }
 
@@ -1085,7 +1124,8 @@ main:has(.newspaper) {
 .article-nav {
   margin-top: var(--space-2xl);
   padding-top: var(--space-xl);
-  border-top: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border));
+  border-top: var(--np-border-style, 1px solid)
+    var(--np-primary, var(--color-border));
 }
 
 .article-nav__inner {
@@ -1150,7 +1190,13 @@ main:has(.newspaper) {
 }
 
 .article-nav__headline {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-sm);
   font-weight: 600;
   line-height: 1.3;
@@ -1172,7 +1218,9 @@ main:has(.newspaper) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   white-space: nowrap;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .article-nav__back:hover {
@@ -1207,7 +1255,8 @@ main:has(.newspaper) {
 .edition-nav {
   margin-top: var(--space-2xl);
   padding-top: var(--space-xl);
-  border-top: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border));
+  border-top: var(--np-border-style, 1px solid)
+    var(--np-primary, var(--color-border));
 }
 
 .edition-nav__inner {
@@ -1269,7 +1318,13 @@ main:has(.newspaper) {
 }
 
 .edition-nav__date {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-sm);
   font-weight: 600;
 }
@@ -1286,7 +1341,9 @@ main:has(.newspaper) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   white-space: nowrap;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .edition-nav__all:hover {
@@ -1353,7 +1410,13 @@ main:has(.newspaper) {
   display: inline-block;
   margin-top: var(--space-xl);
   margin-bottom: var(--space-md);
-  font-family: var(--np-font-body, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-body,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-sm);
   color: var(--np-primary, var(--color-link));
   text-decoration: none;
@@ -1440,7 +1503,13 @@ main:has(.newspaper) {
 
 /* === Article Full Page === */
 .article-full__title {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-2xl);
   line-height: 1.2;
   margin-bottom: var(--space-sm);
@@ -1475,7 +1544,13 @@ main:has(.newspaper) {
 .article-full__body h2,
 .article-full__body h3,
 .article-full__body h4 {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   margin-top: var(--space-xl);
   margin-bottom: var(--space-sm);
 }
@@ -1530,19 +1605,27 @@ main:has(.newspaper) {
 /* === In Brief Section === */
 .in-brief {
   background: var(--color-surface);
-  border: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border));
+  border: var(--np-border-style, 1px solid)
+    var(--np-primary, var(--color-border));
   padding: var(--space-lg);
   margin-bottom: var(--space-xl);
   border-radius: var(--radius);
 }
 
 .in-brief h2 {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-lg);
   color: var(--np-primary, var(--color-text));
   margin-bottom: var(--space-md);
   padding-bottom: var(--space-sm);
-  border-bottom: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border-light));
+  border-bottom: var(--np-border-style, 1px solid)
+    var(--np-primary, var(--color-border-light));
 }
 
 .in-brief-item {
@@ -1569,7 +1652,8 @@ main:has(.newspaper) {
 
 /* === Editor's Note === */
 .editors-note {
-  border-left: var(--np-border-style, 3px solid) var(--np-primary, var(--color-accent));
+  border-left: var(--np-border-style, 3px solid)
+    var(--np-primary, var(--color-accent));
   padding: var(--space-md) var(--space-lg);
   margin: var(--space-xl) 0;
   font-style: italic;
@@ -1794,13 +1878,16 @@ main:has(.newspaper) {
   justify-content: space-between;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  border: var(--np-border-style, 1px solid) var(--np-primary, var(--color-border));
+  border: var(--np-border-style, 1px solid)
+    var(--np-primary, var(--color-border));
   border-top: 5px solid var(--np-accent, var(--np-primary, var(--color-border)));
   border-radius: var(--radius);
   background: var(--np-secondary, var(--color-surface));
   color: var(--color-text);
   text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   isolation: isolate; /* contain stacking context */
 }
 
@@ -1840,13 +1927,12 @@ main:has(.newspaper) {
   position: relative;
   z-index: 1;
   padding: var(--space-md) var(--space-md) var(--space-xl);
-  background:
-    linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--np-primary, #000) 60%, rgba(0, 0, 0, 0.72)) 0%,
-      color-mix(in srgb, var(--np-primary, #000) 20%, rgba(0, 0, 0, 0.3)) 60%,
-      transparent 100%
-    );
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--np-primary, #000) 60%, rgba(0, 0, 0, 0.72)) 0%,
+    color-mix(in srgb, var(--np-primary, #000) 20%, rgba(0, 0, 0, 0.3)) 60%,
+    transparent 100%
+  );
   color: #fff;
 }
 
@@ -1859,7 +1945,13 @@ main:has(.newspaper) {
 }
 
 .front-page-card__name {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-lg);
   font-weight: 700;
   line-height: 1.15;
@@ -1913,7 +2005,13 @@ main:has(.newspaper) {
 }
 
 .front-page-card__headline {
-  font-family: var(--np-font-heading, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-font-heading,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-xl);
   font-weight: 700;
   line-height: 1.2;
@@ -1948,7 +2046,8 @@ main:has(.newspaper) {
   .front-page-card__headline {
     font-size: var(--type-lg);
   }
-  .front-page-card:not(:has(.front-page-card__image)) .front-page-card__headline {
+  .front-page-card:not(:has(.front-page-card__image))
+    .front-page-card__headline {
     font-size: var(--type-xl);
   }
 }
@@ -1960,7 +2059,8 @@ main:has(.newspaper) {
   .front-page-card__headline {
     font-size: var(--type-lg);
   }
-  .front-page-card:not(:has(.front-page-card__image)) .front-page-card__headline {
+  .front-page-card:not(:has(.front-page-card__image))
+    .front-page-card__headline {
     font-size: var(--type-2xl);
   }
 }
@@ -1969,56 +2069,56 @@ main:has(.newspaper) {
 
 /* --- Sovereign → The Economist ---
    Red top stripe, double border, restrained serif elegance */
-.front-page-card[data-persona="sovereign"] {
+.front-page-card[data-persona='sovereign'] {
   border-top: 5px solid #e3120b;
   border-radius: 0;
 }
 
-.front-page-card[data-persona="sovereign"] .front-page-card__name {
+.front-page-card[data-persona='sovereign'] .front-page-card__name {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.front-page-card[data-persona="sovereign"] .front-page-card__headline {
+.front-page-card[data-persona='sovereign'] .front-page-card__headline {
   font-weight: 400;
   font-style: italic;
 }
 
 /* --- Aspirant → The Guardian ---
    Bold teal, geometric (no radius), heavy sans-serif weight */
-.front-page-card[data-persona="aspirant"] {
+.front-page-card[data-persona='aspirant'] {
   border-radius: 0;
   border-top-width: 6px;
 }
 
-.front-page-card[data-persona="aspirant"] .front-page-card__name {
+.front-page-card[data-persona='aspirant'] .front-page-card__name {
   font-weight: 900;
   letter-spacing: -0.02em;
 }
 
 /* --- Owner → WSJ / Financial Times ---
    Hairline rules, restrained, italic headline */
-.front-page-card[data-persona="owner"] {
+.front-page-card[data-persona='owner'] {
   border-radius: 0;
   border-top-width: 3px;
 }
 
-.front-page-card[data-persona="owner"] .front-page-card__name {
+.front-page-card[data-persona='owner'] .front-page-card__name {
   font-style: italic;
 }
 
-.front-page-card[data-persona="owner"] .front-page-card__headline {
+.front-page-card[data-persona='owner'] .front-page-card__headline {
   font-style: italic;
   font-weight: 400;
 }
 
 /* --- Moralist → The Daily Telegraph ---
    Traditional broadsheet, formal, maroon top rule */
-.front-page-card[data-persona="moralist"] {
+.front-page-card[data-persona='moralist'] {
   border-radius: 0;
 }
 
-.front-page-card[data-persona="moralist"] .front-page-card__tagline {
+.front-page-card[data-persona='moralist'] .front-page-card__tagline {
   font-style: normal;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -2027,17 +2127,17 @@ main:has(.newspaper) {
 
 /* --- Radical → Underground Press ---
    Brutalist, heavy border, uppercase everything */
-.front-page-card[data-persona="radical"] {
+.front-page-card[data-persona='radical'] {
   border-radius: 0;
   border-top-width: 6px;
 }
 
-.front-page-card[data-persona="radical"] .front-page-card__name {
+.front-page-card[data-persona='radical'] .front-page-card__name {
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-.front-page-card[data-persona="radical"] .front-page-card__headline {
+.front-page-card[data-persona='radical'] .front-page-card__headline {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -2045,22 +2145,22 @@ main:has(.newspaper) {
 
 /* --- Hedonist → Daily Mail / Vanity Fair ---
    Tabloid-magazine, rounded corners, splashy headline */
-.front-page-card[data-persona="hedonist"] {
+.front-page-card[data-persona='hedonist'] {
   border-radius: 8px;
 }
 
-.front-page-card[data-persona="hedonist"] .front-page-card__name {
+.front-page-card[data-persona='hedonist'] .front-page-card__name {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.front-page-card[data-persona="hedonist"] .front-page-card__headline {
+.front-page-card[data-persona='hedonist'] .front-page-card__headline {
   text-transform: uppercase;
   line-height: 1.1;
 }
 
 @media (min-width: 52rem) {
-  .front-page-card[data-persona="hedonist"] .front-page-card__headline {
+  .front-page-card[data-persona='hedonist'] .front-page-card__headline {
     font-size: var(--type-xl);
   }
 }
@@ -2126,7 +2226,9 @@ main:has(.newspaper) {
   border-radius: var(--radius);
   text-decoration: none;
   overflow: hidden;
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
 .newspaper-card:hover {
@@ -2164,7 +2266,13 @@ main:has(.newspaper) {
 }
 
 .newspaper-card__name {
-  font-family: var(--np-heading-font, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  font-family: var(
+    --np-heading-font,
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
   font-size: var(--type-lg);
   font-weight: 700;
   margin-bottom: var(--space-xs);
@@ -2316,7 +2424,9 @@ main:has(.newspaper) {
   border-radius: var(--radius);
   text-decoration: none;
   color: var(--color-text-muted);
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .archive-card__np-link:hover {
@@ -2375,48 +2485,52 @@ main:has(.newspaper) {
    Iconic red top stripe, white space, restrained serif
    elegance, small-caps labels, double-rule dividers. */
 
-.newspaper[data-persona="sovereign"] .newspaper-masthead {
+.newspaper[data-persona='sovereign'] .newspaper-masthead {
   background: #fff;
   border-top: 5px solid #e3120b;
   border-bottom: 3px double var(--np-primary);
   padding-top: var(--space-xl);
 }
 
-.newspaper[data-persona="sovereign"] .newspaper-masthead__name {
+.newspaper[data-persona='sovereign'] .newspaper-masthead__name {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-size: var(--type-xl);
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="sovereign"] .newspaper-masthead__name {
+  .newspaper[data-persona='sovereign'] .newspaper-masthead__name {
     font-size: var(--type-2xl);
   }
 }
 
-.newspaper[data-persona="sovereign"] .section-label {
+.newspaper[data-persona='sovereign'] .section-label {
   font-variant: small-caps;
   letter-spacing: 0.15em;
   text-transform: none;
   font-size: var(--type-sm);
 }
 
-.newspaper[data-persona="sovereign"] .article-preview {
+.newspaper[data-persona='sovereign'] .article-preview {
   border-bottom-style: double;
 }
 
-.newspaper[data-persona="sovereign"] .article-full__body blockquote {
+.newspaper[data-persona='sovereign'] .article-full__body blockquote {
   border-left: 3px double var(--np-primary);
 }
 
-.newspaper[data-persona="sovereign"] .article-preview--lead .article-preview__title {
+.newspaper[data-persona='sovereign']
+  .article-preview--lead
+  .article-preview__title {
   font-weight: 400;
   font-style: italic;
   font-size: var(--type-xl);
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="sovereign"] .article-preview--lead .article-preview__title {
+  .newspaper[data-persona='sovereign']
+    .article-preview--lead
+    .article-preview__title {
     font-size: var(--type-2xl);
   }
 }
@@ -2425,50 +2539,54 @@ main:has(.newspaper) {
    Bold dark teal banner, heavy sans-serif headline weight,
    strong left-border accents, generous white space. */
 
-.newspaper[data-persona="aspirant"] .newspaper-masthead {
+.newspaper[data-persona='aspirant'] .newspaper-masthead {
   background: var(--np-primary);
   color: #fff;
   border-top: none;
   border-bottom: 4px solid var(--np-accent);
 }
 
-.newspaper[data-persona="aspirant"] .newspaper-masthead__name {
+.newspaper[data-persona='aspirant'] .newspaper-masthead__name {
   color: #fff;
   font-weight: 900;
   letter-spacing: -0.02em;
 }
 
-.newspaper[data-persona="aspirant"] .newspaper-masthead__tagline {
+.newspaper[data-persona='aspirant'] .newspaper-masthead__tagline {
   color: rgba(255, 255, 255, 0.85);
 }
 
-.newspaper[data-persona="aspirant"] .newspaper-masthead__date {
+.newspaper[data-persona='aspirant'] .newspaper-masthead__date {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.newspaper[data-persona="aspirant"] .article-preview__title {
+.newspaper[data-persona='aspirant'] .article-preview__title {
   font-weight: 700;
 }
 
-.newspaper[data-persona="aspirant"] .article-preview--lead .article-preview__title {
+.newspaper[data-persona='aspirant']
+  .article-preview--lead
+  .article-preview__title {
   font-size: var(--type-xl);
   font-weight: 900;
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="aspirant"] .article-preview--lead .article-preview__title {
+  .newspaper[data-persona='aspirant']
+    .article-preview--lead
+    .article-preview__title {
     font-size: var(--type-2xl);
   }
 }
 
-.newspaper[data-persona="aspirant"] .in-brief {
+.newspaper[data-persona='aspirant'] .in-brief {
   border-left: 4px solid var(--np-primary);
   border-top: none;
   border-right: none;
   border-bottom: none;
 }
 
-.newspaper[data-persona="aspirant"] .article-full__body blockquote {
+.newspaper[data-persona='aspirant'] .article-full__body blockquote {
   border-left: 4px solid var(--np-primary);
   background: var(--np-secondary);
   padding: var(--space-md);
@@ -2477,36 +2595,36 @@ main:has(.newspaper) {
 /* Aspirant layout: Guardian-style — left-aligned masthead, generous spacing,
    geometric (no rounded corners), bold accent bars */
 
-.newspaper[data-persona="aspirant"] .newspaper-masthead {
+.newspaper[data-persona='aspirant'] .newspaper-masthead {
   text-align: left;
 }
 
-.newspaper[data-persona="aspirant"] .section-label {
+.newspaper[data-persona='aspirant'] .section-label {
   font-weight: 700;
   border-bottom: 3px solid var(--np-accent);
 }
 
-.newspaper[data-persona="aspirant"] .article-preview {
+.newspaper[data-persona='aspirant'] .article-preview {
   padding: var(--space-xl) 0;
 }
 
-.newspaper[data-persona="aspirant"] .article-preview--lead {
+.newspaper[data-persona='aspirant'] .article-preview--lead {
   border-left: 5px solid var(--np-primary);
   padding-left: var(--space-lg);
 }
 
-.newspaper[data-persona="aspirant"] .article-preview__image,
-.newspaper[data-persona="aspirant"] .newspaper__hero-img,
-.newspaper[data-persona="aspirant"] .article-full__image img {
+.newspaper[data-persona='aspirant'] .article-preview__image,
+.newspaper[data-persona='aspirant'] .newspaper__hero-img,
+.newspaper[data-persona='aspirant'] .article-full__image img {
   border-radius: 0;
 }
 
-.newspaper[data-persona="aspirant"] .editors-note {
+.newspaper[data-persona='aspirant'] .editors-note {
   border-left: 5px solid var(--np-accent);
   background: rgba(41, 128, 185, 0.06);
 }
 
-.newspaper[data-persona="aspirant"] .article-preview__read-more {
+.newspaper[data-persona='aspirant'] .article-preview__read-more {
   color: var(--np-accent);
 }
 
@@ -2514,17 +2632,17 @@ main:has(.newspaper) {
    Salmon-tinted page, refined Playfair serif headlines,
    thin hairline rules, understated elegance. */
 
-.newspaper[data-persona="owner"] {
+.newspaper[data-persona='owner'] {
   background: var(--np-secondary);
 }
 
-.newspaper[data-persona="owner"] .newspaper-masthead {
+.newspaper[data-persona='owner'] .newspaper-masthead {
   background: var(--np-primary);
   color: #fff;
   border-bottom: 1px solid var(--np-accent);
 }
 
-.newspaper[data-persona="owner"] .newspaper-masthead__name {
+.newspaper[data-persona='owner'] .newspaper-masthead__name {
   color: #fff;
   font-weight: 700;
   font-size: var(--type-3xl);
@@ -2532,35 +2650,35 @@ main:has(.newspaper) {
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="owner"] .newspaper-masthead__name {
+  .newspaper[data-persona='owner'] .newspaper-masthead__name {
     font-size: 3rem;
   }
 }
 
-.newspaper[data-persona="owner"] .newspaper-masthead__tagline {
+.newspaper[data-persona='owner'] .newspaper-masthead__tagline {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.newspaper[data-persona="owner"] .newspaper-masthead__date {
+.newspaper[data-persona='owner'] .newspaper-masthead__date {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.newspaper[data-persona="owner"] .article-preview {
+.newspaper[data-persona='owner'] .article-preview {
   border-bottom: 1px solid var(--np-accent);
 }
 
-.newspaper[data-persona="owner"] .article-preview__title {
+.newspaper[data-persona='owner'] .article-preview__title {
   letter-spacing: 0.01em;
 }
 
-.newspaper[data-persona="owner"] .article-full__body blockquote {
+.newspaper[data-persona='owner'] .article-full__body blockquote {
   font-style: normal;
   border-left: 2px solid var(--np-accent);
   background: #fff;
   padding: var(--space-md);
 }
 
-.newspaper[data-persona="owner"] .in-brief {
+.newspaper[data-persona='owner'] .in-brief {
   background: #fff;
 }
 
@@ -2568,54 +2686,62 @@ main:has(.newspaper) {
    hairline rules, restrained elegance */
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="owner"] .newspaper-articles {
+  .newspaper[data-persona='owner'] .newspaper-articles {
     grid-template-columns: repeat(3, 1fr);
   }
 
   /* Reset shared 2-column nth-child rules */
-  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(odd) {
+  .newspaper[data-persona='owner']
+    .article-preview:not(.article-preview--lead):nth-child(odd) {
     border-right: none;
     padding-right: 0;
   }
 
-  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(even) {
+  .newspaper[data-persona='owner']
+    .article-preview:not(.article-preview--lead):nth-child(even) {
     padding-left: 0;
   }
 
   /* 3-column vertical dividers */
-  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(3n+1),
-  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(3n+2) {
+  .newspaper[data-persona='owner']
+    .article-preview:not(.article-preview--lead):nth-child(3n + 1),
+  .newspaper[data-persona='owner']
+    .article-preview:not(.article-preview--lead):nth-child(3n + 2) {
     border-right: 1px solid var(--np-accent);
     padding-right: var(--space-md);
   }
 
-  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(3n+2),
-  .newspaper[data-persona="owner"] .article-preview:not(.article-preview--lead):nth-child(3n) {
+  .newspaper[data-persona='owner']
+    .article-preview:not(.article-preview--lead):nth-child(3n + 2),
+  .newspaper[data-persona='owner']
+    .article-preview:not(.article-preview--lead):nth-child(3n) {
     padding-left: var(--space-md);
   }
 }
 
-.newspaper[data-persona="owner"] .article-preview {
+.newspaper[data-persona='owner'] .article-preview {
   padding: var(--space-md) 0;
 }
 
-.newspaper[data-persona="owner"] .section-label {
+.newspaper[data-persona='owner'] .section-label {
   font-size: var(--type-xs);
   letter-spacing: 0.1em;
   border-bottom: 1px solid var(--np-accent);
 }
 
-.newspaper[data-persona="owner"] .article-preview--lead .article-preview__title {
+.newspaper[data-persona='owner']
+  .article-preview--lead
+  .article-preview__title {
   font-style: italic;
 }
 
-.newspaper[data-persona="owner"] .article-preview__image,
-.newspaper[data-persona="owner"] .newspaper__hero-img,
-.newspaper[data-persona="owner"] .article-full__image img {
+.newspaper[data-persona='owner'] .article-preview__image,
+.newspaper[data-persona='owner'] .newspaper__hero-img,
+.newspaper[data-persona='owner'] .article-full__image img {
   border-radius: 0;
 }
 
-.newspaper[data-persona="owner"] .editors-note {
+.newspaper[data-persona='owner'] .editors-note {
   border-left: 2px solid var(--np-accent);
   font-style: normal;
 }
@@ -2624,25 +2750,25 @@ main:has(.newspaper) {
    Traditional serif masthead with dark blue/purple bar,
    classic broadsheet layout, authoritative rules. */
 
-.newspaper[data-persona="moralist"] .newspaper-masthead {
+.newspaper[data-persona='moralist'] .newspaper-masthead {
   background: var(--np-primary);
   color: #fff;
   border-bottom: 3px solid var(--np-accent);
   position: relative;
 }
 
-.newspaper[data-persona="moralist"] .newspaper-masthead__name {
+.newspaper[data-persona='moralist'] .newspaper-masthead__name {
   color: #fff;
   font-size: var(--type-2xl);
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="moralist"] .newspaper-masthead__name {
+  .newspaper[data-persona='moralist'] .newspaper-masthead__name {
     font-size: var(--type-3xl);
   }
 }
 
-.newspaper[data-persona="moralist"] .newspaper-masthead__tagline {
+.newspaper[data-persona='moralist'] .newspaper-masthead__tagline {
   color: rgba(255, 255, 255, 0.85);
   font-weight: 600;
   font-style: normal;
@@ -2651,21 +2777,21 @@ main:has(.newspaper) {
   letter-spacing: 0.12em;
 }
 
-.newspaper[data-persona="moralist"] .newspaper-masthead__date {
+.newspaper[data-persona='moralist'] .newspaper-masthead__date {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.newspaper[data-persona="moralist"] .article-preview {
+.newspaper[data-persona='moralist'] .article-preview {
   border-bottom-style: solid;
 }
 
-.newspaper[data-persona="moralist"] .editors-note {
+.newspaper[data-persona='moralist'] .editors-note {
   border-left-style: solid;
   border-left-color: var(--np-accent);
   background: var(--np-secondary);
 }
 
-.newspaper[data-persona="moralist"] .article-full__body blockquote {
+.newspaper[data-persona='moralist'] .article-full__body blockquote {
   border-left: 3px solid var(--np-accent);
   background: var(--np-secondary);
   padding: var(--space-md);
@@ -2674,29 +2800,29 @@ main:has(.newspaper) {
 /* Moralist layout: Daily Telegraph-style — traditional broadsheet,
    ornamental, serif-heavy, formal spacing */
 
-.newspaper[data-persona="moralist"] .newspaper-masthead {
+.newspaper[data-persona='moralist'] .newspaper-masthead {
   border-top: 4px solid var(--np-accent);
 }
 
-.newspaper[data-persona="moralist"] .section-label {
+.newspaper[data-persona='moralist'] .section-label {
   font-variant: small-caps;
   text-transform: none;
   letter-spacing: 0.1em;
 }
 
-.newspaper[data-persona="moralist"] .in-brief {
+.newspaper[data-persona='moralist'] .in-brief {
   border: 2px solid var(--np-primary);
   background: var(--np-secondary);
   border-radius: 0;
 }
 
-.newspaper[data-persona="moralist"] .article-preview__read-more {
+.newspaper[data-persona='moralist'] .article-preview__read-more {
   color: var(--np-accent);
 }
 
-.newspaper[data-persona="moralist"] .article-preview__image,
-.newspaper[data-persona="moralist"] .newspaper__hero-img,
-.newspaper[data-persona="moralist"] .article-full__image img {
+.newspaper[data-persona='moralist'] .article-preview__image,
+.newspaper[data-persona='moralist'] .newspaper__hero-img,
+.newspaper[data-persona='moralist'] .article-full__image img {
   border-radius: 0;
 }
 
@@ -2704,7 +2830,7 @@ main:has(.newspaper) {
    Bold red masthead, screaming uppercase headlines,
    thick borders, aggressive high-contrast tabloid energy. */
 
-.newspaper[data-persona="radical"] .newspaper-masthead {
+.newspaper[data-persona='radical'] .newspaper-masthead {
   background: var(--np-primary);
   color: #fff;
   border-bottom: none;
@@ -2712,7 +2838,7 @@ main:has(.newspaper) {
   padding-bottom: var(--space-md);
 }
 
-.newspaper[data-persona="radical"] .newspaper-masthead__name {
+.newspaper[data-persona='radical'] .newspaper-masthead__name {
   color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -2720,12 +2846,12 @@ main:has(.newspaper) {
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="radical"] .newspaper-masthead__name {
+  .newspaper[data-persona='radical'] .newspaper-masthead__name {
     font-size: var(--type-3xl);
   }
 }
 
-.newspaper[data-persona="radical"] .newspaper-masthead__tagline {
+.newspaper[data-persona='radical'] .newspaper-masthead__tagline {
   color: var(--np-accent);
   font-style: normal;
   font-weight: 700;
@@ -2734,37 +2860,41 @@ main:has(.newspaper) {
   letter-spacing: 0.1em;
 }
 
-.newspaper[data-persona="radical"] .newspaper-masthead__date {
+.newspaper[data-persona='radical'] .newspaper-masthead__date {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.newspaper[data-persona="radical"] .article-preview--lead .article-preview__title {
+.newspaper[data-persona='radical']
+  .article-preview--lead
+  .article-preview__title {
   text-transform: uppercase;
   font-size: var(--type-xl);
   line-height: 1.1;
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="radical"] .article-preview--lead .article-preview__title {
+  .newspaper[data-persona='radical']
+    .article-preview--lead
+    .article-preview__title {
     font-size: var(--type-2xl);
   }
 }
 
-.newspaper[data-persona="radical"] .article-full__title {
+.newspaper[data-persona='radical'] .article-full__title {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   line-height: 1.1;
 }
 
-.newspaper[data-persona="radical"] .article-preview {
+.newspaper[data-persona='radical'] .article-preview {
   border-bottom: 2px solid var(--np-primary);
 }
 
-.newspaper[data-persona="radical"] .in-brief {
+.newspaper[data-persona='radical'] .in-brief {
   border: 3px solid var(--np-primary);
 }
 
-.newspaper[data-persona="radical"] .article-full__body blockquote {
+.newspaper[data-persona='radical'] .article-full__body blockquote {
   border-left: 4px solid var(--np-primary);
   font-style: normal;
   font-weight: 600;
@@ -2773,38 +2903,38 @@ main:has(.newspaper) {
 /* Radical layout: Underground Press / The Intercept-style — brutalist,
    stark, high-contrast, zero decoration, urgent pacing */
 
-.newspaper[data-persona="radical"] .article-preview__image,
-.newspaper[data-persona="radical"] .newspaper__hero-img,
-.newspaper[data-persona="radical"] .article-full__image img {
+.newspaper[data-persona='radical'] .article-preview__image,
+.newspaper[data-persona='radical'] .newspaper__hero-img,
+.newspaper[data-persona='radical'] .article-full__image img {
   border-radius: 0;
 }
 
-.newspaper[data-persona="radical"] .in-brief {
+.newspaper[data-persona='radical'] .in-brief {
   border-radius: 0;
 }
 
-.newspaper[data-persona="radical"] .section-label {
+.newspaper[data-persona='radical'] .section-label {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border-bottom: 4px solid var(--np-primary);
 }
 
-.newspaper[data-persona="radical"] .article-preview {
+.newspaper[data-persona='radical'] .article-preview {
   padding: var(--space-md) 0;
 }
 
-.newspaper[data-persona="radical"] .article-preview__title {
+.newspaper[data-persona='radical'] .article-preview__title {
   text-transform: uppercase;
 }
 
-.newspaper[data-persona="radical"] .editors-note {
+.newspaper[data-persona='radical'] .editors-note {
   border-left: none;
   border-top: 4px solid var(--np-primary);
   padding-top: var(--space-md);
 }
 
-.newspaper[data-persona="radical"] .article-preview__read-more {
+.newspaper[data-persona='radical'] .article-preview__read-more {
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -2813,61 +2943,65 @@ main:has(.newspaper) {
    Bold tabloid-magazine energy. Dark masthead, punchy
    headlines, rounded images, hot-pink accent pops. */
 
-.newspaper[data-persona="hedonist"] .newspaper-masthead {
+.newspaper[data-persona='hedonist'] .newspaper-masthead {
   background: #1a1a2e;
   color: #fff;
   border-bottom: 3px solid var(--np-accent);
 }
 
-.newspaper[data-persona="hedonist"] .newspaper-masthead__name {
+.newspaper[data-persona='hedonist'] .newspaper-masthead__name {
   color: var(--np-primary);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.newspaper[data-persona="hedonist"] .newspaper-masthead__tagline {
+.newspaper[data-persona='hedonist'] .newspaper-masthead__tagline {
   color: var(--np-accent);
   font-style: normal;
   font-weight: 600;
 }
 
-.newspaper[data-persona="hedonist"] .newspaper-masthead__date {
+.newspaper[data-persona='hedonist'] .newspaper-masthead__date {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.newspaper[data-persona="hedonist"] .article-preview__title {
+.newspaper[data-persona='hedonist'] .article-preview__title {
   font-weight: 700;
   line-height: 1.15;
 }
 
-.newspaper[data-persona="hedonist"] .article-preview--lead .article-preview__title {
+.newspaper[data-persona='hedonist']
+  .article-preview--lead
+  .article-preview__title {
   font-size: var(--type-xl);
   text-transform: uppercase;
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="hedonist"] .article-preview--lead .article-preview__title {
+  .newspaper[data-persona='hedonist']
+    .article-preview--lead
+    .article-preview__title {
     font-size: var(--type-2xl);
   }
 }
 
-.newspaper[data-persona="hedonist"] .article-preview__image,
-.newspaper[data-persona="hedonist"] .newspaper__hero-img,
-.newspaper[data-persona="hedonist"] .article-full__image img {
+.newspaper[data-persona='hedonist'] .article-preview__image,
+.newspaper[data-persona='hedonist'] .newspaper__hero-img,
+.newspaper[data-persona='hedonist'] .article-full__image img {
   border-radius: 6px;
 }
 
-.newspaper[data-persona="hedonist"] .in-brief {
+.newspaper[data-persona='hedonist'] .in-brief {
   border: 2px solid var(--np-accent);
   border-radius: 8px;
 }
 
-.newspaper[data-persona="hedonist"] .in-brief h2 {
+.newspaper[data-persona='hedonist'] .in-brief h2 {
   color: var(--np-accent);
 }
 
-.newspaper[data-persona="hedonist"] .article-full__body blockquote {
+.newspaper[data-persona='hedonist'] .article-full__body blockquote {
   border-left: 4px solid var(--np-accent);
   border-radius: 0 6px 6px 0;
   background: var(--np-secondary);
@@ -2877,31 +3011,35 @@ main:has(.newspaper) {
 /* Hedonist layout: Daily Mail / Vanity Fair-style — tabloid-magazine hybrid,
    splashy headlines, image-dominant, playful */
 
-.newspaper[data-persona="hedonist"] .newspaper-masthead {
+.newspaper[data-persona='hedonist'] .newspaper-masthead {
   padding: var(--space-xl) var(--space-md);
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="hedonist"] .article-preview--lead .article-preview__title {
+  .newspaper[data-persona='hedonist']
+    .article-preview--lead
+    .article-preview__title {
     font-size: var(--type-3xl);
     letter-spacing: -0.02em;
   }
 
-  .newspaper[data-persona="hedonist"] .article-preview--lead .article-preview__image {
+  .newspaper[data-persona='hedonist']
+    .article-preview--lead
+    .article-preview__image {
     width: 55%;
   }
 }
 
-.newspaper[data-persona="hedonist"] .section-label {
+.newspaper[data-persona='hedonist'] .section-label {
   border-bottom: 2px dotted var(--np-accent);
 }
 
-.newspaper[data-persona="hedonist"] .editors-note {
+.newspaper[data-persona='hedonist'] .editors-note {
   border-left: 4px solid var(--np-accent);
   border-radius: 6px;
 }
 
-.newspaper[data-persona="hedonist"] .article-preview__read-more {
+.newspaper[data-persona='hedonist'] .article-preview__read-more {
   background: #c9407a;
   color: #fff;
   padding: var(--space-xs) var(--space-md);
@@ -2909,36 +3047,36 @@ main:has(.newspaper) {
   text-decoration: none;
 }
 
-.newspaper[data-persona="hedonist"] .article-preview__read-more:hover {
+.newspaper[data-persona='hedonist'] .article-preview__read-more:hover {
   background: #a83565;
   text-decoration: none;
 }
 
-.newspaper[data-persona="hedonist"] .in-brief h2 {
+.newspaper[data-persona='hedonist'] .in-brief h2 {
   color: var(--np-accent);
 }
 
-.newspaper[data-persona="hedonist"] .article-full__title {
+.newspaper[data-persona='hedonist'] .article-full__title {
   text-transform: uppercase;
   font-size: var(--type-2xl);
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="hedonist"] .article-full__title {
+  .newspaper[data-persona='hedonist'] .article-full__title {
     font-size: var(--type-3xl);
   }
 }
 
 /* === Curator — Premium Intelligence Briefing === */
 
-.newspaper[data-persona="curator"] {
+.newspaper[data-persona='curator'] {
   --curator-dark: #2c3e50;
   --curator-mid: #34495e;
   --curator-accent: #3498db;
   --curator-bg: #f8f9fa;
 }
 
-.newspaper[data-persona="curator"] .newspaper-masthead {
+.newspaper[data-persona='curator'] .newspaper-masthead {
   background: var(--curator-dark);
   color: #fff;
   border-bottom: none;
@@ -2948,7 +3086,7 @@ main:has(.newspaper) {
   text-align: center;
 }
 
-.newspaper[data-persona="curator"] .newspaper-masthead__name {
+.newspaper[data-persona='curator'] .newspaper-masthead__name {
   font-family: 'Inter', sans-serif;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -2957,7 +3095,7 @@ main:has(.newspaper) {
   font-size: var(--type-xl);
 }
 
-.newspaper[data-persona="curator"] .newspaper-masthead__tagline {
+.newspaper[data-persona='curator'] .newspaper-masthead__tagline {
   color: rgba(255, 255, 255, 0.7);
   font-style: normal;
   font-family: 'Inter', sans-serif;
@@ -2966,17 +3104,17 @@ main:has(.newspaper) {
   margin-top: var(--space-xs);
 }
 
-.newspaper[data-persona="curator"] .newspaper-masthead__date {
+.newspaper[data-persona='curator'] .newspaper-masthead__date {
   color: rgba(255, 255, 255, 0.5);
   margin-top: var(--space-sm);
 }
 
 @media (min-width: 48rem) {
-  .newspaper[data-persona="curator"] .newspaper-masthead {
+  .newspaper[data-persona='curator'] .newspaper-masthead {
     padding: var(--space-2xl) var(--space-lg);
   }
 
-  .newspaper[data-persona="curator"] .newspaper-masthead__name {
+  .newspaper[data-persona='curator'] .newspaper-masthead__name {
     font-size: var(--type-2xl);
     letter-spacing: 0.1em;
   }
@@ -2999,19 +3137,19 @@ main:has(.newspaper) {
 }
 
 /* Tighten main layout for curator — wider than articles, centered */
-.newspaper[data-persona="curator"] .synthesis-section {
+.newspaper[data-persona='curator'] .synthesis-section {
   max-width: 70ch;
   margin: 0 auto var(--space-xl);
 }
 
 /* Curator sibling-nav + edition-nav styling */
-.newspaper[data-persona="curator"] .sibling-nav {
+.newspaper[data-persona='curator'] .sibling-nav {
   max-width: 70ch;
   margin-left: auto;
   margin-right: auto;
 }
 
-.newspaper[data-persona="curator"] .edition-nav {
+.newspaper[data-persona='curator'] .edition-nav {
   max-width: 70ch;
   margin-left: auto;
   margin-right: auto;
@@ -3052,75 +3190,80 @@ main:has(.newspaper) {
 
 /* ─── RTL Overrides ──────────────────────────────────────────────────────── */
 
-[dir="rtl"] {
+[dir='rtl'] {
   text-align: right;
 }
 
-[dir="rtl"] .breadcrumb ol {
+[dir='rtl'] .breadcrumb ol {
   direction: rtl;
 }
 
 /* Editors note: flip border side */
-[dir="rtl"] .editors-note {
+[dir='rtl'] .editors-note {
   border-left: none;
-  border-right: var(--np-border-style, 3px solid) var(--np-primary, var(--color-accent));
+  border-right: var(--np-border-style, 3px solid)
+    var(--np-primary, var(--color-accent));
   padding-left: 0;
   padding-right: var(--space-lg);
 }
 
 /* Blockquotes: flip border side */
-[dir="rtl"] .article-full__body blockquote {
+[dir='rtl'] .article-full__body blockquote {
   border-left: none;
-  border-right: 4px solid var(--np-accent, var(--np-primary, var(--color-accent)));
+  border-right: 4px solid
+    var(--np-accent, var(--np-primary, var(--color-accent)));
   padding-left: 0;
   padding-right: var(--space-lg);
 }
 
 /* Article nav: flip arrows */
-[dir="rtl"] .article-nav__prev .article-nav__arrow {
+[dir='rtl'] .article-nav__prev .article-nav__arrow {
   transform: scaleX(-1);
 }
 
-[dir="rtl"] .article-nav__next-col .article-nav__arrow {
+[dir='rtl'] .article-nav__next-col .article-nav__arrow {
   transform: scaleX(-1);
 }
 
 /* Back link: flip arrow */
-[dir="rtl"] .back-link {
+[dir='rtl'] .back-link {
   direction: rtl;
 }
 
 /* In-brief section: flip border */
-[dir="rtl"] .in-brief {
+[dir='rtl'] .in-brief {
   border-left: none;
 }
 
 /* Persona-specific border overrides */
-[dir="rtl"] .newspaper[data-persona="sovereign"] .article-full__body blockquote {
+[dir='rtl']
+  .newspaper[data-persona='sovereign']
+  .article-full__body
+  blockquote {
   border-left: none;
   border-right: 3px double var(--np-primary);
 }
 
-[dir="rtl"] .newspaper[data-persona="sovereign"] .editors-note {
+[dir='rtl'] .newspaper[data-persona='sovereign'] .editors-note {
   border-left: none;
   border-right: 3px double var(--np-primary);
 }
 
 /* Anchor links: flip margin */
-[dir="rtl"] .anchor-link {
+[dir='rtl'] .anchor-link {
   margin-left: 0;
   margin-right: 0.35em;
 }
 
 /* Site header: keep LTR for brand/nav — these are English-only chrome */
-[dir="rtl"] .site-header,
-[dir="rtl"] .site-footer {
+[dir='rtl'] .site-header,
+[dir='rtl'] .site-footer {
   direction: ltr;
   text-align: left;
 }
 
 /* Language switcher stays LTR even in RTL pages */
-[dir="rtl"] .language-switcher {
+[dir='rtl'] .language-switcher {
   direction: ltr;
   text-align: left;
 }

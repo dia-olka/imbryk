@@ -13,7 +13,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 function loadLanguages() {
-  const langPath = join(__dirname, '..', '..', '..', '..', 'data', 'languages.json');
+  const langPath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    'data',
+    'languages.json',
+  );
   try {
     return JSON.parse(readFileSync(langPath, 'utf-8'));
   } catch {
@@ -50,7 +58,7 @@ export default async function () {
               label: `article in newspaper "${newspaper.newspaper_id}" (edition ${edition.edition_id})`,
               offendingData: article,
             },
-            result.error
+            result.error,
           );
           continue;
         }
@@ -79,7 +87,9 @@ export default async function () {
         { code: 'en', nativeName: 'English', dir: 'ltr' },
       ];
       for (const lang of systemLangs) {
-        if (editionTranslations[lang.code]?.articles?.[newspaper.newspaper_id]) {
+        if (
+          editionTranslations[lang.code]?.articles?.[newspaper.newspaper_id]
+        ) {
           availableLangs.push({
             code: lang.code,
             nativeName: lang.nativeName,
@@ -93,9 +103,10 @@ export default async function () {
         // Add URLs to available langs (needs slug)
         const langsWithUrls = availableLangs.map((l) => ({
           ...l,
-          url: l.code === 'en'
-            ? `/edition/${edition.date}/${newspaper.newspaper_id}/${article.slug}/`
-            : `/edition/${edition.date}/${newspaper.newspaper_id}/${article.slug}/${l.code}/`,
+          url:
+            l.code === 'en'
+              ? `/edition/${edition.date}/${newspaper.newspaper_id}/${article.slug}/`
+              : `/edition/${edition.date}/${newspaper.newspaper_id}/${article.slug}/${l.code}/`,
         }));
 
         pages.push({

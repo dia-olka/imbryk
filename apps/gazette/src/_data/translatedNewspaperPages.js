@@ -21,7 +21,15 @@ import loadTranslations from './translations.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function loadLanguages() {
-  const langPath = join(__dirname, '..', '..', '..', '..', 'data', 'languages.json');
+  const langPath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    'data',
+    'languages.json',
+  );
   try {
     return JSON.parse(readFileSync(langPath, 'utf-8'));
   } catch {
@@ -95,7 +103,10 @@ export default async function () {
 
         // Available languages for switcher
         const availableLangs = systemLangs
-          .filter((l) => editionTranslations[l.code]?.articles?.[newspaper.newspaper_id])
+          .filter(
+            (l) =>
+              editionTranslations[l.code]?.articles?.[newspaper.newspaper_id],
+          )
           .map((l) => ({
             code: l.code,
             nativeName: l.nativeName,

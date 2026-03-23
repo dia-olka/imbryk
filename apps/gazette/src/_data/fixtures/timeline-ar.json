@@ -11,19 +11,14 @@
       "headline": "الانهيار الكبير",
       "description": "الأسواق المالية العالمية تنهار بشكل متتالي.",
       "impact": "انهيار النظام العالمي القائم على القواعد.",
-      "sectors": [
-        "geopolitics",
-        "economy"
-      ]
+      "sectors": ["geopolitics", "economy"]
     },
     {
       "date": "2030-06-01",
       "headline": "تشكيل كتل القوة",
       "description": "ست فصائل تظهر من رماد النظام القديم.",
       "impact": "توازن متعدد الأقطاب جديد.",
-      "sectors": [
-        "geopolitics"
-      ]
+      "sectors": ["geopolitics"]
     }
   ]
 }

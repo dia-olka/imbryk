@@ -9,14 +9,6 @@
       "dateLocale": "es-ES"
     },
     {
-      "code": "fr",
-      "locale": "fr_FR",
-      "name": "French",
-      "nativeName": "Français",
-      "dir": "ltr",
-      "dateLocale": "fr-FR"
-    },
-    {
       "code": "ar",
       "locale": "ar_SA",
       "name": "Arabic",
@@ -37,18 +29,6 @@
       "about": "Acerca de",
       "backToEdition": "Volver a la edición",
       "publishedOn": "Publicado el"
-    },
-    "fr": {
-      "readMore": "Lire la suite",
-      "inBrief": "En bref",
-      "editorsNote": "Note de la rédaction",
-      "language": "Langue",
-      "home": "Accueil",
-      "archive": "Archives",
-      "newspapers": "Journaux",
-      "about": "À propos",
-      "backToEdition": "Retour à l'édition",
-      "publishedOn": "Publié le"
     },
     "ar": {
       "readMore": "اقرأ المزيد",

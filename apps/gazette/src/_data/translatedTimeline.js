@@ -16,7 +16,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 function loadLanguages() {
-  const langPath = join(__dirname, '..', '..', '..', '..', 'data', 'languages.json');
+  const langPath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    'data',
+    'languages.json',
+  );
   try {
     return JSON.parse(readFileSync(langPath, 'utf-8'));
   } catch {
