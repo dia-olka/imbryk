@@ -29,8 +29,8 @@ class InBriefOutput:
 @dataclass
 class NewspaperOutput:
     newspaper_name: str
+    frontPageImagePrompt: str
     articles: list[ArticleOutput]
-    frontPageImagePrompt: str | None = None
     in_brief: list[InBriefOutput] | None = None
     editors_note: str | None = None
     metadata: dict | None = field(default=None)

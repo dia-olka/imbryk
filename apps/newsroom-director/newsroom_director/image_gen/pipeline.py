@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ..storage import EditionStorage
 from ..validation import sanitize_prompt_text
+from .backfill import _rewrite_image_prompt
 from .client import ImageGenerationStrategy
+
+if TYPE_CHECKING:
+    from ..generation import GenerationStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +37,15 @@ def generate_images_for_newspaper(
     edition_id: str,
     max_article_images: int = MAX_ARTICLE_IMAGES,
     negative_prompt: str = "",
+    llm: GenerationStrategy | None = None,
 ) -> ImageResult:
     """Generate images for a newspaper's articles and hero.
 
     Selects the top articles (by weight) that have a non-null imagePrompt,
     generates images via Imagen, and uploads them to storage.
+
+    When *llm* is provided and a prompt is rejected by Imagen (safety filter),
+    the prompt is rewritten via Flash and retried once before giving up.
 
     Args:
         newspaper_id: The newspaper identifier (e.g., "sovereign").
@@ -46,6 +55,8 @@ def generate_images_for_newspaper(
         storage: Edition storage backend for uploading images.
         edition_id: The edition identifier for storage paths.
         max_article_images: Max article images to generate.
+        negative_prompt: Per-persona negative prompt for Imagen.
+        llm: Optional LLM backend for rewriting rejected prompts.
 
     Returns:
         ImageResult with URLs for generated images.
@@ -84,6 +95,19 @@ def generate_images_for_newspaper(
             negative_prompt=negative_prompt,
             aspect_ratio="4:3",
         )
+        if image_bytes is None and llm is not None:
+            rewritten = _rewrite_image_prompt(image_prompt, headline, llm)
+            if rewritten:
+                logger.info(
+                    "Retrying article image with rewritten prompt for %s article %d",
+                    newspaper_id,
+                    idx,
+                    extra={"newspaper_id": newspaper_id, "article_index": idx,
+                           "rewritten_prompt": rewritten},
+                )
+                image_bytes = imagen_client.generate(
+                    rewritten, negative_prompt=negative_prompt, aspect_ratio="4:3",
+                )
         if image_bytes is None:
             logger.warning(
                 "Image generation returned None for %s article %d (%s) "
@@ -143,6 +167,22 @@ def generate_images_for_newspaper(
             negative_prompt=negative_prompt,
             aspect_ratio="16:9",
         )
+        if hero_bytes is None and llm is not None:
+            top_headline = next(
+                (a.get("headline", "") for a in articles if a.get("headline")),
+                "",
+            )
+            rewritten = _rewrite_image_prompt(sanitized_hero_prompt, top_headline, llm)
+            if rewritten:
+                logger.info(
+                    "Retrying hero image with rewritten prompt for %s",
+                    newspaper_id,
+                    extra={"newspaper_id": newspaper_id,
+                           "rewritten_prompt": rewritten},
+                )
+                hero_bytes = imagen_client.generate(
+                    rewritten, negative_prompt=negative_prompt, aspect_ratio="16:9",
+                )
         if hero_bytes is not None:
             hero_image_url = storage.write_image(
                 edition_id, newspaper_id, "hero.png", hero_bytes

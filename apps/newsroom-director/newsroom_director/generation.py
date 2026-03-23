@@ -134,6 +134,7 @@ class StubGenerationStrategy(GenerationStrategy):
             if response_schema is NewspaperOutput:
                 return json.dumps({
                     "newspaper_name": f"Stub {model_tier}",
+                    "frontPageImagePrompt": "A dramatic aerial view of a modern city skyline at golden hour, 4K, HDR, professional photography",
                     "articles": [{"headline": "Stub headline", "body": "Stub body text."}],
                     "in_brief": [],
                 })

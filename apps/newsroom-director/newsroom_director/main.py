@@ -773,6 +773,7 @@ def run_morning_press(
                         datetime.now(timezone.utc).strftime("%Y-%m-%d")
                     ),
                     negative_prompt=persona_neg,
+                    llm=gen,
                 )
 
                 # Embed image URLs into articles

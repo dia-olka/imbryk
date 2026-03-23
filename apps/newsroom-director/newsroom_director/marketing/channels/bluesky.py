@@ -70,6 +70,9 @@ def _compress_image(image_data: bytes, max_bytes: int = 976_000) -> tuple[bytes,
     if Pillow is unavailable.
     """
     if len(image_data) <= max_bytes:
+        # Detect actual content type from magic bytes
+        if image_data[:8].startswith(b"\x89PNG"):
+            return image_data, "image/png"
         return image_data, "image/jpeg"
 
     from PIL import Image  # noqa: PIL is an optional-but-expected dep
@@ -100,7 +103,7 @@ def _build_embed_card(url: str, client):
     try:
         og = _fetch_og_metadata(url)
     except Exception:
-        logger.debug("Failed to fetch OG metadata for %s", url, exc_info=True)
+        logger.warning("Failed to fetch OG metadata for %s", url, exc_info=True)
         return None
 
     title = og.get("og:title", "")
@@ -117,11 +120,11 @@ def _build_embed_card(url: str, client):
             )
             with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
                 image_data = resp.read()
-            image_data, content_type = _compress_image(image_data)
-            upload_resp = client.upload_blob(image_data, content_type=content_type)
+            image_data, _content_type = _compress_image(image_data)
+            upload_resp = client.upload_blob(image_data)
             thumb = upload_resp.blob
         except Exception:
-            logger.debug(
+            logger.warning(
                 "Failed to fetch/upload OG image %s", image_url, exc_info=True
             )
 

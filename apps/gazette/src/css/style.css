@@ -254,7 +254,8 @@ a:hover {
 }
 
 .site-logo__image {
-  height: var(--type-2xl);
+  height: 2.5rem;
+  width: auto;
 }
 
 .site-logo .site-title {
