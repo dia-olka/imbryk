@@ -1,14 +1,39 @@
 """Imbryk Ingestion API — prompts, payments, and editions."""
 
-import asyncio
+# Initialise Sentry before all other imports so startup crashes are reported.
 import logging
+import os
 import sys
+
+import sentry_sdk
+import sentry_sdk.integrations.logging
+
+_sentry_dsn = os.getenv("SENTRY_DSN", "")
+_log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+_log_level_int_early = getattr(logging, _log_level_name, logging.INFO)
+
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+        integrations=[
+            sentry_sdk.integrations.logging.LoggingIntegration(
+                level=_log_level_int_early,
+                event_level=logging.ERROR,
+            ),
+        ],
+    )
+    logging.captureWarnings(True)
+
+# --- remaining imports (now covered by Sentry) ---
+# ruff: noqa: E402
+
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 import httpx
-import sentry_sdk
-import sentry_sdk.integrations.logging
 import stripe
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,7 +50,6 @@ from ingestion_api.config import (
     QUOTE_EXPIRY_HOURS,
     RATE_LIMIT_QUOTE,
     RATE_LIMIT_QUOTE_GLOBAL,
-    SENTRY_DSN,
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET,
     TURNSTILE_SECRET_KEY,
@@ -61,20 +85,6 @@ logging.basicConfig(
     level=_log_level_int,
     format="%(levelname)s %(name)s: %(message)s",
 )
-
-if SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=0.1,
-        send_default_pii=False,
-        integrations=[
-            sentry_sdk.integrations.logging.LoggingIntegration(
-                level=_log_level_int,  # Capture logs at configured level or higher
-                event_level=logging.ERROR,  # Send only ERROR logs as Sentry events
-            ),
-        ],
-    )
-    logging.captureWarnings(True)  # Route warnings.warn() through logging so Sentry sees them
 
 logger = logging.getLogger(__name__)
 
