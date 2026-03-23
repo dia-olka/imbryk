@@ -7,6 +7,7 @@ import { getDesignTokens, toCSSCustomProperties } from './designTokens.js';
 import loadEditions from './lib/loadEditions.js';
 import { captureValidationError } from './lib/sentry.js';
 import { ArticleSchema } from './lib/schemas.js';
+import loadTranslations from './translations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
@@ -20,9 +21,9 @@ function loadLanguages() {
   }
 }
 
-export default async function (data) {
+export default async function () {
   const editions = await loadEditions();
-  const translations = data?.translations || {};
+  const translations = await loadTranslations();
   const langConfig = loadLanguages();
   const systemLangs = langConfig.system || [];
   const pages = [];

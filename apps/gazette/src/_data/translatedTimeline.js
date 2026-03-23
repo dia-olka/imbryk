@@ -29,7 +29,12 @@ export default async function () {
   const systemLangs = langConfig.system || [];
   const uiStrings = langConfig.ui || {};
 
-  if (!systemLangs.length || !R2_PUBLIC_URL) return [];
+  if (!systemLangs.length) return [];
+
+  if (!R2_PUBLIC_URL) {
+    // Local dev — load fixture timelines
+    return loadFixtureTimelines(systemLangs, uiStrings);
+  }
 
   const pages = [];
 
@@ -41,6 +46,36 @@ export default async function () {
       if (!resp.ok) continue;
 
       const data = await resp.json();
+      if (!data.history || !Array.isArray(data.history)) continue;
+
+      pages.push({
+        lang: lang.code,
+        langDir: lang.dir,
+        langLocale: lang.locale,
+        langName: lang.nativeName,
+        ui: uiStrings[lang.code] || {},
+        title: data.title || 'World History',
+        synopsis: data.synopsis || '',
+        epoch: data.epoch || '',
+        history: data.history,
+      });
+    } catch {
+      continue;
+    }
+  }
+
+  return pages;
+}
+
+function loadFixtureTimelines(systemLangs, uiStrings) {
+  const fixtureDir = join(__dirname, 'fixtures');
+  const pages = [];
+
+  for (const lang of systemLangs) {
+    const filePath = join(fixtureDir, `timeline-${lang.code}.json`);
+    try {
+      const raw = readFileSync(filePath, 'utf-8');
+      const data = JSON.parse(raw);
       if (!data.history || !Array.isArray(data.history)) continue;
 
       pages.push({

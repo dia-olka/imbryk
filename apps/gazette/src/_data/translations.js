@@ -49,8 +49,8 @@ function loadLanguages() {
 
 export default async function () {
   if (!R2_PUBLIC_URL) {
-    // Local dev — no translations available
-    return {};
+    // Local dev — load fixture translations
+    return loadFixtureTranslations();
   }
 
   const editions = await loadEditions();
@@ -91,6 +91,43 @@ export default async function () {
 
     if (Object.keys(editionTranslations).length > 0) {
       translations[edition.edition_id] = editionTranslations;
+    }
+  }
+
+  return translations;
+}
+
+/**
+ * Load fixture translations for local development.
+ * Reads translation-{lang}.json files from the fixtures directory.
+ */
+function loadFixtureTranslations() {
+  const langConfig = loadLanguages();
+  const systemLangs = langConfig.system || [];
+  if (!systemLangs.length) return {};
+
+  const fixtureDir = join(__dirname, 'fixtures');
+  const translations = {};
+
+  for (const lang of systemLangs) {
+    const filePath = join(fixtureDir, `translation-${lang.code}.json`);
+    try {
+      const raw = readFileSync(filePath, 'utf-8');
+      const data = JSON.parse(raw);
+      const result = TranslationSchema.safeParse(data);
+      if (!result.success) {
+        console.warn(`Invalid fixture translation for ${lang.code}:`, result.error.flatten());
+        continue;
+      }
+      // The fixture has a single edition_id — replicate it for all 3 dev editions
+      // (loadEditions creates 3 editions with different dates from the same fixture)
+      const editionId = result.data.edition_id;
+      if (!translations[editionId]) {
+        translations[editionId] = {};
+      }
+      translations[editionId][lang.code] = result.data;
+    } catch {
+      continue;
     }
   }
 

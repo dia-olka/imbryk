@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { getDesignTokens, toCSSCustomProperties } from './designTokens.js';
 import loadEditions from './lib/loadEditions.js';
 import { ArticleSchema } from './lib/schemas.js';
+import loadTranslations from './translations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,9 +29,8 @@ function loadLanguages() {
   }
 }
 
-export default async function (data) {
-  // data.translations is populated by translations.js
-  const translations = data?.translations || {};
+export default async function () {
+  const translations = await loadTranslations();
   const langConfig = loadLanguages();
   const systemLangs = langConfig.system || [];
   const uiStrings = langConfig.ui || {};
