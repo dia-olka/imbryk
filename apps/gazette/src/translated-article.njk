@@ -17,8 +17,6 @@ eleventyComputed:
   pageLang: "{{ tap.lang }}"
   pageDir: "{{ tap.langDir }}"
   pageLocale: "{{ tap.langLocale }}"
-  hreflangAlternates: "{{ tap.availableLangs }}"
-  hreflangDefault: "/edition/{{ tap.editionDate }}/{{ tap.newspaperId }}/{{ tap.slug }}/"
 ---
 
 {% set persona = personas.newspapers | findPersona(tap.newspaperId) %}

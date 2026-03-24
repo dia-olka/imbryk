@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
 import loadEditions from './lib/loadEditions.js';
+import loadLanguages from './lib/loadLanguages.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
@@ -33,27 +34,6 @@ const TranslationSchema = z.object({
   translated_at: z.string(),
   articles: z.record(z.string(), z.array(TranslatedArticleSchema)),
 });
-
-/**
- * Load language config from data/languages.json.
- */
-function loadLanguages() {
-  const langPath = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    'data',
-    'languages.json',
-  );
-  try {
-    const raw = readFileSync(langPath, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return { system: [], ui: {} };
-  }
-}
 
 export default async function () {
   if (!R2_PUBLIC_URL) {

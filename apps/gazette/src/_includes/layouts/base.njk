@@ -92,10 +92,10 @@
       </a>
       <nav aria-label="Primary navigation">
         <ul class="nav-list" role="list">
-          <li><a href="/"{% if page.url == "/" %} aria-current="page"{% endif %}>Today</a></li>
-          <li><a href="/timeline/"{% if page.url == "/timeline/" %} aria-current="page"{% endif %}>World</a></li>
-          <li><a href="/archive/"{% if page.url == "/archive/" %} aria-current="page"{% endif %}>Archive</a></li>
-          <li><a href="/about/"{% if page.url == "/about/" %} aria-current="page"{% endif %}>About</a></li>
+          <li><a href="/"{% if page.url == "/" %} aria-current="page"{% endif %}>{{ pageUi.today | default("Today") }}</a></li>
+          <li><a href="/timeline/"{% if page.url == "/timeline/" %} aria-current="page"{% endif %}>{{ pageUi.world | default("World") }}</a></li>
+          <li><a href="/archive/"{% if page.url == "/archive/" %} aria-current="page"{% endif %}>{{ pageUi.archive | default("Archive") }}</a></li>
+          <li><a href="/about/"{% if page.url == "/about/" %} aria-current="page"{% endif %}>{{ pageUi.about | default("About") }}</a></li>
         </ul>
       </nav>
     </div>

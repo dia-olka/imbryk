@@ -90,6 +90,7 @@ def run_backfill(
     database_url: str | None = None,
     storage: EditionStorage | None = None,
     translator: TranslationStrategy | None = None,
+    force: bool = False,
 ) -> dict:
     """Backfill translations for all historical editions.
 
@@ -154,6 +155,28 @@ def run_backfill(
 
         edition_translations = 0
 
+        # Load edition articles from DB once for all languages
+        session = session_factory()
+        try:
+            edition_articles = load_edition_by_date(session, edition_date)
+        finally:
+            session.close()
+
+        if not edition_articles:
+            logger.info("No DB edition for %s, skipping", edition_date)
+            continue
+
+        articles_by_newspaper: dict[str, list[dict]] = {}
+        for newspaper_id, content_json in edition_articles.items():
+            if newspaper_id == "curator":
+                continue
+            articles = _extract_articles(content_json)
+            if articles:
+                articles_by_newspaper[newspaper_id] = articles
+
+        if not articles_by_newspaper:
+            continue
+
         for lang in languages:
             lang_code = lang["code"]
             r2_key = f"editions/{edition_date}/translations/{lang_code}/{edition_id}.json"
@@ -162,29 +185,6 @@ def run_backfill(
             existing = store.read_json(r2_key)
             if existing is not None:
                 continue
-
-            # Load edition articles from DB
-            session = session_factory()
-            try:
-                edition_articles = load_edition_by_date(session, edition_date)
-            finally:
-                session.close()
-
-            if not edition_articles:
-                logger.info("No DB edition for %s, skipping", edition_date)
-                break  # no point trying other languages for this date
-
-            # Extract articles
-            articles_by_newspaper: dict[str, list[dict]] = {}
-            for newspaper_id, content_json in edition_articles.items():
-                if newspaper_id == "curator":
-                    continue
-                articles = _extract_articles(content_json)
-                if articles:
-                    articles_by_newspaper[newspaper_id] = articles
-
-            if not articles_by_newspaper:
-                break
 
             # Collect texts
             all_texts: list[str] = []
@@ -267,13 +267,14 @@ def run_backfill(
             editions_processed += 1
             total_translations += edition_translations
 
-    # Also backfill timeline translations (idempotency built in)
+    # Also backfill timeline translations
     timeline_written = _translate_timeline(
         session_factory=session_factory,
         store=store,
         translator=trans,
         budget=budget,
         languages=languages,
+        force=force,
     )
     total_translations += timeline_written
 
@@ -305,6 +306,7 @@ def run_translation(
     storage: EditionStorage | None = None,
     translator: TranslationStrategy | None = None,
     edition_date: str | None = None,
+    force: bool = False,
 ) -> dict:
     """Execute the translation pipeline.
 
@@ -490,6 +492,7 @@ def run_translation(
         translator=trans,
         budget=budget,
         languages=languages,
+        force=force,
     )
     translations_written += timeline_written
 
@@ -521,6 +524,7 @@ def _translate_timeline(
     translator: TranslationStrategy,
     budget: TranslationBudget,
     languages: list[dict],
+    force: bool = False,
 ) -> int:
     """Translate world history timeline events for all system languages.
 
@@ -555,9 +559,9 @@ def _translate_timeline(
         lang_code = lang["code"]
         r2_key = f"translations/_meta/timeline-{lang_code}.json"
 
-        # Idempotency: skip if already exists
+        # Idempotency: skip if already exists (unless --force)
         existing = store.read_json(r2_key)
-        if existing is not None:
+        if existing is not None and not force:
             logger.info("Timeline translation already exists for %s, skipping", lang_code)
             continue
 
@@ -719,6 +723,7 @@ def cli_main() -> None:
     configure_logging()
 
     backfill = "--backfill" in sys.argv or TRANSLATION_BACKFILL
+    force = "--force" in sys.argv
 
     if not TRANSLATION_ENABLED:
         logger.info("Translation disabled via TRANSLATION_ENABLED=false")
@@ -763,7 +768,7 @@ def cli_main() -> None:
         trans = StubTranslationClient()
 
     if backfill:
-        summary = run_backfill(storage=store, translator=trans)
+        summary = run_backfill(storage=store, translator=trans, force=force)
     else:
-        summary = run_translation(storage=store, translator=trans)
+        summary = run_translation(storage=store, translator=trans, force=force)
     logger.info("Translation job finished", extra={"summary": summary})

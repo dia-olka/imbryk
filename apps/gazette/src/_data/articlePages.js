@@ -1,33 +1,13 @@
 import slugify from '@sindresorhus/slugify';
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { getDesignTokens, toCSSCustomProperties } from './designTokens.js';
 import loadEditions from './lib/loadEditions.js';
+import loadLanguages from './lib/loadLanguages.js';
 import { captureValidationError } from './lib/sentry.js';
 import { ArticleSchema } from './lib/schemas.js';
 import loadTranslations from './translations.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
-
-function loadLanguages() {
-  const langPath = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    'data',
-    'languages.json',
-  );
-  try {
-    return JSON.parse(readFileSync(langPath, 'utf-8'));
-  } catch {
-    return { system: [], ui: {} };
-  }
-}
 
 export default async function () {
   const editions = await loadEditions();
