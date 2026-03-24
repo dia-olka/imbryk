@@ -18,15 +18,22 @@ _DEFAULT_ENDPOINT = "https://api.cognitive.microsofttranslator.com"
 class AzureTranslationClient(TranslationStrategy):
     """Calls Azure Translator to translate text segments.
 
-    Uses the batch endpoint (up to 100 segments / 50K chars per request).
-    Designed for the F0 (free) tier: includes inter-request throttling
-    and respects the ``Retry-After`` header on 429 responses.
+    Designed for the F0 (free) tier limits:
+      - 2,000,000 characters / month
+      - 33,300 characters / minute
+      - 10,000 characters / request
+      - Rate limit resets 60 seconds after a 429
+
+    Throttles inter-request delay based on characters sent to stay within
+    the per-minute cap. Respects ``Retry-After`` on 429 responses.
 
     See: https://learn.microsoft.com/en-us/azure/ai-services/translator/reference/v3-0-translate
     """
 
-    # Minimum gap between API calls to avoid 429s on the F0 free tier.
-    _REQUEST_INTERVAL_S = 0.2
+    # F0 free tier: 33,300 chars/minute
+    _CHARS_PER_MINUTE = 33_300
+    # Default wait when a 429 doesn't include a Retry-After header
+    _RATE_LIMIT_RESET_S = 60
 
     def __init__(
         self,
@@ -38,6 +45,7 @@ class AzureTranslationClient(TranslationStrategy):
         self._region = region
         self._endpoint = endpoint.rstrip("/")
         self._last_request_time: float = 0.0
+        self._last_request_chars: int = 0
 
     @property
     def provider_name(self) -> str:
@@ -49,13 +57,20 @@ class AzureTranslationClient(TranslationStrategy):
 
     @property
     def max_chars_per_request(self) -> int:
-        return 50_000
+        return 10_000
 
-    def _throttle(self) -> None:
-        """Wait if needed to maintain the minimum inter-request gap."""
+    def _throttle(self, chars_to_send: int) -> None:
+        """Wait if needed to stay within the per-minute character rate limit.
+
+        After sending N chars, we must wait at least N / (33300/60) seconds
+        before the next request to avoid exceeding 33,300 chars/minute.
+        """
+        if self._last_request_chars == 0:
+            return
+        min_gap = self._last_request_chars / (self._CHARS_PER_MINUTE / 60)
         elapsed = time.monotonic() - self._last_request_time
-        if elapsed < self._REQUEST_INTERVAL_S:
-            time.sleep(self._REQUEST_INTERVAL_S - elapsed)
+        if elapsed < min_gap:
+            time.sleep(min_gap - elapsed)
 
     def translate_batch(
         self,
@@ -78,10 +93,11 @@ class AzureTranslationClient(TranslationStrategy):
             "Content-Type": "application/json",
         }
 
-        max_retries = 4
+        total_chars = sum(len(t) for t in texts)
+        max_retries = 3
         response_data = None
         for attempt in range(max_retries):
-            self._throttle()
+            self._throttle(total_chars)
             try:
                 req = urllib.request.Request(
                     url,
@@ -92,14 +108,16 @@ class AzureTranslationClient(TranslationStrategy):
                 with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
                     response_data = json.loads(resp.read().decode("utf-8"))
                 self._last_request_time = time.monotonic()
+                self._last_request_chars = total_chars
                 break
             except urllib.error.HTTPError as e:
                 if e.code == 429 and attempt < max_retries - 1:
                     retry_after = e.headers.get("Retry-After")
-                    wait = int(retry_after) if retry_after else 2 ** (attempt + 1)
-                    logger.info("Rate limited (429), retrying in %ds", wait)
+                    wait = int(retry_after) if retry_after else self._RATE_LIMIT_RESET_S
+                    logger.warning("Rate limited (429), waiting %ds before retry", wait)
                     time.sleep(wait)
                     self._last_request_time = time.monotonic()
+                    self._last_request_chars = 0
                     continue
                 logger.warning(
                     "Azure Translator API call failed for %d texts -> %s",
