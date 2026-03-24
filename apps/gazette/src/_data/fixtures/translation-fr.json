@@ -77,5 +77,19 @@
         "imageAlt": "FR: "
       }
     ]
+  },
+  "newspapers": {
+    "sovereign": {
+      "frontPageImagePrompt": "Un vaste porte-avions fendant le détroit de Malacca au crépuscule, flanqué de navires d'escorte plus petits, avec des silhouettes de navires commerciaux dans l'arrière-plan brumeux et des feux de navigation brillant contre un ciel gris acier."
+    },
+    "aspirant": {
+      "frontPageImagePrompt": "Une vaste colonne de familles déplacées marchant le long d'une route poussiéreuse du corridor sahélien, portant leurs affaires, avec des conteneurs d'eau vides, une lumière dorée projetant de longues ombres — réalisme documentaire."
+    },
+    "moralist": {
+      "frontPageImagePrompt": "Un rassemblement solennel dans un lieu de culte, bougies allumées, congrégation baissant la tête en prière, lumière dorée chaleureuse à travers des vitraux, une atmosphère de gravité morale."
+    },
+    "hedonist": {
+      "frontPageImagePrompt": "Une scène sous-marine spectaculaire de forêts de kelp vibrantes dans un fjord norvégien, des rayons de soleil doré perçant l'eau cristalline, un plongeur en silhouette contre la lumière, couleurs hyper-vives et saturées."
+    }
   }
 }

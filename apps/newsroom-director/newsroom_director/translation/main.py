@@ -69,6 +69,23 @@ def _extract_articles(content_json: str) -> list[dict]:
     return result
 
 
+def _extract_newspaper_meta(content_json: str) -> dict:
+    """Extract newspaper-level translatable fields from content JSON.
+
+    Returns a dict with keys like frontPageImagePrompt (only if non-empty).
+    """
+    try:
+        parsed = json.loads(content_json)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+    meta: dict = {}
+    prompt = parsed.get("frontPageImagePrompt", "")
+    if prompt:
+        meta["frontPageImagePrompt"] = prompt
+    return meta
+
+
 def _batch_texts_for_article(article: dict) -> list[tuple[str, str]]:
     """Return (field_name, text) pairs for a single article to translate."""
     pairs: list[tuple[str, str]] = []
@@ -144,6 +161,12 @@ def run_backfill(
     failed: list[str] = []      # translation API errors
     stopped: list[str] = []     # budget exhausted before translating
 
+    # Per-language tracking: {lang_code: {"written": N, "failed": N, "skipped": N}}
+    lang_stats: dict[str, dict[str, int]] = {
+        lang["code"]: {"written": 0, "failed": 0, "skipped": 0}
+        for lang in languages
+    }
+
     for entry in index:
         edition_date = entry.get("date")
         edition_id = entry.get("edition_id")
@@ -170,12 +193,16 @@ def run_backfill(
             continue
 
         articles_by_newspaper: dict[str, list[dict]] = {}
+        newspaper_meta: dict[str, dict] = {}
         for newspaper_id, content_json in edition_articles.items():
             if newspaper_id == "curator":
                 continue
             articles = _extract_articles(content_json)
             if articles:
                 articles_by_newspaper[newspaper_id] = articles
+            meta = _extract_newspaper_meta(content_json)
+            if meta:
+                newspaper_meta[newspaper_id] = meta
 
         if not articles_by_newspaper:
             skipped.append(edition_date)
@@ -188,6 +215,7 @@ def run_backfill(
             # Skip if translation already exists
             existing = store.read_json(r2_key)
             if existing is not None:
+                lang_stats[lang_code]["skipped"] += 1
                 continue
 
             edition_had_work = True
@@ -201,6 +229,12 @@ def run_backfill(
                     for field_name, text in _batch_texts_for_article(article):
                         all_texts.append(text)
                         text_map.append((newspaper_id, article["original_index"], field_name))
+
+            # Newspaper-level fields (frontPageImagePrompt, etc.)
+            for newspaper_id, meta in newspaper_meta.items():
+                for field_name, text in meta.items():
+                    all_texts.append(text)
+                    text_map.append((newspaper_id, -1, field_name))
 
             if not all_texts:
                 continue
@@ -221,12 +255,24 @@ def run_backfill(
 
             # Assemble translation JSON
             translated_articles: dict[str, list[dict]] = {}
+            translated_newspapers: dict[str, dict] = {}
             chars_used = 0
+            failed_segments = 0
 
             for i, result in enumerate(results):
                 if result is None:
+                    failed_segments += 1
                     continue
                 newspaper_id, original_index, field_name = text_map[i]
+
+                # Newspaper-level field (original_index == -1)
+                if original_index == -1:
+                    if newspaper_id not in translated_newspapers:
+                        translated_newspapers[newspaper_id] = {}
+                    translated_newspapers[newspaper_id][field_name] = result.translated_text
+                    chars_used += result.chars_used
+                    continue
+
                 if newspaper_id not in translated_articles:
                     translated_articles[newspaper_id] = []
 
@@ -242,10 +288,21 @@ def run_backfill(
                 entry_item[field_name] = result.translated_text
                 chars_used += result.chars_used
 
-            if not translated_articles:
-                if edition_date not in [e for e in failed]:
+            if not translated_articles and not translated_newspapers:
+                lang_stats[lang_code]["failed"] += 1
+                logger.warning(
+                    "Backfill: ALL segments failed for %s/%s (%d segments)",
+                    edition_date, lang_code, len(all_texts),
+                )
+                if edition_date not in failed:
                     failed.append(edition_date)
                 continue
+
+            if failed_segments:
+                logger.warning(
+                    "Backfill: %d/%d segments failed for %s/%s",
+                    failed_segments, len(all_texts), edition_date, lang_code,
+                )
 
             translation_payload = {
                 "edition_id": edition_id,
@@ -254,6 +311,7 @@ def run_backfill(
                 "provider": trans.provider_name,
                 "translated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "articles": translated_articles,
+                "newspapers": translated_newspapers,
             }
 
             store.write_raw(
@@ -265,6 +323,7 @@ def run_backfill(
             budget.record_usage(chars_used)
             total_chars += chars_used
             edition_translations += 1
+            lang_stats[lang_code]["written"] += 1
 
             logger.info(
                 "Backfill: translated %s/%s | %d newspapers, %d chars",
@@ -305,6 +364,7 @@ def run_backfill(
         "total_chars": total_chars,
         "budget_exhausted": budget_exhausted,
         "provider": trans.provider_name,
+        "lang_stats": lang_stats,
         "latency_ms": total_ms,
     }
 
@@ -315,6 +375,15 @@ def run_backfill(
     ]
     if succeeded:
         parts.append(f"    {', '.join(succeeded)}")
+
+    # Per-language breakdown
+    parts.append("  Per-language breakdown:")
+    for lc, stats in lang_stats.items():
+        parts.append(
+            f"    {lc}: {stats['written']} written, "
+            f"{stats['failed']} failed, {stats['skipped']} skipped"
+        )
+
     if skipped:
         parts.append(f"  Skipped (already done): {len(skipped)} editions")
     if failed:
@@ -395,12 +464,16 @@ def run_translation(
 
     # Extract all articles per newspaper (skip curator)
     articles_by_newspaper: dict[str, list[dict]] = {}
+    newspaper_meta: dict[str, dict] = {}
     for newspaper_id, content_json in edition_articles.items():
         if newspaper_id == "curator":
             continue
         articles = _extract_articles(content_json)
         if articles:
             articles_by_newspaper[newspaper_id] = articles
+        meta = _extract_newspaper_meta(content_json)
+        if meta:
+            newspaper_meta[newspaper_id] = meta
 
     if not articles_by_newspaper:
         logger.info("No articles found to translate for %s", today)
@@ -412,6 +485,7 @@ def run_translation(
 
     translations_written = 0
     total_chars = 0
+    lang_results: dict[str, str] = {}  # lang_code -> "written"|"failed"|"skipped"|"budget"
 
     for lang in languages:
         lang_code = lang["code"]
@@ -424,6 +498,7 @@ def run_translation(
                 "Translation already exists for %s/%s, skipping",
                 today, lang_code,
             )
+            lang_results[lang_code] = "skipped"
             continue
 
         # Collect all texts to translate for this language
@@ -435,6 +510,12 @@ def run_translation(
                 for field_name, text in _batch_texts_for_article(article):
                     all_texts.append(text)
                     text_map.append((newspaper_id, article["original_index"], field_name))
+
+        # Newspaper-level fields (frontPageImagePrompt, etc.)
+        for newspaper_id, meta in newspaper_meta.items():
+            for field_name, text in meta.items():
+                all_texts.append(text)
+                text_map.append((newspaper_id, -1, field_name))
 
         if not all_texts:
             continue
@@ -448,6 +529,7 @@ def run_translation(
                 today, lang_code, total_batch_chars, budget.remaining(),
                 extra={"step": "budget_exceeded", "lang": lang_code},
             )
+            lang_results[lang_code] = "budget"
             continue
 
         # Translate in batches respecting provider limits
@@ -455,12 +537,24 @@ def run_translation(
 
         # Assemble translation JSON
         translated_articles: dict[str, list[dict]] = {}
+        translated_newspapers: dict[str, dict] = {}
         chars_used = 0
+        failed_segments = 0
 
         for i, result in enumerate(results):
             if result is None:
+                failed_segments += 1
                 continue
             newspaper_id, original_index, field_name = text_map[i]
+
+            # Newspaper-level field (original_index == -1)
+            if original_index == -1:
+                if newspaper_id not in translated_newspapers:
+                    translated_newspapers[newspaper_id] = {}
+                translated_newspapers[newspaper_id][field_name] = result.translated_text
+                chars_used += result.chars_used
+                continue
+
             # Find or create the article entry
             if newspaper_id not in translated_articles:
                 translated_articles[newspaper_id] = []
@@ -478,9 +572,19 @@ def run_translation(
             entry[field_name] = result.translated_text
             chars_used += result.chars_used
 
-        if not translated_articles:
-            logger.warning("All translations failed for %s/%s", today, lang_code)
+        if not translated_articles and not translated_newspapers:
+            logger.warning(
+                "All %d translation segments failed for %s/%s",
+                len(all_texts), today, lang_code,
+            )
+            lang_results[lang_code] = "failed"
             continue
+
+        if failed_segments:
+            logger.warning(
+                "%d/%d segments failed for %s/%s",
+                failed_segments, len(all_texts), today, lang_code,
+            )
 
         # Write translation JSON to R2
         translation_payload = {
@@ -490,6 +594,7 @@ def run_translation(
             "provider": trans.provider_name,
             "translated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "articles": translated_articles,
+            "newspapers": translated_newspapers,
         }
 
         store.write_raw(
@@ -501,6 +606,7 @@ def run_translation(
         budget.record_usage(chars_used)
         total_chars += chars_used
         translations_written += 1
+        lang_results[lang_code] = "written"
 
         logger.info(
             "Translation written: %s/%s | %d newspapers, %d chars",
@@ -533,13 +639,20 @@ def run_translation(
         "edition_date": today,
         "translations_written": translations_written,
         "languages_attempted": len(languages),
+        "lang_results": lang_results,
         "total_chars": total_chars,
         "provider": trans.provider_name,
         "latency_ms": total_ms,
     }
+
+    # Per-language detail in the summary log
+    lang_detail = ", ".join(
+        f"{lc}={status}" for lc, status in lang_results.items()
+    )
     logger.info(
-        "Translation job complete: %d/%d languages in %.1fs (%d chars)",
+        "Translation job complete: %d/%d languages in %.1fs (%d chars) | %s",
         translations_written, len(languages), total_ms / 1000, total_chars,
+        lang_detail,
         extra={"step": "complete", **summary},
     )
     return summary

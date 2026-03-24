@@ -1,0 +1,77 @@
+---
+pagination:
+  data: translatedEditionPages
+  size: 1
+  alias: tep
+permalink: "edition/{{ tep.editionDate }}/{{ tep.lang }}/index.html"
+layout: layouts/base.njk
+ogType: website
+eleventyComputed:
+  title: "{{ tep.editionDate | dateDisplay }} — Imbryk Gazette"
+  description: "{{ tep.editionDate | dateDisplay }} — {{ tep.langName }}"
+  ogImage: "{% if tep.newspapers[0].heroImageUrl %}{{ tep.newspapers[0].heroImageUrl }}{% endif %}"
+  pageLang: "{{ tep.lang }}"
+  pageDir: "{{ tep.langDir }}"
+  pageLocale: "{{ tep.langLocale }}"
+---
+
+{% set breadcrumbs = [
+  {label: tep.ui.home | default("Home"), url: "/" + tep.lang + "/"},
+  {label: tep.editionDate | dateDisplay(tep.lang), url: ""}
+] %}
+{% include "breadcrumb.njk" %}
+
+<div class="edition-header">
+  {% set neighbours = editions | editionNeighbours(tep.editionDate) %}
+  <nav class="curator-nav-row" aria-label="{{ tep.ui.browseEditions | default('Browse editions by date') }}">
+    <div class="curator-nav-row__next">
+      {% if neighbours.next %}
+        <a href="/edition/{{ neighbours.next }}/{{ tep.lang }}/" class="curator-nav-row__link">
+          <span class="curator-nav-row__arrow" aria-hidden="true">&larr;</span>
+          <span class="curator-nav-row__meta">
+            <span class="curator-nav-row__date">
+              <span class="curator-nav-row__date-full">{{ neighbours.next | dateDisplay(tep.lang) }}</span>
+              <span class="curator-nav-row__date-short">{{ neighbours.next | dateShort(tep.lang) }}</span>
+            </span>
+          </span>
+        </a>
+      {% endif %}
+    </div>
+    <div class="curator-nav-row__center">
+      {% if tep.curatorSynthesis %}
+        <a href="/edition/{{ tep.editionDate }}/curator/"
+           class="curator-banner"
+           style="{{ personas.curator.cssVars }}"
+           aria-label="{{ personas.curator.paperName }} — {{ tep.ui.synthesis | default('Synthesis &amp; Analysis') }}">
+          <span class="curator-banner__label">{{ personas.curator.paperName }}</span>
+          <span class="curator-banner__text">{{ (tep.curatorSynthesis.text or tep.curatorSynthesis.analysis or "") | truncateChars(120) }}</span>
+          <span class="curator-banner__cta" aria-hidden="true">&rarr;</span>
+        </a>
+      {% endif %}
+    </div>
+    <div class="curator-nav-row__prev">
+      {% if neighbours.prev %}
+        <a href="/edition/{{ neighbours.prev }}/{{ tep.lang }}/" class="curator-nav-row__link curator-nav-row__link--prev">
+          <span class="curator-nav-row__meta">
+            <span class="curator-nav-row__date">
+              <span class="curator-nav-row__date-full">{{ neighbours.prev | dateDisplay(tep.lang) }}</span>
+              <span class="curator-nav-row__date-short">{{ neighbours.prev | dateShort(tep.lang) }}</span>
+            </span>
+          </span>
+          <span class="curator-nav-row__arrow" aria-hidden="true">&rarr;</span>
+        </a>
+      {% endif %}
+    </div>
+  </nav>
+</div>
+
+<ul class="front-page-grid" role="list">
+  {% for newspaper in tep.newspapers %}
+    {% set cardPersona = personas.newspapers | findPersona(newspaper.newspaper_id) %}
+    {% set cardNewspaper = newspaper %}
+    {% set cardEditionDate = tep.editionDate %}
+    {% set cardLangSuffix = tep.lang %}
+    {% set cardId = newspaper.newspaper_id %}
+    {% include "front-page-card-translated.njk" %}
+  {% endfor %}
+</ul>

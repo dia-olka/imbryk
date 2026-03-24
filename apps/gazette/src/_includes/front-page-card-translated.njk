@@ -1,0 +1,48 @@
+{# Front-page newspaper card — translated version
+   Usage: {% include "front-page-card-translated.njk" %}
+   Expects:
+     - cardNewspaper: newspaper object with translated articles
+     - cardPersona: persona object (paperName, tagline, cssVars)
+     - cardEditionDate: edition date for URL
+     - cardLangSuffix: language code for URL suffix (e.g. "es")
+#}
+
+{% set leadHeadline = cardNewspaper.articles[0].headline if cardNewspaper.articles.length else "" %}
+
+<li{% if cardId %} id="{{ cardId }}"{% endif %}>
+  <a href="/edition/{{ cardEditionDate }}/{{ cardNewspaper.newspaper_id }}/{{ cardLangSuffix }}/"
+     class="front-page-card"
+     data-persona="{{ cardNewspaper.newspaper_id }}"
+     style="{{ cardPersona.cssVars if cardPersona else '' }}"
+     aria-label="{{ cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name }} — {{ leadHeadline }}">
+
+    {# Image layer — uses hero image when available #}
+    {% if cardNewspaper.heroImageUrl %}
+    <img src="{{ cardNewspaper.heroImageUrl }}"
+         alt=""
+         {% if loop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
+         decoding="async"
+         width="600"
+         height="800"
+         class="front-page-card__image">
+    {% endif %}
+
+    {# Top: Masthead overlay #}
+    <div class="front-page-card__masthead">
+      <h2 class="front-page-card__name">{{ cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name }}</h2>
+      {% if cardPersona and cardPersona.tagline %}
+        <p class="front-page-card__tagline">{{ cardPersona.tagline }}</p>
+      {% endif %}
+    </div>
+
+    {# Bottom: Lead headline overlay #}
+    <div class="front-page-card__footer">
+      {% if leadHeadline %}
+        <p class="front-page-card__headline">{{ leadHeadline }}</p>
+      {% endif %}
+      <p class="front-page-card__count">
+        {{ cardNewspaper.articles.length }} article{{ "s" if cardNewspaper.articles.length != 1 }}{% if cardNewspaper.in_brief.length %} · {{ cardNewspaper.in_brief.length }} in brief{% endif %}
+      </p>
+    </div>
+  </a>
+</li>

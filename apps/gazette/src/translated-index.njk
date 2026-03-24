@@ -1,0 +1,83 @@
+---
+pagination:
+  data: translatedIndexPages
+  size: 1
+  alias: tip
+permalink: "{{ tip.lang }}/index.html"
+layout: layouts/base.njk
+bodyClass: page-home
+ogType: website
+eleventyComputed:
+  title: "{{ tip.ui.todaysEdition | default(\"Today's Edition\") }} — Imbryk Gazette"
+  description: "{{ tip.ui.descriptor | default(\"Today's AI-generated perspectives on how world events reshape civilisation.\") }}"
+  ogImage: "{% if tip.edition.newspapers[0].heroImageUrl %}{{ tip.edition.newspapers[0].heroImageUrl }}{% endif %}"
+  pageLang: "{{ tip.lang }}"
+  pageDir: "{{ tip.langDir }}"
+  pageLocale: "{{ tip.langLocale }}"
+---
+
+{% set edition = tip.edition %}
+
+{% if edition %}
+<div class="edition-banner">
+  <p class="edition-dateline">
+    <time datetime="{{ edition.date | dateISO }}">{{ edition.date | dateDisplay(tip.lang) }}</time>
+    &mdash; {{ tip.ui.todaysEdition | default("Today's Edition") }}
+  </p>
+  {% set neighbours = tip.allEditions | editionNeighbours(edition.date) %}
+  <nav class="curator-nav-row" aria-label="{{ tip.ui.browseEditions | default('Browse editions by date') }}">
+    <div class="curator-nav-row__item curator-nav-row__item--next">
+      {% if neighbours.next %}
+        <a href="/edition/{{ neighbours.next }}/" class="curator-nav-row__link">
+          <span class="curator-nav-row__arrow" aria-hidden="true">&larr;</span>
+          <span class="curator-nav-row__meta">
+            <span class="curator-nav-row__date">
+              <span class="curator-nav-row__date-full">{{ neighbours.next | dateDisplay(tip.lang) }}</span>
+              <span class="curator-nav-row__date-short">{{ neighbours.next | dateShort(tip.lang) }}</span>
+            </span>
+          </span>
+        </a>
+      {% endif %}
+    </div>
+    <div class="curator-nav-row__item curator-nav-row__item--center">
+      {% if edition.curator_synthesis %}
+        <a href="/edition/{{ edition.date }}/curator/"
+           class="curator-banner"
+           style="{{ personas.curator.cssVars }}"
+           aria-label="{{ personas.curator.paperName }} — {{ tip.ui.synthesis | default('Synthesis &amp; Analysis') }}">
+          <span class="curator-banner__label">{{ personas.curator.paperName }}</span>
+          <span class="curator-banner__text">{{ (edition.curator_synthesis.text or edition.curator_synthesis.analysis or "") | truncateWords(30) }}</span>
+          <span class="curator-banner__cta" aria-hidden="true">&rarr;</span>
+        </a>
+      {% endif %}
+    </div>
+    <div class="curator-nav-row__item curator-nav-row__item--prev">
+      {% if neighbours.prev %}
+        <a href="/edition/{{ neighbours.prev }}/" class="curator-nav-row__link curator-nav-row__link--prev">
+          <span class="curator-nav-row__meta">
+            <span class="curator-nav-row__date">
+              <span class="curator-nav-row__date-full">{{ neighbours.prev | dateDisplay(tip.lang) }}</span>
+              <span class="curator-nav-row__date-short">{{ neighbours.prev | dateShort(tip.lang) }}</span>
+            </span>
+          </span>
+          <span class="curator-nav-row__arrow" aria-hidden="true">&rarr;</span>
+        </a>
+      {% endif %}
+    </div>
+  </nav>
+</div>
+{% endif %}
+
+{% if edition %}
+  <ul class="front-page-grid" role="list">
+    {% for newspaper in edition.newspapers %}
+      {% set cardPersona = personas.newspapers | findPersona(newspaper.newspaper_id) %}
+      {% set cardNewspaper = newspaper %}
+      {% set cardEditionDate = edition.date %}
+      {% set cardLangSuffix = tip.lang %}
+      {% include "front-page-card-translated.njk" %}
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>{{ tip.ui.noEditions | default("No editions published yet. Check back soon.") }}</p>
+{% endif %}

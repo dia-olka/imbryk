@@ -77,5 +77,19 @@
         "imageAlt": "ES: "
       }
     ]
+  },
+  "newspapers": {
+    "sovereign": {
+      "frontPageImagePrompt": "Un vasto portaaviones surcando el estrecho de Malaca al atardecer, flanqueado por buques de escolta más pequeños, con siluetas de barcos comerciales en el fondo brumoso y luces de navegación brillando contra un cielo gris acero."
+    },
+    "aspirant": {
+      "frontPageImagePrompt": "Una vasta columna de familias desplazadas caminando por un camino polvoriento del corredor del Sahel, cargando pertenencias, con contenedores de agua vacíos, luz dorada proyectando largas sombras — realismo documental."
+    },
+    "moralist": {
+      "frontPageImagePrompt": "Una reunión solemne en un lugar de culto, velas encendidas, congregación inclinando la cabeza en oración, cálida luz dorada a través de vidrieras, una atmósfera de gravedad moral."
+    },
+    "hedonist": {
+      "frontPageImagePrompt": "Una espectacular escena submarina de vibrantes bosques de algas en un fiordo noruego, rayos de luz solar dorada penetrando el agua cristalina, un buceador en silueta contra la luz, colores hípervivos y saturados."
+    }
   }
 }

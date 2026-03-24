@@ -26,6 +26,10 @@ const TranslatedArticleSchema = z.object({
   imageAlt: z.string().optional(),
 });
 
+const TranslatedNewspaperMetaSchema = z.object({
+  frontPageImagePrompt: z.string().optional(),
+});
+
 const TranslationSchema = z.object({
   edition_id: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -33,6 +37,7 @@ const TranslationSchema = z.object({
   provider: z.string().min(1),
   translated_at: z.string(),
   articles: z.record(z.string(), z.array(TranslatedArticleSchema)),
+  newspapers: z.record(z.string(), TranslatedNewspaperMetaSchema).optional(),
 });
 
 export default async function () {

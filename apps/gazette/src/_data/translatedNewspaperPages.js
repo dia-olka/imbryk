@@ -100,6 +100,14 @@ export default async function () {
           url: `/edition/${edition.date}/${newspaper.newspaper_id}/`,
         });
 
+        // Translated newspaper-level fields (frontPageImagePrompt)
+        const newspaperMeta =
+          langTranslation.newspapers?.[newspaper.newspaper_id];
+        const translatedImagePrompt =
+          newspaperMeta?.frontPageImagePrompt ||
+          newspaper.frontPageImagePrompt ||
+          null;
+
         const tokens = getDesignTokens(newspaper.newspaper_id);
         pages.push({
           editionDate: edition.date,
@@ -114,7 +122,7 @@ export default async function () {
           inBrief: newspaper.in_brief,
           editorsNote: newspaper.editors_note,
           heroImageUrl: newspaper.heroImageUrl || null,
-          frontPageImagePrompt: newspaper.frontPageImagePrompt || null,
+          frontPageImagePrompt: translatedImagePrompt,
           allNewspaperIds,
           availableLangs,
           designTokens: tokens,
