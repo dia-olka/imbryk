@@ -1,13 +1,19 @@
 import slugify from '@sindresorhus/slugify';
+
 import { getDesignTokens, toCSSCustomProperties } from './designTokens.js';
 import loadEditions from './lib/loadEditions.js';
+import loadLanguages from './lib/loadLanguages.js';
 import { captureValidationError } from './lib/sentry.js';
 import { ArticleSchema } from './lib/schemas.js';
+import loadTranslations from './translations.js';
 
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 export default async function () {
   const editions = await loadEditions();
+  const translations = await loadTranslations();
+  const langConfig = loadLanguages();
+  const systemLangs = langConfig.system || [];
   const pages = [];
 
   for (const edition of editions) {
@@ -32,7 +38,7 @@ export default async function () {
               label: `article in newspaper "${newspaper.newspaper_id}" (edition ${edition.edition_id})`,
               offendingData: article,
             },
-            result.error
+            result.error,
           );
           continue;
         }
@@ -55,8 +61,34 @@ export default async function () {
       const tokens = getDesignTokens(newspaper.newspaper_id);
       const cssVars = toCSSCustomProperties(tokens);
 
+      // Build available languages for the language switcher
+      const editionTranslations = translations[edition.edition_id] || {};
+      const availableLangs = [
+        { code: 'en', nativeName: 'English', dir: 'ltr' },
+      ];
+      for (const lang of systemLangs) {
+        if (
+          editionTranslations[lang.code]?.articles?.[newspaper.newspaper_id]
+        ) {
+          availableLangs.push({
+            code: lang.code,
+            nativeName: lang.nativeName,
+            dir: lang.dir,
+          });
+        }
+      }
+
       for (let i = 0; i < articlesWithSlugs.length; i++) {
         const article = articlesWithSlugs[i];
+        // Add URLs to available langs (needs slug)
+        const langsWithUrls = availableLangs.map((l) => ({
+          ...l,
+          url:
+            l.code === 'en'
+              ? `/edition/${edition.date}/${newspaper.newspaper_id}/${article.slug}/`
+              : `/edition/${edition.date}/${newspaper.newspaper_id}/${article.slug}/${l.code}/`,
+        }));
+
         pages.push({
           editionDate: edition.date,
           newspaperId: newspaper.newspaper_id,
@@ -69,6 +101,7 @@ export default async function () {
           editorsNote: newspaper.editors_note,
           heroImageUrl: newspaper.heroImageUrl || null,
           allNewspaperIds,
+          availableLangs: langsWithUrls,
           designTokens: tokens,
           cssVars,
           googleFontsUrl: tokens?.googleFontsUrl || null,

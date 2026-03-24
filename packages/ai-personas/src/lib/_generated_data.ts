@@ -1,7 +1,7 @@
 /* Auto-generated from data/personas.json and data/taxonomy.json
  * DO NOT EDIT — run `npx nx run ai-personas:generate-data` to regenerate. */
 
- 
+/* eslint-disable */
 
 export const PERSONAS_DATA = {
   preamble:

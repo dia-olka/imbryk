@@ -1,0 +1,38 @@
+{# Translated article preview card component
+   Same as article-preview.njk but with language suffix on article URL.
+   Expects:
+     - previewArticle, previewEditionDate, previewNewspaperId, previewIsLead, previewTruncate
+     - previewLangSuffix: language code for URL suffix
+#}
+
+{% set truncateCount = previewTruncate if previewTruncate else 30 %}
+
+<div id="{{ previewArticle.slug }}"
+     class="article-preview{% if previewIsLead %} article-preview--lead{% endif %}">
+  <article>
+    {% if previewArticle.image_url %}
+      <img src="{{ previewArticle.image_url }}"
+           alt="{{ previewArticle.imageAlt | default(previewArticle.imagePrompt) }}"
+           loading="{% if previewIsLead %}eager{% else %}lazy{% endif %}"
+           decoding="async"
+           width="400"
+           height="225"
+           class="article-preview__image">
+    {% endif %}
+    <div class="article-preview__body">
+      <h3 class="article-preview__title">
+        {{ previewArticle.headline }}
+        <a href="#{{ previewArticle.slug }}"
+           class="anchor-link article-preview__anchor"
+           aria-label="Permalink to: {{ previewArticle.headline }}">#</a>
+      </h3>
+      <p class="article-preview__excerpt">{{ previewArticle.body | truncateWords(truncateCount) }}</p>
+      <p class="article-preview__meta">
+        {{ previewArticle.word_count }} words
+        <a href="/edition/{{ previewEditionDate }}/{{ previewNewspaperId }}/{{ previewArticle.slug }}/{{ previewLangSuffix }}/"
+           class="article-preview__card-link article-preview__read-more"
+           aria-label="Read full article: {{ previewArticle.headline }}">Read article →</a>
+      </p>
+    </div>
+  </article>
+</div>

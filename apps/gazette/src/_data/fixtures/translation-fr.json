@@ -1,0 +1,81 @@
+{
+  "edition_id": "yz-d2-001",
+  "date": "2026-03-01",
+  "lang": "fr",
+  "provider": "stub",
+  "translated_at": "2026-03-01T07:30:00Z",
+  "articles": {
+    "sovereign": [
+      {
+        "original_index": 0,
+        "headline": "Les incidents dans le détroit de Malacca s'intensifient avec le déploiement d'un groupe aéronaval",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: A carrier strike group formation in the Strait of Malacca at"
+      },
+      {
+        "original_index": 1,
+        "headline": "Le Bouclier du Nord propose un traité sur les armes autonomes — la République Atlantique signale son opposition",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: A formal diplomatic chamber in Tromsø with Northern Shield P"
+      }
+    ],
+    "aspirant": [
+      {
+        "original_index": 0,
+        "headline": "La crise de l'eau déplace 200 000 personnes dans l'Union du Sud",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: A long line of displaced families crossing a dry Sahel lands"
+      },
+      {
+        "original_index": 1,
+        "headline": "L'effondrement corallien menace la sécurité alimentaire de millions de personnes dans le Pacifique",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: "
+      }
+    ],
+    "owner": [
+      {
+        "original_index": 0,
+        "headline": "La perturbation à Malacca déclenche une révision de la chaîne d'approvisionnement",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: A vast trading floor with screens showing spiking shipping f"
+      }
+    ],
+    "radical": [
+      {
+        "original_index": 0,
+        "headline": "15 000 travailleurs technologiques licenciés tandis que la Directive sur l'autonomie de l'IA supprime la supervision humaine",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: A surveillance camera mounted on a sterile corporate buildin"
+      }
+    ],
+    "moralist": [
+      {
+        "original_index": 0,
+        "headline": "Le traité sur les armes autonomes est un impératif moral, pas une stratégie",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: A stark podium with the Tromsø Protocol document illuminated"
+      },
+      {
+        "original_index": 1,
+        "headline": "La crise du déplacement exige du courage moral, pas des paquets d'aide",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: "
+      }
+    ],
+    "hedonist": [
+      {
+        "original_index": 0,
+        "headline": "Les récifs coralliens meurent et vos prochaines vacances aussi",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: A split-screen underwater panorama: bleached white dead cora"
+      },
+      {
+        "original_index": 1,
+        "headline": "La percée en thérapie génique qui devrait vraiment vous enthousiasmer",
+        "body": "Ceci est une traduction de test en français. Le texte original a été remplacé par un contenu d'exemple pour vérifier que le système de traduction fonctionne correctement dans l'environnement de développement local. Les articles réels seraient traduits par Azure Translator ou un autre fournisseur de traduction configuré.",
+        "imageAlt": "FR: "
+      }
+    ]
+  }
+}

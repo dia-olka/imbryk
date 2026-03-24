@@ -1,0 +1,80 @@
+---
+pagination:
+  data: translatedArticlePages
+  size: 1
+  alias: tap
+permalink: "edition/{{ tap.editionDate }}/{{ tap.newspaperId }}/{{ tap.slug }}/{{ tap.lang }}/index.html"
+layout: layouts/base.njk
+ogType: article
+eleventyComputed:
+  title: "{{ tap.article.headline }} — {{ tap.newspaperName }} — Imbryk Gazette"
+  ogTitle: "{{ tap.article.headline }} — {{ tap.newspaperName }}"
+  description: "{{ tap.article.body | truncateChars(155) }}"
+  ogDescription: "{{ tap.article.body | truncateChars(200) }}"
+  ogImage: "{% if tap.article.image_url %}{{ tap.article.image_url }}{% elif tap.heroImageUrl %}{{ tap.heroImageUrl }}{% endif %}"
+  ogImageAlt: "{{ tap.article.imageAlt | default(tap.article.headline) }}"
+  googleFontsUrl: "{{ tap.googleFontsUrl }}"
+  pageLang: "{{ tap.lang }}"
+  pageDir: "{{ tap.langDir }}"
+  pageLocale: "{{ tap.langLocale }}"
+---
+
+{% set persona = personas.newspapers | findPersona(tap.newspaperId) %}
+
+{% set breadcrumbs = [
+  {label: tap.ui.home | default("Home"), url: "/"},
+  {label: tap.editionDate | dateDisplay, url: "/edition/" + tap.editionDate + "/"},
+  {label: tap.newspaperName, url: "/edition/" + tap.editionDate + "/" + tap.newspaperId + "/"},
+  {label: tap.article.headline, url: ""}
+] %}
+{% include "breadcrumb.njk" %}
+
+{% set switcherLangs = tap.availableLangs %}
+{% set switcherCurrentLang = tap.lang %}
+{% include "language-switcher.njk" %}
+
+<div class="newspaper" data-persona="{{ tap.newspaperId }}" style="{{ tap.cssVars }}">
+
+  {% set mastheadName = tap.newspaperName %}
+  {% set mastheadTagline = persona.tagline if persona else "" %}
+  {% set mastheadDate = tap.editionDate %}
+  {% include "newspaper-masthead.njk" %}
+
+  <article id="{{ tap.slug }}">
+    <h1 class="article-full__title">
+      {{ tap.article.headline }}
+      <a href="#{{ tap.slug }}" class="anchor-link" aria-label="Permalink to this article">#</a>
+    </h1>
+
+    <p class="article-full__meta">
+      {{ tap.editionDate | dateDisplay }} · {{ tap.article.word_count }} words
+    </p>
+
+    {% if tap.article.image_url %}
+      <figure class="article-full__image">
+        <img src="{{ tap.article.image_url }}"
+             alt="{{ tap.article.imageAlt }}"
+             loading="lazy"
+             decoding="async"
+             width="800"
+             height="450"
+             srcset="{{ tap.article.image_url }} 800w"
+             sizes="(max-width: 800px) 100vw, 800px">
+        <figcaption>{{ tap.article.imageAlt }}</figcaption>
+      </figure>
+    {% endif %}
+
+    <div class="article-full__body">
+      {{ tap.article.body | markdown | safe }}
+    </div>
+  </article>
+
+  {% set prevArticle = tap.prevArticle %}
+  {% set nextArticle = tap.nextArticle %}
+  {% set articleEditionDate = tap.editionDate %}
+  {% set articleNewspaperId = tap.newspaperId %}
+  {% set articleNewspaperName = tap.newspaperName %}
+  {% set articleLangSuffix = tap.lang %}
+  {% include "article-nav-translated.njk" %}
+
+</div>

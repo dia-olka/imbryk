@@ -1,0 +1,24 @@
+{# Language switcher component
+   Usage: {% include "language-switcher.njk" %}
+   Expects:
+     - switcherLangs: array of { code, nativeName, dir, url }
+     - switcherCurrentLang: current language code (e.g. "es")
+#}
+
+{% if switcherLangs and switcherLangs.length > 1 %}
+<nav class="language-switcher" aria-label="Language">
+  <ul role="list">
+    {% for lang in switcherLangs %}
+      {% if lang.code == switcherCurrentLang %}
+        <li>
+          <span class="language-switcher__current" aria-current="true" lang="{{ lang.code }}" dir="{{ lang.dir }}">{{ lang.nativeName }}</span>
+        </li>
+      {% else %}
+        <li>
+          <a href="{{ lang.url }}" class="language-switcher__link" lang="{{ lang.code }}" dir="{{ lang.dir }}" hreflang="{{ lang.code }}">{{ lang.nativeName }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+</nav>
+{% endif %}

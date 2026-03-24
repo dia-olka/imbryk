@@ -1,13 +1,39 @@
 import slugify from '@sindresorhus/slugify';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { getDesignTokens, toCSSCustomProperties } from './designTokens.js';
 import loadEditions from './lib/loadEditions.js';
 import { captureValidationError } from './lib/sentry.js';
 import { ArticleSchema } from './lib/schemas.js';
+import loadTranslations from './translations.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
+
+function loadLanguages() {
+  const langPath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    'data',
+    'languages.json',
+  );
+  try {
+    return JSON.parse(readFileSync(langPath, 'utf-8'));
+  } catch {
+    return { system: [], ui: {} };
+  }
+}
 
 export default async function () {
   const editions = await loadEditions();
+  const translations = await loadTranslations();
+  const langConfig = loadLanguages();
+  const systemLangs = langConfig.system || [];
   const pages = [];
 
   for (const edition of editions) {
@@ -32,7 +58,7 @@ export default async function () {
               label: `article in newspaper "${newspaper.newspaper_id}" (edition ${edition.edition_id})`,
               offendingData: article,
             },
-            result.error
+            result.error,
           );
           continue;
         }
@@ -52,6 +78,29 @@ export default async function () {
         return { ...article, slug };
       });
 
+      // Build available languages for the language switcher
+      const editionTranslations = translations[edition.edition_id] || {};
+      const availableLangs = [
+        {
+          code: 'en',
+          nativeName: 'English',
+          dir: 'ltr',
+          url: `/edition/${edition.date}/${newspaper.newspaper_id}/`,
+        },
+      ];
+      for (const lang of systemLangs) {
+        if (
+          editionTranslations[lang.code]?.articles?.[newspaper.newspaper_id]
+        ) {
+          availableLangs.push({
+            code: lang.code,
+            nativeName: lang.nativeName,
+            dir: lang.dir,
+            url: `/edition/${edition.date}/${newspaper.newspaper_id}/${lang.code}/`,
+          });
+        }
+      }
+
       const tokens = getDesignTokens(newspaper.newspaper_id);
       pages.push({
         editionDate: edition.date,
@@ -64,6 +113,7 @@ export default async function () {
         heroImageUrl: newspaper.heroImageUrl || null,
         metadata: newspaper.metadata,
         allNewspaperIds,
+        availableLangs,
         designTokens: tokens,
         cssVars: toCSSCustomProperties(tokens),
         googleFontsUrl: tokens?.googleFontsUrl || null,

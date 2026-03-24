@@ -1,0 +1,81 @@
+{
+  "edition_id": "yz-d2-001",
+  "date": "2026-03-01",
+  "lang": "es",
+  "provider": "stub",
+  "translated_at": "2026-03-01T07:30:00Z",
+  "articles": {
+    "sovereign": [
+      {
+        "original_index": 0,
+        "headline": "Los incidentes en el estrecho de Malaca se intensifican con el despliegue de un grupo de portaaviones",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: A carrier strike group formation in the Strait of Malacca at"
+      },
+      {
+        "original_index": 1,
+        "headline": "El Escudo del Norte propone un tratado sobre armas autónomas — la República Atlántica señala oposición",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: A formal diplomatic chamber in Tromsø with Northern Shield P"
+      }
+    ],
+    "aspirant": [
+      {
+        "original_index": 0,
+        "headline": "La crisis del agua desplaza a 200.000 personas en la Unión del Sur",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: A long line of displaced families crossing a dry Sahel lands"
+      },
+      {
+        "original_index": 1,
+        "headline": "El colapso del coral amenaza la seguridad alimentaria de millones en el Pacífico",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: "
+      }
+    ],
+    "owner": [
+      {
+        "original_index": 0,
+        "headline": "La interrupción en Malaca provoca una revisión de la cadena de suministro",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: A vast trading floor with screens showing spiking shipping f"
+      }
+    ],
+    "radical": [
+      {
+        "original_index": 0,
+        "headline": "15.000 trabajadores tecnológicos despedidos mientras la Directiva de Autonomía de IA elimina la supervisión humana",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: A surveillance camera mounted on a sterile corporate buildin"
+      }
+    ],
+    "moralist": [
+      {
+        "original_index": 0,
+        "headline": "El tratado de armas autónomas es un imperativo moral, no una estrategia",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: A stark podium with the Tromsø Protocol document illuminated"
+      },
+      {
+        "original_index": 1,
+        "headline": "La crisis de desplazamiento exige coraje moral, no paquetes de ayuda",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: "
+      }
+    ],
+    "hedonist": [
+      {
+        "original_index": 0,
+        "headline": "Los arrecifes de coral están muriendo y también tus próximas vacaciones",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: A split-screen underwater panorama: bleached white dead cora"
+      },
+      {
+        "original_index": 1,
+        "headline": "El avance en terapia génica que realmente debería entusiasmarte",
+        "body": "Esta es una traducción de prueba al español. El texto original ha sido reemplazado con contenido de ejemplo para verificar que el sistema de traducción funciona correctamente en el entorno de desarrollo local. Los artículos reales serían traducidos por Azure Translator u otro proveedor de traducción configurado.",
+        "imageAlt": "ES: "
+      }
+    ]
+  }
+}

@@ -23,6 +23,12 @@ eleventyComputed:
 ] %}
 {% include "breadcrumb.njk" %}
 
+{% if np.availableLangs and np.availableLangs.length > 1 %}
+{% set switcherLangs = np.availableLangs %}
+{% set switcherCurrentLang = "en" %}
+{% include "language-switcher.njk" %}
+{% endif %}
+
 {% set siblingNewspaperIds = np.allNewspaperIds %}
 {% set currentNewspaperId = np.newspaperId %}
 {% set siblingEditionDate = np.editionDate %}

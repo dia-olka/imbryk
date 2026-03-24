@@ -1,0 +1,24 @@
+{
+  "lang": "es",
+  "provider": "stub",
+  "translated_at": "2026-03-01T07:30:00Z",
+  "title": "World History",
+  "epoch": "La era de la fractura",
+  "synopsis": "Un mundo fragmentado en bloques de poder rivales después del Gran Colapso de 2029.",
+  "history": [
+    {
+      "date": "2029-03-15",
+      "headline": "El Gran Colapso",
+      "description": "Los mercados financieros mundiales se derrumban en cascada.",
+      "impact": "Colapso del orden mundial basado en reglas.",
+      "sectors": ["geopolitics", "economy"]
+    },
+    {
+      "date": "2030-06-01",
+      "headline": "Formación de los bloques de poder",
+      "description": "Seis facciones emergen de las cenizas del viejo orden.",
+      "impact": "Nuevo equilibrio multipolar.",
+      "sectors": ["geopolitics"]
+    }
+  ]
+}

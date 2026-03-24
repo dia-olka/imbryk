@@ -1,0 +1,42 @@
+---
+pagination:
+  data: staticPageTranslations.policies
+  size: 1
+  alias: sp
+permalink: "policies/{{ sp.lang }}/index.html"
+layout: layouts/base.njk
+ogType: website
+eleventyComputed:
+  title: "{{ sp.content.title }}"
+  pageLang: "{{ sp.lang }}"
+  pageDir: "{{ sp.langDir }}"
+  pageLocale: "{{ sp.langLocale }}"
+---
+
+{% set switcherLangs = [
+  {code: "en", nativeName: "English", dir: "ltr", url: "/policies/"},
+  {code: "es", nativeName: "Español", dir: "ltr", url: "/policies/es/"},
+  {code: "fr", nativeName: "Français", dir: "ltr", url: "/policies/fr/"},
+  {code: "ar", nativeName: "العربية", dir: "rtl", url: "/policies/ar/"}
+] %}
+{% set switcherCurrentLang = sp.lang %}
+{% include "language-switcher.njk" %}
+
+<article>
+  <h1>{{ sp.content.heading }}</h1>
+
+  <h2>{{ sp.content.disclaimer }}</h2>
+  <p>{{ sp.content.disclaimerP }}</p>
+
+  <h2>{{ sp.content.submissions }}</h2>
+  <p>{{ sp.content.submissionsP }}</p>
+
+  <h2>{{ sp.content.privacy }}</h2>
+  <p>{{ sp.content.privacyP }}</p>
+
+  <h2>{{ sp.content.ip }}</h2>
+  <p>{{ sp.content.ipP }}</p>
+
+  <h2>{{ sp.content.contact }}</h2>
+  <p>{{ sp.content.contactP }}</p>
+</article>
