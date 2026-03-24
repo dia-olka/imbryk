@@ -253,11 +253,11 @@ jobs:
           JOB_MODE=translate,\
           SENTRY_DSN=${{ vars.SENTRY_DSN }},\
           R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }},\
-          TRANSLATION_ENABLED=${{ vars.TRANSLATION_ENABLED || 'true' }},\
+          TRANSLATION_ENABLED=${{ vars.TRANSLATION_ENABLED || 'false' }},\
           TRANSLATION_PROVIDER=${{ vars.TRANSLATION_PROVIDER || 'azure' }},\
           AZURE_TRANSLATOR_REGION=${{ vars.AZURE_TRANSLATOR_REGION || 'northeurope' }},\
           TRANSLATION_BACKFILL=${{ vars.TRANSLATION_BACKFILL || 'false' }},\
-          TRANSLATION_CHAR_BUDGET=${{ vars.TRANSLATION_CHAR_BUDGET || '' }} \
+          TRANSLATION_CHAR_BUDGET=${{ vars.TRANSLATION_CHAR_BUDGET || '0' }} \
             --update-secrets=\
           DATABASE_URL=database-url:latest,\
           R2_ACCOUNT_ID=r2-account-id:latest,\
