@@ -3,6 +3,7 @@
    Expects:
      - previewArticle, previewEditionDate, previewNewspaperId, previewIsLead, previewTruncate
      - previewLangSuffix: language code for URL suffix
+     - previewUi: (optional) translated UI strings { readArticle, words }
 #}
 
 {% set truncateCount = previewTruncate if previewTruncate else 30 %}
@@ -28,10 +29,10 @@
       </h3>
       <p class="article-preview__excerpt">{{ previewArticle.body | truncateWords(truncateCount) }}</p>
       <p class="article-preview__meta">
-        {{ previewArticle.word_count }} words
+        {{ previewArticle.word_count }} {{ previewUi.words | default("words") }}
         <a href="/edition/{{ previewEditionDate }}/{{ previewNewspaperId }}/{{ previewArticle.slug }}/{{ previewLangSuffix }}/"
            class="article-preview__card-link article-preview__read-more"
-           aria-label="Read full article: {{ previewArticle.headline }}">Read article →</a>
+           aria-label="{{ previewUi.readArticle | default('Read article') }}: {{ previewArticle.headline }}">{{ previewUi.readArticle | default("Read article") }} →</a>
       </p>
     </div>
   </article>

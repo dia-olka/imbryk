@@ -23,15 +23,11 @@ eleventyComputed:
 
 {% set breadcrumbs = [
   {label: tap.ui.home | default("Home"), url: "/"},
-  {label: tap.editionDate | dateDisplay, url: "/edition/" + tap.editionDate + "/"},
+  {label: tap.editionDate | dateDisplay(tap.lang), url: "/edition/" + tap.editionDate + "/"},
   {label: tap.newspaperName, url: "/edition/" + tap.editionDate + "/" + tap.newspaperId + "/"},
   {label: tap.article.headline, url: ""}
 ] %}
 {% include "breadcrumb.njk" %}
-
-{% set switcherLangs = tap.availableLangs %}
-{% set switcherCurrentLang = tap.lang %}
-{% include "language-switcher.njk" %}
 
 <div class="newspaper" data-persona="{{ tap.newspaperId }}" style="{{ tap.cssVars }}">
 
@@ -43,11 +39,11 @@ eleventyComputed:
   <article id="{{ tap.slug }}">
     <h1 class="article-full__title">
       {{ tap.article.headline }}
-      <a href="#{{ tap.slug }}" class="anchor-link" aria-label="Permalink to this article">#</a>
+      <a href="#{{ tap.slug }}" class="anchor-link" aria-label="{{ tap.ui.permalink | default('Permalink to this article') }}">#</a>
     </h1>
 
     <p class="article-full__meta">
-      {{ tap.editionDate | dateDisplay }} · {{ tap.article.word_count }} words
+      {{ tap.editionDate | dateDisplay(tap.lang) }} · {{ tap.article.word_count }} {{ tap.ui.words | default("words") }}
     </p>
 
     {% if tap.article.image_url %}
@@ -75,6 +71,7 @@ eleventyComputed:
   {% set articleNewspaperId = tap.newspaperId %}
   {% set articleNewspaperName = tap.newspaperName %}
   {% set articleLangSuffix = tap.lang %}
+  {% set articleNavUi = tap.ui %}
   {% include "article-nav-translated.njk" %}
 
 </div>

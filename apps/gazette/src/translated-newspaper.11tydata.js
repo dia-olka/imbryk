@@ -13,5 +13,7 @@ export default {
       return `/edition/${tnp.editionDate}/${tnp.newspaperId}/`;
     },
     pageUi: (data) => data.tnp?.ui ?? {},
+    switcherLangs: (data) => data.tnp?.availableLangs ?? null,
+    switcherCurrentLang: (data) => data.tnp?.lang ?? 'en',
   },
 };

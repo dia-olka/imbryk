@@ -1,24 +1,52 @@
-{# Language switcher component
+{# Language switcher dropdown component (pure CSS, details/summary)
    Usage: {% include "language-switcher.njk" %}
    Expects:
      - switcherLangs: array of { code, nativeName, dir, url }
      - switcherCurrentLang: current language code (e.g. "es")
+     - pageUi: (optional) translated UI strings — uses pageUi.language for header
 #}
 
 {% if switcherLangs and switcherLangs.length > 1 %}
-<nav class="language-switcher" aria-label="Language">
-  <ul role="list">
-    {% for lang in switcherLangs %}
-      {% if lang.code == switcherCurrentLang %}
-        <li>
-          <span class="language-switcher__current" aria-current="true" lang="{{ lang.code }}" dir="{{ lang.dir }}">{{ lang.nativeName }}</span>
-        </li>
-      {% else %}
-        <li>
-          <a href="{{ lang.url }}" class="language-switcher__link" lang="{{ lang.code }}" dir="{{ lang.dir }}" hreflang="{{ lang.code }}">{{ lang.nativeName }}</a>
-        </li>
-      {% endif %}
-    {% endfor %}
-  </ul>
-</nav>
+{% set currentLangObj = null %}
+{% for lang in switcherLangs %}
+  {% if lang.code == switcherCurrentLang %}
+    {% set currentLangObj = lang %}
+  {% endif %}
+{% endfor %}
+
+<div class="lang-switcher" dir="ltr">
+  <details>
+    <summary class="lang-trigger" aria-label="{{ pageUi.language | default('Language') }}">
+      <svg class="lang-trigger__icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" fill="currentColor"/>
+      </svg>
+      <span class="lang-trigger__code">{{ switcherCurrentLang | upper }}</span>
+      <svg class="lang-trigger__chevron" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </summary>
+
+    <div class="lang-dropdown" role="menu">
+      <div class="lang-dropdown__header">{{ pageUi.language | default("Language") }}</div>
+
+      {% for lang in switcherLangs %}
+        <a class="lang-option{% if lang.code == switcherCurrentLang %} lang-option--active{% endif %}"
+           href="{{ lang.url }}"
+           role="menuitem"
+           lang="{{ lang.code }}"
+           dir="{{ lang.dir }}"
+           hreflang="{{ lang.code }}"
+           {% if lang.code == switcherCurrentLang %}aria-current="true"{% endif %}>
+          <span class="lang-option__name">{{ lang.nativeName }}</span>
+          <span class="lang-option__code">{{ lang.code }}</span>
+          {% if lang.code == switcherCurrentLang %}
+          <svg class="lang-option__check" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+            <path d="M3 7.5l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          {% endif %}
+        </a>
+      {% endfor %}
+    </div>
+  </details>
+</div>
 {% endif %}

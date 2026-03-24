@@ -184,12 +184,18 @@ a:hover {
   max-width: 80rem;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   grid-template-areas:
-    'brand submit'
-    'nav   nav';
+    'brand lang submit'
+    'nav   nav  nav';
   align-items: start;
   gap: var(--space-xs) var(--space-sm);
+}
+
+.site-header__inner > .lang-switcher {
+  grid-area: lang;
+  align-self: start;
+  margin-bottom: 0;
 }
 
 .site-header__brand {
@@ -231,13 +237,17 @@ a:hover {
 
 @media (min-width: 56rem) {
   .site-header__inner {
-    grid-template-columns: auto 1fr auto;
-    grid-template-areas: 'brand nav submit';
+    grid-template-columns: auto 1fr auto auto;
+    grid-template-areas: 'brand nav lang submit';
     align-items: center;
   }
 
   .site-header__inner > nav {
     justify-self: end;
+  }
+
+  .site-header__inner > .lang-switcher {
+    align-self: center;
   }
 
   .site-submit-cta {
@@ -3158,34 +3168,161 @@ main:has(.newspaper) {
 
 /* ─── Language Switcher ──────────────────────────────────────────────────── */
 
-.language-switcher {
-  margin-bottom: var(--space-md);
+/* ─── Language Switcher Dropdown ─────────────────────────────────────────── */
+
+.lang-switcher {
+  position: relative;
+  user-select: none;
 }
 
-.language-switcher ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs) var(--space-sm);
+.lang-switcher details {
+  position: relative;
+}
+
+.lang-switcher details summary {
   list-style: none;
-  padding: 0;
-  margin: 0;
+  cursor: pointer;
+  outline: none;
 }
 
-.language-switcher__link {
-  color: var(--color-link);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  font-size: var(--type-sm);
+.lang-switcher details summary::-webkit-details-marker {
+  display: none;
 }
 
-.language-switcher__link:hover {
-  color: var(--color-accent-hover);
-}
-
-.language-switcher__current {
-  font-weight: 700;
-  font-size: var(--type-sm);
+/* Trigger button */
+.lang-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   color: var(--color-text);
+  font-size: var(--type-sm);
+  font-weight: 500;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+  white-space: nowrap;
+}
+
+.lang-trigger:hover,
+details[open] .lang-trigger {
+  border-color: var(--color-link);
+  box-shadow: 0 0 0 2px rgba(26, 77, 143, 0.15);
+}
+
+.lang-trigger__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--color-link);
+}
+
+.lang-trigger__code {
+  font-family: monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.lang-trigger__chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 160ms ease;
+}
+
+details[open] .lang-trigger__chevron {
+  transform: rotate(180deg);
+}
+
+/* Dropdown panel */
+.lang-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+  animation: lang-dropdown-in 140ms ease both;
+  z-index: 999;
+}
+
+@keyframes lang-dropdown-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.lang-dropdown__header {
+  padding: 8px 14px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* Language options */
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  text-decoration: none;
+  color: var(--color-text-muted);
+  font-size: var(--type-sm);
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.lang-option:hover {
+  background: rgba(26, 77, 143, 0.06);
+  color: var(--color-text);
+}
+
+.lang-option--active {
+  color: var(--color-link);
+  font-weight: 600;
+}
+
+.lang-option + .lang-option {
+  border-top: 1px solid var(--color-border-light);
+}
+
+.lang-option__name {
+  flex: 1;
+}
+
+.lang-option__code {
+  font-family: monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.lang-option__check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--color-link);
+}
+
+/* Click-outside overlay to close dropdown */
+details[open]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+}
+
+.lang-dropdown {
+  z-index: 999;
 }
 
 /* ─── RTL Overrides ──────────────────────────────────────────────────────── */
@@ -3263,7 +3400,7 @@ main:has(.newspaper) {
 }
 
 /* Language switcher stays LTR even in RTL pages */
-[dir='rtl'] .language-switcher {
+[dir='rtl'] .lang-switcher {
   direction: ltr;
   text-align: left;
 }

@@ -34,10 +34,10 @@ export default function (eleventyConfig) {
   // TODO: create a 1200x630 og-gazette.png and place it in src/
   eleventyConfig.addPassthroughCopy('src/og-gazette.png');
 
-  eleventyConfig.addFilter('dateDisplay', (value) => {
+  eleventyConfig.addFilter('dateDisplay', (value, locale) => {
     if (!value) return '';
     const date = new Date(value);
-    return date.toLocaleDateString('en-GB', {
+    return date.toLocaleDateString(locale || 'en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -50,10 +50,10 @@ export default function (eleventyConfig) {
     return new Date(value).toISOString().split('T')[0];
   });
 
-  eleventyConfig.addFilter('dateShort', (value) => {
+  eleventyConfig.addFilter('dateShort', (value, locale) => {
     if (!value) return '';
     const date = new Date(value);
-    return date.toLocaleDateString('en-GB', {
+    return date.toLocaleDateString(locale || 'en-GB', {
       day: 'numeric',
       month: 'short',
     });

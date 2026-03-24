@@ -21,14 +21,10 @@ eleventyComputed:
 
 {% set breadcrumbs = [
   {label: tnp.ui.home | default("Home"), url: "/"},
-  {label: tnp.editionDate | dateDisplay, url: "/edition/" + tnp.editionDate + "/"},
+  {label: tnp.editionDate | dateDisplay(tnp.lang), url: "/edition/" + tnp.editionDate + "/"},
   {label: tnp.newspaperName, url: ""}
 ] %}
 {% include "breadcrumb.njk" %}
-
-{% set switcherLangs = tnp.availableLangs %}
-{% set switcherCurrentLang = tnp.lang %}
-{% include "language-switcher.njk" %}
 
 {% set siblingNewspaperIds = tnp.allNewspaperIds %}
 {% set currentNewspaperId = tnp.newspaperId %}
@@ -62,8 +58,8 @@ eleventyComputed:
 
   <section id="articles" aria-labelledby="articles-heading">
     <h2 id="articles-heading" class="section-label">
-      {{ tnp.ui.newspapers | default("Articles") }}
-      <a href="#articles" class="anchor-link" aria-label="Link to Articles section">#</a>
+      {{ tnp.ui.articles | default("Articles") }}
+      <a href="#articles" class="anchor-link" aria-label="{{ tnp.ui.articles | default('Articles') }}">#</a>
     </h2>
 
     <div class="newspaper-articles">
@@ -72,6 +68,7 @@ eleventyComputed:
         {% set previewEditionDate = tnp.editionDate %}
         {% set previewNewspaperId = tnp.newspaperId %}
         {% set previewLangSuffix = tnp.lang %}
+        {% set previewUi = tnp.ui %}
         {% if loop.first %}
           {% set previewIsLead = true %}
           {% set previewTruncate = 80 %}
@@ -91,7 +88,7 @@ eleventyComputed:
     <section id="in-brief" class="in-brief" aria-labelledby="in-brief-heading">
       <h2 id="in-brief-heading">
         {{ tnp.ui.inBrief | default("In Brief") }}
-        <a href="#in-brief" class="anchor-link" aria-label="Link to In Brief section">#</a>
+        <a href="#in-brief" class="anchor-link" aria-label="{{ tnp.ui.inBrief | default('In Brief') }}">#</a>
       </h2>
 
       {% for item in tnp.inBrief %}
@@ -107,7 +104,7 @@ eleventyComputed:
     <aside id="editors-note" class="editors-note" aria-label="{{ tnp.ui.editorsNote | default('Editor\'s note') }}">
       <h2>
         {{ tnp.ui.editorsNote | default("Editor's Note") }}
-        <a href="#editors-note" class="anchor-link" aria-label="Link to Editor's Note">#</a>
+        <a href="#editors-note" class="anchor-link" aria-label="{{ tnp.ui.editorsNote | default('Editor\'s Note') }}">#</a>
       </h2>
       <p>{{ tnp.editorsNote }}</p>
     </aside>

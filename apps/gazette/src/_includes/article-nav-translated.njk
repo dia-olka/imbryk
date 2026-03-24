@@ -3,9 +3,10 @@
    Expects:
      - prevArticle, nextArticle, articleEditionDate, articleNewspaperId
      - articleLangSuffix: language code for URL suffix
+     - articleNavUi: (optional) translated UI strings { previous, next, allArticles, articleNavigation }
 #}
 
-<nav class="article-nav" aria-label="Article navigation">
+<nav class="article-nav" aria-label="{{ articleNavUi.articleNavigation | default('Article navigation') }}">
   <div class="article-nav__inner">
 
     <div class="article-nav__prev">
@@ -14,7 +15,7 @@
            class="article-nav__link">
           <span class="article-nav__arrow" aria-hidden="true">←</span>
           <span class="article-nav__info">
-            <span class="article-nav__label">Previous</span>
+            <span class="article-nav__label">{{ articleNavUi.previous | default("Previous") }}</span>
             <span class="article-nav__headline">{{ prevArticle.headline }}</span>
           </span>
         </a>
@@ -24,7 +25,7 @@
     <div class="article-nav__center">
       <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ articleLangSuffix }}/"
          class="article-nav__back">
-        All articles
+        {{ articleNavUi.allArticles | default("All articles") }}
       </a>
     </div>
 
@@ -33,7 +34,7 @@
         <a href="/edition/{{ articleEditionDate }}/{{ articleNewspaperId }}/{{ nextArticle.slug }}/{{ articleLangSuffix }}/"
            class="article-nav__link article-nav__link--next">
           <span class="article-nav__info">
-            <span class="article-nav__label">Next</span>
+            <span class="article-nav__label">{{ articleNavUi.next | default("Next") }}</span>
             <span class="article-nav__headline">{{ nextArticle.headline }}</span>
           </span>
           <span class="article-nav__arrow" aria-hidden="true">→</span>

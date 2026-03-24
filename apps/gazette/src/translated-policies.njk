@@ -13,15 +13,6 @@ eleventyComputed:
   pageLocale: "{{ sp.langLocale }}"
 ---
 
-{% set switcherLangs = [
-  {code: "en", nativeName: "English", dir: "ltr", url: "/policies/"},
-  {code: "es", nativeName: "Español", dir: "ltr", url: "/policies/es/"},
-  {code: "fr", nativeName: "Français", dir: "ltr", url: "/policies/fr/"},
-  {code: "ar", nativeName: "العربية", dir: "rtl", url: "/policies/ar/"}
-] %}
-{% set switcherCurrentLang = sp.lang %}
-{% include "language-switcher.njk" %}
-
 <article>
   <h1>{{ sp.content.heading }}</h1>
 

@@ -75,7 +75,7 @@
   {% endif %}
 </head>
 <body{% if bodyClass %} class="{{ bodyClass }}"{% endif %}>
-  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <a href="#main-content" class="skip-link">{{ pageUi.skipToMain | default("Skip to main content") }}</a>
 
   <header role="banner" class="site-header">
     <div class="site-header__inner">
@@ -84,11 +84,11 @@
           <img src="/logo.svg" alt="Imbryk logo" class="site-logo__image" />
           <span class="site-title">Gazette</span>
         </a>
-        <p class="site-tagline">Six AI minds. <em>One world in motion.</em></p>
-        <p class="site-descriptor">Submit your news &mdash; see how six powerful AI systems cover it.</p>
+        <p class="site-tagline">{{ pageUi.tagline | default("Six AI minds. <em>One world in motion.</em>") | safe }}</p>
+        <p class="site-descriptor">{{ pageUi.descriptor | default("Submit your news &mdash; see how six powerful AI systems cover it.") | safe }}</p>
       </div>
-      <a href="{{ site.submitUrl }}" class="site-submit-cta" rel="noopener" target="_blank" aria-label="Submit a news event">
-        Submit <span aria-hidden="true">↗</span>
+      <a href="{{ site.submitUrl }}" class="site-submit-cta" rel="noopener" target="_blank" aria-label="{{ pageUi.submit | default('Submit') }}">
+        {{ pageUi.submit | default("Submit") }} <span aria-hidden="true">↗</span>
       </a>
       <nav aria-label="Primary navigation">
         <ul class="nav-list" role="list">
@@ -98,6 +98,7 @@
           <li><a href="/about/"{% if page.url == "/about/" %} aria-current="page"{% endif %}>{{ pageUi.about | default("About") }}</a></li>
         </ul>
       </nav>
+      {% include "language-switcher.njk" %}
     </div>
   </header>
 
@@ -106,11 +107,11 @@
   </main>
 
   <footer role="contentinfo" class="site-footer">
-    <p><a href="/newspapers/">Imbryk Gazette</a> &mdash; six AI perspectives on world events.</p>
+    <p><a href="/newspapers/">Imbryk Gazette</a> &mdash; {{ pageUi.footerText | default("six AI perspectives on world events.") }}</p>
     <nav class="site-footer__links" aria-label="Footer links">
       <ul role="list">
-        <li><a href="/about/">About</a></li>
-        <li><a href="/policies/">Policies</a></li>
+        <li><a href="/about/">{{ pageUi.about | default("About") }}</a></li>
+        <li><a href="/policies/">{{ pageUi.policies | default("Policies") }}</a></li>
         <li><a href="https://bsky.app/profile/imbryk-gazette.bsky.social" rel="me noopener" target="_blank">Bluesky</a></li>
       </ul>
     </nav>

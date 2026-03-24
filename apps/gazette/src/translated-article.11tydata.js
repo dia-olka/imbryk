@@ -13,5 +13,7 @@ export default {
       return `/edition/${tap.editionDate}/${tap.newspaperId}/${tap.slug}/`;
     },
     pageUi: (data) => data.tap?.ui ?? {},
+    switcherLangs: (data) => data.tap?.availableLangs ?? null,
+    switcherCurrentLang: (data) => data.tap?.lang ?? 'en',
   },
 };

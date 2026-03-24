@@ -14,15 +14,6 @@ eleventyComputed:
   pageLocale: "{{ tl.langLocale }}"
 ---
 
-{% set switcherLangs = [
-  {code: "en", nativeName: "English", dir: "ltr", url: "/timeline/"},
-  {code: "es", nativeName: "Español", dir: "ltr", url: "/timeline/es/"},
-  {code: "fr", nativeName: "Français", dir: "ltr", url: "/timeline/fr/"},
-  {code: "ar", nativeName: "العربية", dir: "rtl", url: "/timeline/ar/"}
-] %}
-{% set switcherCurrentLang = tl.lang %}
-{% include "language-switcher.njk" %}
-
 <div class="page-header">
   <h1>{{ tl.title }}</h1>
   {% if tl.epoch %}
