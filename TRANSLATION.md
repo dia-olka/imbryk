@@ -413,7 +413,7 @@ Adding a new system language = add an entry to `system` array + add UI strings +
 - [x] Add `JOB_MODE=translate` to `__main__.py`
 - [x] Add translation env vars to `config.py`
 - [x] Create `data/languages.json` (es, fr, ar + UI strings + dir)
-- [ ] `--backfill` mode for historical editions
+- [x] `--backfill` mode for historical editions
 - [x] Write tests (mock API, R2 read/write, budget tracking, pipeline orchestrator)
 
 ### Phase A2: Additional Providers (when needed)

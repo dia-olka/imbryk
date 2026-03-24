@@ -18,6 +18,7 @@ from ..config import (
     CF_DEPLOY_HOOK_URL,
     DATABASE_URL,
     R2_ACCOUNT_ID,
+    TRANSLATION_BACKFILL,
     TRANSLATION_CHAR_BUDGET,
     TRANSLATION_ENABLED,
     TRANSLATION_PROVIDER,
@@ -83,6 +84,220 @@ def _batch_texts_for_article(article: dict) -> list[tuple[str, str]]:
     if article.get("imageAlt"):
         pairs.append(("imageAlt", article["imageAlt"]))
     return pairs
+
+
+def run_backfill(
+    database_url: str | None = None,
+    storage: EditionStorage | None = None,
+    translator: TranslationStrategy | None = None,
+) -> dict:
+    """Backfill translations for all historical editions.
+
+    Reads the R2 edition index, iterates newest-first, and translates
+    any missing (edition, language) pairs.  Budget-aware: stops when the
+    monthly character cap is reached.
+
+    Returns:
+        Summary dict with total counts across all editions.
+    """
+    start_time = time.monotonic()
+
+    db_url = database_url or DATABASE_URL
+    store = storage or StubEditionStorage()
+    trans = translator or StubTranslationClient()
+
+    languages = _load_system_languages()
+    if not languages:
+        logger.info("No system languages configured, skipping backfill")
+        return {"editions_processed": 0, "translations_written": 0, "reason": "no_languages"}
+
+    lang_codes = [lang["code"] for lang in languages]
+    logger.info(
+        "Backfill starting | languages=%s | provider=%s",
+        lang_codes, trans.provider_name,
+    )
+
+    # Read the full edition index from R2
+    try:
+        index = store.read_json("editions/index.json")
+    except Exception:
+        logger.error("Failed to read editions/index.json from R2", exc_info=True)
+        return {"editions_processed": 0, "translations_written": 0, "reason": "index_read_error"}
+
+    if not index or not isinstance(index, list):
+        logger.warning("No editions found in R2 index")
+        return {"editions_processed": 0, "translations_written": 0, "reason": "empty_index"}
+
+    # Sort newest-first so the most recent editions get translated first
+    index.sort(key=lambda e: e.get("date", ""), reverse=True)
+
+    # Shared budget tracker across all editions
+    budget_limit = int(TRANSLATION_CHAR_BUDGET) if TRANSLATION_CHAR_BUDGET else None
+    budget = TranslationBudget(store, trans.provider_name, budget_limit)
+
+    engine = get_engine(db_url)
+    session_factory = get_session_factory(engine)
+
+    editions_processed = 0
+    total_translations = 0
+    total_chars = 0
+    budget_exhausted = False
+
+    for entry in index:
+        edition_date = entry.get("date")
+        edition_id = entry.get("edition_id")
+        if not edition_date or not edition_id:
+            continue
+
+        if budget_exhausted:
+            break
+
+        edition_translations = 0
+
+        for lang in languages:
+            lang_code = lang["code"]
+            r2_key = f"editions/{edition_date}/translations/{lang_code}/{edition_id}.json"
+
+            # Skip if translation already exists
+            existing = store.read_json(r2_key)
+            if existing is not None:
+                continue
+
+            # Load edition articles from DB
+            session = session_factory()
+            try:
+                edition_articles = load_edition_by_date(session, edition_date)
+            finally:
+                session.close()
+
+            if not edition_articles:
+                logger.info("No DB edition for %s, skipping", edition_date)
+                break  # no point trying other languages for this date
+
+            # Extract articles
+            articles_by_newspaper: dict[str, list[dict]] = {}
+            for newspaper_id, content_json in edition_articles.items():
+                if newspaper_id == "curator":
+                    continue
+                articles = _extract_articles(content_json)
+                if articles:
+                    articles_by_newspaper[newspaper_id] = articles
+
+            if not articles_by_newspaper:
+                break
+
+            # Collect texts
+            all_texts: list[str] = []
+            text_map: list[tuple[str, int, str]] = []
+
+            for newspaper_id, articles in articles_by_newspaper.items():
+                for article in articles:
+                    for field_name, text in _batch_texts_for_article(article):
+                        all_texts.append(text)
+                        text_map.append((newspaper_id, article["original_index"], field_name))
+
+            if not all_texts:
+                continue
+
+            total_batch_chars = sum(len(t) for t in all_texts)
+
+            if budget.would_exceed(total_batch_chars):
+                logger.warning(
+                    "Budget exhausted during backfill at %s/%s (%d remaining)",
+                    edition_date, lang_code, budget.remaining(),
+                )
+                budget_exhausted = True
+                break
+
+            # Translate
+            results = _translate_all(trans, all_texts, lang_code)
+
+            # Assemble translation JSON
+            translated_articles: dict[str, list[dict]] = {}
+            chars_used = 0
+
+            for i, result in enumerate(results):
+                if result is None:
+                    continue
+                newspaper_id, original_index, field_name = text_map[i]
+                if newspaper_id not in translated_articles:
+                    translated_articles[newspaper_id] = []
+
+                entry_item = None
+                for existing_entry in translated_articles[newspaper_id]:
+                    if existing_entry["original_index"] == original_index:
+                        entry_item = existing_entry
+                        break
+                if entry_item is None:
+                    entry_item = {"original_index": original_index}
+                    translated_articles[newspaper_id].append(entry_item)
+
+                entry_item[field_name] = result.translated_text
+                chars_used += result.chars_used
+
+            if not translated_articles:
+                continue
+
+            translation_payload = {
+                "edition_id": edition_id,
+                "date": edition_date,
+                "lang": lang_code,
+                "provider": trans.provider_name,
+                "translated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "articles": translated_articles,
+            }
+
+            store.write_raw(
+                r2_key,
+                json.dumps(translation_payload, ensure_ascii=False).encode("utf-8"),
+                "application/json",
+            )
+
+            budget.record_usage(chars_used)
+            total_chars += chars_used
+            edition_translations += 1
+
+            logger.info(
+                "Backfill: translated %s/%s | %d newspapers, %d chars",
+                edition_date, lang_code,
+                len(translated_articles), chars_used,
+            )
+
+        if edition_translations > 0:
+            editions_processed += 1
+            total_translations += edition_translations
+
+    # Also backfill timeline translations (idempotency built in)
+    timeline_written = _translate_timeline(
+        session_factory=session_factory,
+        store=store,
+        translator=trans,
+        budget=budget,
+        languages=languages,
+    )
+    total_translations += timeline_written
+
+    # Trigger rebuild if anything was written
+    if total_translations > 0:
+        _trigger_deploy_hook()
+
+    total_ms = int((time.monotonic() - start_time) * 1000)
+    summary = {
+        "mode": "backfill",
+        "editions_processed": editions_processed,
+        "translations_written": total_translations,
+        "total_chars": total_chars,
+        "budget_exhausted": budget_exhausted,
+        "provider": trans.provider_name,
+        "latency_ms": total_ms,
+    }
+    logger.info(
+        "Backfill complete: %d editions, %d translations, %d chars in %.1fs%s",
+        editions_processed, total_translations, total_chars, total_ms / 1000,
+        " (budget exhausted)" if budget_exhausted else "",
+        extra={"step": "backfill_complete", **summary},
+    )
+    return summary
 
 
 def run_translation(
@@ -496,8 +711,14 @@ def _trigger_deploy_hook() -> None:
 
 
 def cli_main() -> None:
-    """CLI entry point for Translation Cloud Run Job."""
+    """CLI entry point for Translation Cloud Run Job.
+
+    Supports ``--backfill`` flag to translate all historical editions
+    instead of just today's.
+    """
     configure_logging()
+
+    backfill = "--backfill" in sys.argv or TRANSLATION_BACKFILL
 
     if not TRANSLATION_ENABLED:
         logger.info("Translation disabled via TRANSLATION_ENABLED=false")
@@ -541,5 +762,8 @@ def cli_main() -> None:
         logger.warning("Unknown TRANSLATION_PROVIDER=%s, using stub", provider)
         trans = StubTranslationClient()
 
-    summary = run_translation(storage=store, translator=trans)
+    if backfill:
+        summary = run_backfill(storage=store, translator=trans)
+    else:
+        summary = run_translation(storage=store, translator=trans)
     logger.info("Translation job finished", extra={"summary": summary})

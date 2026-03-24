@@ -861,7 +861,7 @@ gcloud run jobs create newsroom-director-translate \
   --set-env-vars=JOB_MODE=translate \
   --set-env-vars=TRANSLATION_ENABLED=true \
   --set-env-vars=TRANSLATION_PROVIDER=azure \
-  --set-env-vars=AZURE_TRANSLATOR_REGION=eastus \
+  --set-env-vars=AZURE_TRANSLATOR_REGION=northeurope \
   --set-env-vars=R2_BUCKET_NAME=imbryk-editions \
   --set-env-vars=R2_PUBLIC_URL=https://editions.yourdomain.com \
   --set-env-vars=SENTRY_DSN="" \
@@ -1052,7 +1052,7 @@ Translation is **disabled by default** (`TRANSLATION_ENABLED=false`). When enabl
 ```sh
 gcloud run jobs update newsroom-director-translate \
   --region=us-central1 \
-  --update-env-vars=TRANSLATION_ENABLED=true,TRANSLATION_PROVIDER=azure,AZURE_TRANSLATOR_REGION=eastus
+  --update-env-vars=TRANSLATION_ENABLED=true,TRANSLATION_PROVIDER=azure,AZURE_TRANSLATOR_REGION=northeurope
 ```
 
 **How to enable via GitHub Actions (recommended):**
@@ -1061,7 +1061,9 @@ gcloud run jobs update newsroom-director-translate \
 2. Add: **Name:** `TRANSLATION_ENABLED` — **Value:** `true`
 3. Push any change to `main` to trigger the CD workflow
 
-**Budget:** With 3 system languages and all articles, expect ~2.7M chars/month. This slightly exceeds Azure's free tier (2M chars/month). Set `TRANSLATION_CHAR_BUDGET` to cap usage, or upgrade to Azure's S1 tier (~$10/M chars). The job auto-stops when the budget is exhausted and resumes next month.
+**Backfill existing editions:** To translate all historical editions (not just today's), set `TRANSLATION_BACKFILL=true` via GitHub Actions Variables, push to trigger CD, then manually execute the translate job. The backfill processes editions newest-first and auto-stops when the monthly character budget is exhausted. **Reset `TRANSLATION_BACKFILL` to `false`** after the backfill completes so the daily job resumes normal single-edition mode.
+
+**Budget:** With 2 system languages and all articles, expect ~600K chars for ~10 editions. This fits within Azure's free tier (2M chars/month). Set `TRANSLATION_CHAR_BUDGET` to cap usage, or upgrade to Azure's S1 tier (~$10/M chars). The job auto-stops when the budget is exhausted and resumes next month.
 
 **Daily schedule:** News Scout (03:00) → Morning Press (06:00) → Translation (07:00) → Marketing (08:00).
 
@@ -1244,6 +1246,7 @@ These are all the configuration values used by the backend services. Most are st
 | `TRANSLATION_PROVIDER`            | Env var | `azure`                   | Translation backend: `azure`, `deepl`, or `google` (only `azure` is currently implemented)                                                                                                                                                                     |
 | `AZURE_TRANSLATOR_KEY`            | Secret  | —                         | Azure Translator subscription key (required when `TRANSLATION_PROVIDER=azure`)                                                                                                                                                                                 |
 | `AZURE_TRANSLATOR_REGION`         | Env var | _(empty)_                 | Azure region for the Translator resource (e.g. `eastus`; required when `TRANSLATION_PROVIDER=azure`)                                                                                                                                                           |
+| `TRANSLATION_BACKFILL`            | Env var | `false`                   | Set to `true` to run backfill mode — translates all historical editions (newest-first, budget-aware). Reset to `false` after backfill completes.                                                                                                               |
 | `TRANSLATION_CHAR_BUDGET`         | Env var | _(provider default)_      | Monthly character budget override — auto-throttles when reached. Leave empty to use the provider's default limit                                                                                                                                               |
 | `LOG_LEVEL`                       | Env var | `INFO`                    | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                                                                                                                                                                                                            |
 | `SENTRY_DSN`                      | Env var | _(empty)_                 | Sentry error tracking URL — leave empty to disable                                                                                                                                                                                                             |
