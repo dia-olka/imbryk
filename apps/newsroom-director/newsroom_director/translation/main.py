@@ -134,10 +134,15 @@ def run_backfill(
     engine = get_engine(db_url)
     session_factory = get_session_factory(engine)
 
-    editions_processed = 0
     total_translations = 0
     total_chars = 0
     budget_exhausted = False
+
+    # Per-edition tracking
+    succeeded: list[str] = []   # edition dates that got new translations
+    skipped: list[str] = []     # already translated or no articles
+    failed: list[str] = []      # translation API errors
+    stopped: list[str] = []     # budget exhausted before translating
 
     for entry in index:
         edition_date = entry.get("date")
@@ -146,9 +151,11 @@ def run_backfill(
             continue
 
         if budget_exhausted:
-            break
+            stopped.append(edition_date)
+            continue
 
         edition_translations = 0
+        edition_had_work = False
 
         # Load edition articles from DB once for all languages
         session = session_factory()
@@ -159,6 +166,7 @@ def run_backfill(
 
         if not edition_articles:
             logger.info("No DB edition for %s, skipping", edition_date)
+            skipped.append(edition_date)
             continue
 
         articles_by_newspaper: dict[str, list[dict]] = {}
@@ -170,6 +178,7 @@ def run_backfill(
                 articles_by_newspaper[newspaper_id] = articles
 
         if not articles_by_newspaper:
+            skipped.append(edition_date)
             continue
 
         for lang in languages:
@@ -180,6 +189,8 @@ def run_backfill(
             existing = store.read_json(r2_key)
             if existing is not None:
                 continue
+
+            edition_had_work = True
 
             # Collect texts
             all_texts: list[str] = []
@@ -202,6 +213,7 @@ def run_backfill(
                     edition_date, lang_code, budget.remaining(),
                 )
                 budget_exhausted = True
+                stopped.append(edition_date)
                 break
 
             # Translate
@@ -231,6 +243,8 @@ def run_backfill(
                 chars_used += result.chars_used
 
             if not translated_articles:
+                if edition_date not in [e for e in failed]:
+                    failed.append(edition_date)
                 continue
 
             translation_payload = {
@@ -259,8 +273,10 @@ def run_backfill(
             )
 
         if edition_translations > 0:
-            editions_processed += 1
+            succeeded.append(edition_date)
             total_translations += edition_translations
+        elif not edition_had_work and edition_date not in stopped:
+            skipped.append(edition_date)
 
     # Also backfill timeline translations
     timeline_written = _translate_timeline(
@@ -280,17 +296,34 @@ def run_backfill(
     total_ms = int((time.monotonic() - start_time) * 1000)
     summary = {
         "mode": "backfill",
-        "editions_processed": editions_processed,
+        "editions_total": len(index),
+        "editions_succeeded": succeeded,
+        "editions_skipped": skipped,
+        "editions_failed": failed,
+        "editions_stopped_by_budget": stopped,
         "translations_written": total_translations,
         "total_chars": total_chars,
         "budget_exhausted": budget_exhausted,
         "provider": trans.provider_name,
         "latency_ms": total_ms,
     }
+
+    # Build a human-readable summary log
+    parts = [
+        f"Backfill complete in {total_ms / 1000:.1f}s",
+        f"  Translated: {len(succeeded)} editions ({total_translations} files, {total_chars} chars)",
+    ]
+    if succeeded:
+        parts.append(f"    {', '.join(succeeded)}")
+    if skipped:
+        parts.append(f"  Skipped (already done): {len(skipped)} editions")
+    if failed:
+        parts.append(f"  Failed: {', '.join(failed)}")
+    if stopped:
+        parts.append(f"  Stopped (budget exhausted): {', '.join(stopped)}")
+
     logger.info(
-        "Backfill complete: %d editions, %d translations, %d chars in %.1fs%s",
-        editions_processed, total_translations, total_chars, total_ms / 1000,
-        " (budget exhausted)" if budget_exhausted else "",
+        "\n".join(parts),
         extra={"step": "backfill_complete", **summary},
     )
     return summary
