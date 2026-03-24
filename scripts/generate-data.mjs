@@ -31,6 +31,9 @@ const personas = JSON.parse(
 const worldState = JSON.parse(
   readFileSync(join(ROOT, 'data', 'world-state.json'), 'utf-8'),
 );
+const languages = JSON.parse(
+  readFileSync(join(ROOT, 'data', 'languages.json'), 'utf-8'),
+);
 
 // ── Key convention helpers ────────────────────────────────────────────
 
@@ -159,6 +162,22 @@ function generateWorldStateTs() {
   ].join('\n');
 }
 
+// ── Languages generation ────────────────────────────────────────────
+
+function generateLanguagesPython() {
+  return [
+    '"""Auto-generated from data/languages.json.',
+    '',
+    'DO NOT EDIT — run `npx nx run newsroom-director:generate-data` to regenerate.',
+    '"""',
+    '',
+    '# ruff: noqa: E501',
+    '',
+    `LANGUAGES_DATA: dict = ${toPython(languages)}`,
+    '',
+  ].join('\n');
+}
+
 // ── Target registry ─────────────────────────────────────────────────
 
 const ALL_TARGETS = [
@@ -200,6 +219,14 @@ const ALL_TARGETS = [
       'apps/newsroom-director/newsroom_director/world_ledger/_generated_world_state.py',
     ),
     generate: generateWorldStatePython,
+  },
+  {
+    name: 'languages-py',
+    outPath: join(
+      ROOT,
+      'apps/newsroom-director/newsroom_director/translation/_generated_languages.py',
+    ),
+    generate: generateLanguagesPython,
   },
 ];
 

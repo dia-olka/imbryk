@@ -32,6 +32,16 @@ All migrations run against **both SQLite (local) and PostgreSQL (production)**. 
 
 **Rule of thumb:** any DDL that modifies an existing column (rename, change type, change default, add/drop constraint) must be wrapped in `with op.batch_alter_table("table_name") as batch_op: ...`. Adding a new column with `op.add_column` is fine bare.
 
+# Data Codegen
+
+All JSON data files in `data/` are the **single source of truth**. Never edit `_generated_data.*` or `_generated_languages.*` files directly — they are produced by `scripts/generate-data.mjs`.
+
+- **`data/taxonomy.json`** and **`data/personas.json`** → `_generated_data.py` (Python apps) and `_generated_data.ts` (TS packages)
+- **`data/languages.json`** → `_generated_languages.py` (newsroom-director translation package)
+- **`data/world-state.json`** → `_generated_world_state.py` + `world-ledger.initial.ts`
+
+When adding a new JSON data file that a Python app needs at runtime, add it to the codegen pipeline (`scripts/generate-data.mjs`) and import the generated Python module. **Do not** read JSON files from the filesystem at runtime — the Docker container only has the app package, not the repo `data/` directory.
+
 # Deployment & Environment Variables
 
 When adding, removing, or renaming **environment variables** for any service, always update **both** of these files:

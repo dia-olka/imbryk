@@ -31,11 +31,15 @@
       "inputs": [
         "{workspaceRoot}/data/taxonomy.json",
         "{workspaceRoot}/data/personas.json",
+        "{workspaceRoot}/data/languages.json",
         "{workspaceRoot}/scripts/generate-data.mjs"
       ],
-      "outputs": ["{projectRoot}/newsroom_director/_generated_data.py"],
+      "outputs": [
+        "{projectRoot}/newsroom_director/_generated_data.py",
+        "{projectRoot}/newsroom_director/translation/_generated_languages.py"
+      ],
       "options": {
-        "command": "node scripts/generate-data.mjs --target newsroom-director"
+        "command": "node scripts/generate-data.mjs --target newsroom-director && node scripts/generate-data.mjs --target languages-py"
       },
       "cache": true
     },

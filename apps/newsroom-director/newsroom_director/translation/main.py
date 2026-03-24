@@ -10,7 +10,6 @@ import logging
 import sys
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 
 from ..config import (
     AZURE_TRANSLATOR_KEY,
@@ -38,14 +37,10 @@ logger = logging.getLogger(__name__)
 
 
 def _load_system_languages() -> list[dict]:
-    """Load system language definitions from data/languages.json."""
-    languages_path = Path(__file__).resolve().parents[4] / "data" / "languages.json"
-    if not languages_path.exists():
-        logger.warning("data/languages.json not found at %s", languages_path)
-        return []
-    with open(languages_path, encoding="utf-8") as f:
-        data = json.load(f)
-    return data.get("system", [])
+    """Load system language definitions from the generated languages module."""
+    from ._generated_languages import LANGUAGES_DATA
+
+    return LANGUAGES_DATA.get("system", [])
 
 
 def _extract_articles(content_json: str) -> list[dict]:
