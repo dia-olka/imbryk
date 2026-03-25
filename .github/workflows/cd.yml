@@ -249,6 +249,7 @@ jobs:
           gcloud run jobs update newsroom-director-translate \
             --image=${{ env.IMAGE_REGISTRY }}/newsroom-director:${{ env.DEPLOY_SHA }} \
             --region=${{ env.GCP_REGION }} \
+            --task-timeout=1800 \
             --update-env-vars=\
           JOB_MODE=translate,\
           SENTRY_DSN=${{ vars.SENTRY_DSN }},\

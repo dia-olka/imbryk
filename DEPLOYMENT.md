@@ -867,7 +867,7 @@ gcloud run jobs create newsroom-director-translate \
   --set-env-vars=SENTRY_DSN="" \
   --memory=1Gi \
   --cpu=1 \
-  --task-timeout=10m \
+  --task-timeout=30m \
   --max-retries=1
 ```
 
