@@ -389,6 +389,136 @@ An agentic marketing loop that reads each day's edition, plans a promotion strat
 
 ---
 
+## Phase 15: Autonomous Quality Grading — Self-Improving Text Quality
+
+An automated quality grading system that evaluates every generated edition, gates bad output before publishing, and feeds concrete scores back into the editorial loop so each persona can self-correct without human intervention.
+
+### Problem
+
+The editorial journal (Phase 13a) gives each persona qualitative self-reflection, but the reflections are subjective — the same model that wrote mediocre text often rates it as good. There is no reliable, quantitative signal telling a persona "your originality dropped" or "your voice is becoming generic". Without numbers, the improvement loop is aspirational rather than measurable.
+
+### Design
+
+Two complementary evaluation layers run after generation and before save:
+
+**Layer 1: Deterministic text metrics** (zero cost, always consistent)
+- Readability: Flesch-Kincaid grade level and Flesch Reading Ease
+- Vocabulary richness: type-token ratio (unique words / total words)
+- Sentence structure: average sentence length, paragraph count
+- Article depth: word count per article
+
+These catch mechanical drift (sentences getting longer, vocabulary shrinking) but cannot assess voice, originality, or depth of coverage.
+
+**Layer 2: LLM-as-judge** (Flash tier, ~$0.01/day)
+A separate Flash-tier call scores each newspaper on a 6-dimension rubric:
+
+| Dimension | What it measures | 1 (bad) | 5 (excellent) |
+|---|---|---|---|
+| voice_consistency | Would a reader recognise which paper this is? | Generic LLM output | Unmistakable persona |
+| coherence | Does each article flow logically? | Disjointed paragraphs | Seamless narrative |
+| originality | Fresh angles or boilerplate? | Formulaic | Genuinely distinctive |
+| prompt_coverage | Are topics explored or name-dropped? | Superficial mention | Thorough analysis |
+| headline_quality | Specific, engaging, persona-true? | Generic clickbait | Compelling and accurate |
+| depth | Substance or surface-level? | Skims the topic | Thoroughly explored |
+
+**Why this is reliable without humans:**
+- The judge (Flash) is a different model than the generator (Pro), reducing self-consistency bias
+- Deterministic metrics are mathematical — cannot be gamed
+- Scores are concrete numbers, not qualitative prose — the persona sees "originality: 2/5" not "could be more original"
+- The quality gate forces regeneration with the specific critique injected, not just "try again"
+
+### Data Flow
+
+```
+Generate (Pro) → Grade (Flash + deterministic) → Gate check
+    ├─ PASS → Save (with scores in metadata.quality)
+    └─ FAIL → Regenerate with critique → Save (1 retry max)
+         ↓
+    Reflect (scores injected alongside reader metrics)
+         ↓
+    Next edition (score history in editorial journal)
+```
+
+### Quality Gate
+
+The gate rejects output when:
+- Overall average < 2.5/5
+- Any single dimension scored 1/5
+
+On rejection:
+1. The specific critique is formatted and injected into the regeneration prompt
+2. Maximum 1 regeneration attempt per newspaper (cost control)
+3. If the retry also fails the gate, publish anyway and log a warning — never block the edition entirely
+
+### Score Storage
+
+Scores are embedded in the existing `metadata` field of the `NewspaperOutput` JSON (already in the schema), not a new DB table:
+
+```json
+{
+  "newspaper_name": "The Sovereign",
+  "articles": [...],
+  "metadata": {
+    "quality": {
+      "scores": {
+        "voice_consistency": {"score": 4, "note": "Strong sovereign tone"},
+        "coherence": {"score": 3, "note": "Abrupt transition in article 2"},
+        ...
+      },
+      "overall": 3.5,
+      "critical_issues": [],
+      "strengths": ["Strong editorial voice in lead article"],
+      "text_metrics": {
+        "word_count": 4200,
+        "avg_sentence_len": 18.3,
+        "type_token_ratio": 0.42,
+        "flesch_reading_ease": 55.2,
+        ...
+      }
+    }
+  }
+}
+```
+
+### Feedback Injection Points
+
+1. **Into reflection prompts** (Step 8c) — persona sees full scorecard with per-dimension notes
+2. **Into generation prompts** (Step 7) — compact score history from last 5 editions: `"overall=3.5 | voice=4 coher=3 orig=2 ... Focus on improving: Originality, Coherence"`
+3. **Into pipeline observation** — aggregated cross-newspaper quality trends
+
+### Cost Estimate
+
+| Component | Per-day cost |
+|---|---|
+| 6 Flash grading calls (~3K tokens each) | ~$0.01 |
+| Deterministic metrics computation | $0 (local) |
+| Regeneration (0-6 Pro calls, rare) | $0-$18 |
+| **Typical day (no rejections)** | **~$0.01** |
+| **Bad day (2 rejections)** | **~$6.01** |
+
+### Implementation Checklist
+
+- [ ] Create `quality_grader.py` — deterministic metrics + LLM-as-judge rubric + grade/parse/embed functions
+- [ ] Add config: `ENABLE_QUALITY_GRADING` (default: `false`), `QUALITY_GATE_THRESHOLD` (default: `2.5`)
+- [ ] Integrate grading into `main.py` — after generation (Step 7), before save (Step 10)
+- [ ] Implement quality gate — reject + regenerate with critique on failure
+- [ ] Inject scores into reflection prompts (`reflection.py`) — alongside reader metrics
+- [ ] Inject score history into generation prompts (`reflection.py:format_journal_for_generation`) — compact trend line
+- [ ] Extract scores from previous edition metadata for history injection
+- [ ] Update `cd.yml` — add `ENABLE_QUALITY_GRADING` env var
+- [ ] Update `DEPLOYMENT.md` — document new env vars
+- [ ] Write tests — deterministic metrics (5), LLM grading with StubStrategy (3), gate logic (3), score embedding/extraction (3), formatting (3) = ~17 tests
+- [ ] Backfill: run grading on existing editions via one-off script (optional, for baseline)
+
+### Validation & Tuning
+
+- [ ] Verify grading does not block pipeline on Flash API failure (graceful degradation)
+- [ ] Verify gate threshold — too aggressive triggers costly regeneration loops; too lenient is useless
+- [ ] Verify score injection doesn't bloat the generation prompt beyond token budget
+- [ ] Monitor: after 2 weeks, compare quality scores of editions WITH grading vs baseline
+
+---
+
 ## Resolved Decisions
 
 1. **Trigger model** — daily batch ("morning press"). Strictly once daily.
