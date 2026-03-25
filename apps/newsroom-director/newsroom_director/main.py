@@ -621,7 +621,7 @@ def run_morning_press(
                     )
 
                     # Quality gate — reject and regenerate if below threshold
-                    if not report.passes_gate and persona.id in generation_prompts:
+                    if not report.passes_gate(QUALITY_GATE_THRESHOLD) and persona.id in generation_prompts:
                         logger.warning(
                             "Quality gate FAILED for %s (overall=%.1f, threshold=%.1f), "
                             "regenerating with critique",
@@ -691,7 +691,7 @@ def run_morning_press(
                         "graded_count": len(quality_reports),
                         "gate_failures": sum(
                             1 for r in quality_reports.values()
-                            if not r.passes_gate
+                            if not r.passes_gate(QUALITY_GATE_THRESHOLD)
                         ),
                     },
                 )

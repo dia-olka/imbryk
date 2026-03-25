@@ -498,16 +498,16 @@ Scores are embedded in the existing `metadata` field of the `NewspaperOutput` JS
 
 ### Implementation Checklist
 
-- [ ] Create `quality_grader.py` — deterministic metrics + LLM-as-judge rubric + grade/parse/embed functions
-- [ ] Add config: `ENABLE_QUALITY_GRADING` (default: `false`), `QUALITY_GATE_THRESHOLD` (default: `2.5`)
-- [ ] Integrate grading into `main.py` — after generation (Step 7), before save (Step 10)
-- [ ] Implement quality gate — reject + regenerate with critique on failure
-- [ ] Inject scores into reflection prompts (`reflection.py`) — alongside reader metrics
-- [ ] Inject score history into generation prompts (`reflection.py:format_journal_for_generation`) — compact trend line
-- [ ] Extract scores from previous edition metadata for history injection
-- [ ] Update `cd.yml` — add `ENABLE_QUALITY_GRADING` env var
-- [ ] Update `DEPLOYMENT.md` — document new env vars
-- [ ] Write tests — deterministic metrics (5), LLM grading with StubStrategy (3), gate logic (3), score embedding/extraction (3), formatting (3) = ~17 tests
+- [x] Create `quality_grader.py` — deterministic metrics + LLM-as-judge rubric + grade/parse/embed functions
+- [x] Add config: `ENABLE_QUALITY_GRADING` (default: `false`), `QUALITY_GATE_THRESHOLD` (default: `2.5`)
+- [x] Integrate grading into `main.py` — after generation (Step 7), before save (Step 10)
+- [x] Implement quality gate — reject + regenerate with critique on failure
+- [x] Inject scores into reflection prompts (`reflection.py`) — alongside reader metrics
+- [x] Inject score history into generation prompts (`reflection.py:format_journal_for_generation`) — compact trend line
+- [x] Extract scores from previous edition metadata for history injection
+- [x] Update `cd.yml` — add `ENABLE_QUALITY_GRADING` env var
+- [x] Update `DEPLOYMENT.md` — document new env vars
+- [x] Write tests — deterministic metrics (5), LLM grading with StubStrategy (3), gate logic (3), score embedding/extraction (3), formatting (3) = ~17 tests
 - [ ] Backfill: run grading on existing editions via one-off script (optional, for baseline)
 
 ### Validation & Tuning

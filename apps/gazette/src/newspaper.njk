@@ -23,6 +23,10 @@ eleventyComputed:
 ] %}
 {% include "breadcrumb.njk" %}
 
+<a class="back-link" href="/edition/{{ np.editionDate }}/">
+  <span aria-hidden="true">&larr;</span> Back to edition
+</a>
+
 {% set siblingNewspaperIds = np.allNewspaperIds %}
 {% set currentNewspaperId = np.newspaperId %}
 {% set siblingEditionDate = np.editionDate %}

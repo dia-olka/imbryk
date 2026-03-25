@@ -164,11 +164,11 @@ class TestParseGraderResponse:
 class TestQualityGate:
     def test_passes_with_good_scores(self):
         report = _parse_grader_response(_VALID_GRADER_RESPONSE)
-        assert report.passes_gate is True
+        assert report.passes_gate() is True
 
     def test_fails_with_low_overall(self):
         report = _parse_grader_response(_LOW_QUALITY_GRADER_RESPONSE)
-        assert report.passes_gate is False
+        assert report.passes_gate() is False
         assert report.overall < 2.5
 
     def test_fails_with_any_score_1(self):
@@ -182,12 +182,18 @@ class TestQualityGate:
             "depth": DimensionScore(score=5, note="great"),
         }
         report = QualityReport(scores=scores, overall=4.3)
-        assert report.passes_gate is False
+        assert report.passes_gate() is False
 
     def test_passes_gate_when_no_scores(self):
         # Grading failure should not block the pipeline
         report = QualityReport()
-        assert report.passes_gate is True
+        assert report.passes_gate() is True
+
+    def test_custom_threshold_respected(self):
+        # overall=3.0 should pass at default 2.5 but fail at threshold=3.5
+        report = _parse_grader_response(_VALID_GRADER_RESPONSE)
+        assert report.passes_gate(threshold=2.5) is True
+        assert report.passes_gate(threshold=report.overall + 0.1) is False
 
 
 # ── Embed / extract round-trip ───────────────────────────────────────────────
@@ -322,7 +328,7 @@ class TestGradeNewspaper:
         assert len(report.scores) == 0
         assert report.text_metrics.word_count > 0
         # Should pass gate (no scores = don't block)
-        assert report.passes_gate is True
+        assert report.passes_gate() is True
 
     def test_grade_handles_invalid_article_json(self):
         stub = StubGenerationStrategy(responses={"flash": _VALID_GRADER_RESPONSE})

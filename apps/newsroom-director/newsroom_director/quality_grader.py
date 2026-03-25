@@ -149,13 +149,12 @@ class QualityReport:
             }),
         )
 
-    @property
-    def passes_gate(self) -> bool:
+    def passes_gate(self, threshold: float = 2.5) -> bool:
         """Return True if quality is above the minimum threshold."""
         if not self.scores:
             return True  # no scores = grading failed, don't block
-        # Fail if overall < 2.5 or any dimension scored 1
-        if self.overall < 2.5:
+        # Fail if overall < threshold or any dimension scored 1
+        if self.overall < threshold:
             return False
         return not any(d.score <= 1 for d in self.scores.values())
 
@@ -190,7 +189,7 @@ class QualityReport:
         if tm.word_count > 0:
             lines.append("")
             lines.append("TEXT METRICS:")
-            lines.append(f"  Avg words/article: {tm.word_count}")
+            lines.append(f"  Total word count: {tm.word_count}")
             lines.append(f"  Avg sentence length: {tm.avg_sentence_len} words")
             lines.append(f"  Vocabulary richness (TTR): {tm.type_token_ratio}")
             lines.append(f"  Readability (Flesch): {tm.flesch_reading_ease}")
@@ -409,7 +408,12 @@ def format_quality_history(
 ) -> str:
     """Format a list of (date, QualityReport) pairs into a trend summary.
 
-    Used in generation prompts to show the persona its score trajectory.
+    Available for future use: inject multi-edition score trends into generation
+    prompts to show the persona its score trajectory over time. Currently the
+    pipeline injects only the previous edition's single scorecard via
+    ``QualityReport.format_for_generation()``.
+    # TODO: wire up in main.py / format_journal_for_generation once multi-edition
+    # history is fetched and passed through the pipeline.
     """
     if not reports:
         return ""
