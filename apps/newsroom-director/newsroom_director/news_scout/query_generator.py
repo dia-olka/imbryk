@@ -147,7 +147,7 @@ def generate_queries(
         try:
             raw = generation_strategy.generate(
                 system_prompt,
-                "flash",
+                "pro",
                 user_content,
                 response_schema=QueryGenerationOutput,
             )
