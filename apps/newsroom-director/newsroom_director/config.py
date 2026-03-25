@@ -58,6 +58,10 @@ TOPIC_RESEARCH_MAX_RETRIES = int(os.getenv("TOPIC_RESEARCH_MAX_RETRIES", "1"))
 ENABLE_EDITORIAL_JOURNAL = os.getenv("ENABLE_EDITORIAL_JOURNAL", "true").lower() == "true"
 JOURNAL_LOOKBACK_DAYS = int(os.getenv("JOURNAL_LOOKBACK_DAYS", "7"))
 
+# Quality Grading — autonomous LLM-as-judge + deterministic metrics
+ENABLE_QUALITY_GRADING = os.getenv("ENABLE_QUALITY_GRADING", "false").lower() == "true"
+QUALITY_GATE_THRESHOLD = float(os.getenv("QUALITY_GATE_THRESHOLD", "2.5"))
+
 # Marketing Agent — autonomous social media promotion
 MARKETING_ENABLED = os.getenv("MARKETING_ENABLED", "false").lower() == "true"
 BLUESKY_HANDLE = os.getenv("BLUESKY_HANDLE", "")

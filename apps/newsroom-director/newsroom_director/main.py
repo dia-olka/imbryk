@@ -35,10 +35,12 @@ from .config import (
     CF_DEPLOY_HOOK_URL,
     DATABASE_URL,
     ENABLE_EDITORIAL_JOURNAL,
+    ENABLE_QUALITY_GRADING,
     ENABLE_READER_METRICS,
     IMAGE_GENERATION_LOCATION,
     JOURNAL_LOOKBACK_DAYS,
     NEWS_ITEM_BASE_WEIGHT,
+    QUALITY_GATE_THRESHOLD,
     R2_ACCOUNT_ID,
     TOPIC_RESEARCH_ENABLED,
     VERTEX_AI_LOCATION,
@@ -84,6 +86,12 @@ from .output_schemas import (
 from .personas import (
     CURATOR_PERSONA,
     NEWSPAPER_PERSONAS,
+)
+from .quality_grader import (
+    QualityReport,
+    embed_quality_scores,
+    extract_quality_report,
+    grade_newspaper,
 )
 from .reflection import (
     format_journal_for_generation,
@@ -335,6 +343,7 @@ def run_morning_press(
             prev_edition_metrics_by_persona = load_edition_metrics(session, prev_date_str)
 
         prev_edition_by_persona: dict[str, str] = {}
+        prev_quality_by_persona: dict[str, str] = {}  # persona_id -> formatted score text
         if prev_edition:
             for persona in NEWSPAPER_PERSONAS:
                 content_json = prev_edition.get(persona.id)
@@ -347,6 +356,15 @@ def run_morning_press(
                 )
                 if summary:
                     prev_edition_by_persona[persona.id] = summary
+
+                # Extract quality scores from previous edition metadata
+                if ENABLE_QUALITY_GRADING and content_json:
+                    prev_report = extract_quality_report(content_json)
+                    if prev_report and prev_report.scores:
+                        prev_quality_by_persona[persona.id] = (
+                            prev_report.format_for_generation()
+                        )
+
             if prev_edition_by_persona:
                 logger.info(
                     "Previous edition summaries loaded for %d personas",
@@ -357,6 +375,8 @@ def run_morning_press(
         # Failures for individual newspapers are isolated — a single Gemini error
         # skips that paper but allows the remaining newspapers to proceed.
         articles: dict[str, str] = {}
+        # Store generation prompts for quality-gate regeneration
+        generation_prompts: dict[str, tuple[str, str]] = {}  # persona_id -> (system, user)
         for persona in NEWSPAPER_PERSONAS:
             prompts_for_paper = newspaper_prompts.get(persona.id, [])
             if not prompts_for_paper:
@@ -427,6 +447,14 @@ def run_morning_press(
                 if prev_summary:
                     journal_text = f"{journal_text}\n\n{prev_summary}" if journal_text else prev_summary
 
+                # Append quality scores from previous edition
+                quality_scorecard = prev_quality_by_persona.get(persona.id, "")
+                if quality_scorecard:
+                    journal_text = (
+                        f"{journal_text}\n\n{quality_scorecard}"
+                        if journal_text else quality_scorecard
+                    )
+
                 user_parts = [f"WORLD HISTORY:\n{synopsis}"]
                 if journal_text:
                     user_parts.append(
@@ -441,6 +469,7 @@ def run_morning_press(
                     "today's edition. Follow all rules in your system instruction.\n</task>"
                 )
                 user_content = "\n\n".join(user_parts)
+                generation_prompts[persona.id] = (system_instruction, user_content)
 
                 # Call LLM — response_schema enforces exact field names so the
                 # gazette always receives canonical JSON (no "title"/"content"/
@@ -557,6 +586,118 @@ def run_morning_press(
             except Exception:
                 logger.exception(
                     "Curator synthesis failed, skipping curator article"
+                )
+
+        # Step 8a: Quality grading — score each newspaper and gate bad output.
+        quality_reports: dict[str, QualityReport] = {}
+        if articles and ENABLE_QUALITY_GRADING:
+            try:
+                for persona in NEWSPAPER_PERSONAS:
+                    if persona.id not in articles:
+                        continue
+
+                    report = grade_newspaper(
+                        newspaper_id=persona.id,
+                        paper_name=persona.paper_name,
+                        ideology=persona.ideology,
+                        content_json=articles[persona.id],
+                        generation_strategy=gen,
+                    )
+                    quality_reports[persona.id] = report
+
+                    logger.info(
+                        "Quality graded %s: overall=%.1f | %s",
+                        persona.id,
+                        report.overall,
+                        " ".join(
+                            f"{k}={v.score}"
+                            for k, v in report.scores.items()
+                        ),
+                        extra={
+                            "step": "quality_grade",
+                            "newspaper_id": persona.id,
+                            "quality_overall": report.overall,
+                        },
+                    )
+
+                    # Quality gate — reject and regenerate if below threshold
+                    if not report.passes_gate(QUALITY_GATE_THRESHOLD) and persona.id in generation_prompts:
+                        logger.warning(
+                            "Quality gate FAILED for %s (overall=%.1f, threshold=%.1f), "
+                            "regenerating with critique",
+                            persona.id, report.overall, QUALITY_GATE_THRESHOLD,
+                            extra={
+                                "step": "quality_gate_fail",
+                                "newspaper_id": persona.id,
+                                "quality_overall": report.overall,
+                            },
+                        )
+                        critique = report.format_critique()
+                        orig_system, orig_user = generation_prompts[persona.id]
+                        retry_user = (
+                            f"{orig_user}\n\n"
+                            f"IMPORTANT — YOUR PREVIOUS ATTEMPT WAS REJECTED "
+                            f"BY QUALITY REVIEW:\n{critique}\n\n"
+                            f"Rewrite this edition fixing the issues above. "
+                            f"Maintain your editorial identity."
+                        )
+                        try:
+                            retry_candidate = gen.generate(
+                                orig_system, persona.model_tier, retry_user,
+                                response_schema=NewspaperOutput,
+                            )
+                            if is_valid_newspaper(retry_candidate):
+                                # Re-grade the retry
+                                retry_report = grade_newspaper(
+                                    newspaper_id=persona.id,
+                                    paper_name=persona.paper_name,
+                                    ideology=persona.ideology,
+                                    content_json=retry_candidate,
+                                    generation_strategy=gen,
+                                )
+                                articles[persona.id] = retry_candidate
+                                quality_reports[persona.id] = retry_report
+                                logger.info(
+                                    "Quality gate retry for %s: overall=%.1f -> %.1f",
+                                    persona.id, report.overall, retry_report.overall,
+                                    extra={
+                                        "step": "quality_gate_retry",
+                                        "newspaper_id": persona.id,
+                                        "quality_before": report.overall,
+                                        "quality_after": retry_report.overall,
+                                    },
+                                )
+                            else:
+                                logger.warning(
+                                    "Quality gate retry for %s produced invalid output, "
+                                    "keeping original",
+                                    persona.id,
+                                )
+                        except Exception:
+                            logger.exception(
+                                "Quality gate retry failed for %s, keeping original",
+                                persona.id,
+                            )
+
+                    # Embed quality scores into article metadata
+                    articles[persona.id] = embed_quality_scores(
+                        articles[persona.id], quality_reports[persona.id],
+                    )
+
+                logger.info(
+                    "Quality grading complete",
+                    extra={
+                        "step": "quality_grade_done",
+                        "graded_count": len(quality_reports),
+                        "gate_failures": sum(
+                            1 for r in quality_reports.values()
+                            if not r.passes_gate(QUALITY_GATE_THRESHOLD)
+                        ),
+                    },
+                )
+            except Exception:
+                logger.exception(
+                    "Quality grading step failed, continuing without scores"
                 )
 
         # Step 8b: Fetch reader metrics for the previous edition (if enabled).
@@ -697,6 +838,16 @@ def run_morning_press(
                     if prev_metrics:
                         persona_metrics_text = format_metrics_for_reflection(
                             prev_metrics, persona.id, prev_newspaper_totals,
+                        )
+
+                    # Append quality scores to metrics text for reflection
+                    quality_report = quality_reports.get(persona.id)
+                    if quality_report and quality_report.scores:
+                        quality_text = quality_report.format_for_reflection()
+                        persona_metrics_text = (
+                            f"{persona_metrics_text}\n\n{quality_text}"
+                            if persona_metrics_text
+                            else quality_text
                         )
 
                     reflection = run_persona_reflection(
