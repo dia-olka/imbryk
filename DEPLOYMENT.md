@@ -1086,25 +1086,63 @@ With the Google Cloud free trial, you will not pay anything for the first 90 day
 
 | What                                        | Monthly Cost      | Why                                                             |
 | ------------------------------------------- | ----------------- | --------------------------------------------------------------- |
-| Database (Cloud SQL)                        | ~$8               | The database runs continuously — this is the biggest fixed cost |
+| Database (Cloud SQL)                        | ~$8               | `db-f1-micro` instance running continuously — cheapest tier     |
 | API server (Cloud Run)                      | ~$0-2             | Only runs when someone makes a request; free when idle          |
 | Newsroom Director (Cloud Run Job)           | ~$0.50            | Runs once per day for ~10 minutes                               |
-| AI article generation (Vertex AI / Gemini)  | ~$18              | ~$3 per newspaper x 6 newspapers per day                        |
-| AI image generation (Vertex AI / Imagen)    | ~$15-30           | ~20-24 images/day for article and front-page illustrations      |
-| AI validation & world updates               | ~$2-4             | Uses the more expensive AI model for accuracy                   |
+| AI article generation (Vertex AI / Gemini)  | ~$6               | 2 pro + 4 flash newspapers per day                              |
+| AI image generation (Vertex AI / Imagen)    | ~$8-12            | ~12-18 images/day (2 per newspaper + heroes + backfill)         |
+| AI support calls (Vertex AI / Gemini)       | ~$1-2             | Reflections, news scout queries, ledger mutation (all flash)    |
 | File storage (Cloudflare R2)                | $0                | Free tier covers years of editions                              |
 | Prompt UI website (Cloudflare Pages)        | $0                | Free                                                            |
 | Gazette website (Cloudflare Pages)          | $0                | Free                                                            |
-| Container image storage (Artifact Registry) | ~$0.50            | Storing the two application images                              |
+| Container image storage (Artifact Registry) | ~$2-3             | Two application images; keep 5 latest versions via cleanup policy |
 | News Scout search (Tavily)                  | ~$0-14            | Free tier: 1,000 calls/month; paid plan if more are needed      |
 | Translation (Azure Translator)              | ~$0-7             | Free tier: 2M chars/month; 3 languages may exceed (~2.7M chars) |
 | Daily schedule (Cloud Scheduler)            | $0                | Free for up to 3 jobs (4th job costs ~$0.10/month)              |
 | Secret storage (Secret Manager)             | ~$0.06            | A few secrets, rarely accessed                                  |
-| **Total**                                   | **~$45-86/month** |                                                                 |
+| **Total**                                   | **~$26-48/month** |                                                                 |
 
-The biggest costs are AI usage (~$35-50/month for Gemini text + Imagen images, proportional to number of active newspapers and images), followed by the database (~$8/month, always on). Tavily is free for up to 1,000 API calls/month (the News Scout uses ~60-90 calls/day, well within the free tier). Everything on Cloudflare is free. The Editorial Journal and Reader Metrics features add negligible cost — journal reflections use Gemini Flash (~$0.50/month extra), Cloudflare Web Analytics is free, and the metrics DB table uses minimal storage.
+The biggest cost is AI usage (~$15-20/month for Gemini text + Imagen images), followed by the database (~$8/month, always on). Only reader-facing article generation uses the Pro-tier model (The Sovereign and The Owner); all support tasks (reflections, news scout queries, world ledger mutation) use the cheaper Flash tier. Image generation uses 2 article images per newspaper (down from 3) and backfill is capped at 5 images/run. Tavily is free for up to 1,000 API calls/month (the News Scout uses ~60-90 calls/day, well within the free tier). Everything on Cloudflare is free.
 
-> **Saving money:** If $30/month is too much after the free trial ends, the database is the first thing to look at. Services like [Neon](https://neon.tech/) or [Supabase](https://supabase.com/) offer free PostgreSQL tiers that could replace Cloud SQL.
+> **Saving money:** The database is the biggest fixed cost. Services like [Neon](https://neon.tech/) or [Supabase](https://supabase.com/) offer free PostgreSQL tiers that could replace Cloud SQL entirely. Make sure the Cloud SQL instance uses the `db-f1-micro` tier (cheapest); `db-g1-small` costs ~3x more. Set up an Artifact Registry cleanup policy to prevent unbounded storage growth (see [Artifact Registry cleanup](#artifact-registry-cleanup) below).
+
+---
+
+## Artifact Registry Cleanup
+
+Without a cleanup policy, old Docker images accumulate and storage costs grow with every deploy. Set up a cleanup policy to keep only the 5 most recent versions of each image:
+
+1. Create a file called `cleanup-policy.json`:
+
+```json
+[
+  {
+    "name": "keep-recent",
+    "action": { "type": "Keep" },
+    "mostRecentVersions": {
+      "packageNamePrefixes": ["ingestion-api", "newsroom-director"],
+      "keepCount": 5
+    }
+  },
+  {
+    "name": "delete-old",
+    "action": { "type": "Delete" },
+    "condition": {
+      "olderThan": "7d"
+    }
+  }
+]
+```
+
+2. Apply it:
+
+```sh
+gcloud artifacts repositories set-cleanup-policies imbryk \
+  --location=us-central1 \
+  --policy=cleanup-policy.json
+```
+
+This runs automatically and keeps storage under ~25 GB (~$2.50/month) instead of growing unboundedly.
 
 ---
 
@@ -1214,8 +1252,8 @@ These are all the configuration values used by the backend services. Most are st
 | `VERTEX_AI_PROJECT`               | Env var | —                         | Your Google Cloud project ID                                                                                                                                                                                                                                   |
 | `VERTEX_AI_LOCATION`              | Env var | `global`                  | Google Cloud region for Gemini text generation models                                                                                                                                                                                                          |
 | `IMAGE_GENERATION_LOCATION`       | Env var | `us-central1`             | Google Cloud region for Imagen image generation (Imagen does not support `global`)                                                                                                                                                                             |
-| `GENERATION_MODEL_PRO`            | Env var | `gemini-3.1-pro-preview`  | Gemini model used for Pro-tier newspapers (The Sovereign, The Owner, Curator, validation, ledger mutation)                                                                                                                                                     |
-| `GENERATION_MODEL_FLASH`          | Env var | `gemini-3-flash-preview`  | Gemini model used for Flash-tier newspapers (The Aspirant, The Moralist, The Radical, The Hedonist)                                                                                                                                                            |
+| `GENERATION_MODEL_PRO`            | Env var | `gemini-3.1-pro-preview`  | Gemini model used for Pro-tier newspapers (The Sovereign, The Owner)                                                                                                                                                                                           |
+| `GENERATION_MODEL_FLASH`          | Env var | `gemini-3-flash-preview`  | Gemini model used for Flash-tier newspapers (The Aspirant, The Moralist, The Radical, The Hedonist), Curator, reflections, news scout queries, and world ledger mutation                                                                                       |
 | `IMAGE_GENERATION_MODEL`          | Env var | `imagen-4.0-generate-001` | Vertex AI Imagen model for article and hero images                                                                                                                                                                                                             |
 | `R2_BUCKET_NAME`                  | Env var | `imbryk-editions`         | R2 bucket where editions and images are stored                                                                                                                                                                                                                 |
 | `R2_PUBLIC_URL`                   | Env var | _(empty)_                 | Custom domain URL for the R2 bucket (e.g. `https://editions.yourdomain.com`) — used to build public image URLs                                                                                                                                                 |
@@ -1223,7 +1261,7 @@ These are all the configuration values used by the backend services. Most are st
 | `ENABLE_VALIDATION`               | Env var | `true`                    | Set to `false` to skip world-coherence validation of prompts                                                                                                                                                                                                   |
 | `TOTAL_BUDGET_TOKENS`             | Env var | `800000`                  | Total AI token budget allocated across all topic clusters per newspaper                                                                                                                                                                                        |
 | `MAX_CLUSTERS`                    | Env var | `30`                      | Maximum number of topic clusters per newspaper before low-weight ones are merged                                                                                                                                                                               |
-| `MAX_BACKFILL_IMAGES_PER_RUN`     | Env var | `20`                      | Max images to generate during the end-of-run backfill step for previously failed image generations                                                                                                                                                             |
+| `MAX_BACKFILL_IMAGES_PER_RUN`     | Env var | `5`                       | Max images to generate during the end-of-run backfill step for previously failed image generations. Set to `0` once backlog is cleared.                                                                                                                        |
 | `NEWS_SCOUT_ENABLED`              | Env var | `true`                    | Set to `false` to disable the News Scout (no real-world news gap filling)                                                                                                                                                                                      |
 | `TOPIC_RESEARCH_ENABLED`          | Env var | `false`                   | Enable Topic Research — transforms paid user prompts into Tavily news searches before distillation. Requires `TAVILY_API_KEY`. See [Enabling Topic Research](#enabling-topic-research).                                                                        |
 | `TOPIC_RESEARCH_MAX_QUERIES`      | Env var | `3`                       | Maximum Tavily search queries generated per user prompt when Topic Research is enabled. Higher values improve coverage at the cost of more Tavily credits.                                                                                                     |

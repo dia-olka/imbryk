@@ -18,25 +18,27 @@ eleventyComputed:
 ---
 
 {% set persona = personas.newspapers | findPersona(tnp.newspaperId) %}
+{% set translatedName = tnp.ui.newspaperNames[tnp.newspaperId] if (tnp.ui.newspaperNames and tnp.ui.newspaperNames[tnp.newspaperId]) else tnp.newspaperName %}
+{% set translatedTagline = tnp.ui.newspaperTaglines[tnp.newspaperId] if (tnp.ui.newspaperTaglines and tnp.ui.newspaperTaglines[tnp.newspaperId]) else (persona.tagline if persona else "") %}
 
 {% set breadcrumbs = [
-  {label: tnp.ui.home | default("Home"), url: "/"},
-  {label: tnp.editionDate | dateDisplay(tnp.lang), url: "/edition/" + tnp.editionDate + "/"},
-  {label: tnp.newspaperName, url: ""}
+  {label: tnp.ui.home | default("Home"), url: "/" + tnp.lang + "/"},
+  {label: tnp.editionDate | dateDisplay(tnp.lang), url: "/edition/" + tnp.editionDate + "/" + tnp.lang + "/"},
+  {label: translatedName, url: ""}
 ] %}
 {% include "breadcrumb.njk" %}
 
 {% set siblingNewspaperIds = tnp.allNewspaperIds %}
 {% set currentNewspaperId = tnp.newspaperId %}
 {% set siblingEditionDate = tnp.editionDate %}
+{% set siblingLangSuffix = tnp.lang %}
+{% set siblingUi = tnp.ui %}
 {% include "sibling-nav.njk" %}
-
-<a href="/edition/{{ tnp.editionDate }}/" class="back-link" aria-label="{{ tnp.ui.backToEdition | default('Back to edition overview') }}">&larr; {{ tnp.ui.backToEdition | default("Back to edition overview") }}</a>
 
 <div class="newspaper" data-persona="{{ tnp.newspaperId }}" style="{{ tnp.cssVars }}">
 
-  {% set mastheadName = tnp.newspaperName %}
-  {% set mastheadTagline = persona.tagline if persona else "" %}
+  {% set mastheadName = translatedName %}
+  {% set mastheadTagline = translatedTagline %}
   {% set mastheadDate = tnp.editionDate %}
   {% include "newspaper-masthead.njk" %}
 
@@ -113,6 +115,8 @@ eleventyComputed:
   {% set siblingNewspaperIds = tnp.allNewspaperIds %}
   {% set currentNewspaperId = tnp.newspaperId %}
   {% set siblingEditionDate = tnp.editionDate %}
+  {% set siblingLangSuffix = tnp.lang %}
+  {% set siblingUi = tnp.ui %}
   {% include "sibling-nav.njk" %}
 
 </div>

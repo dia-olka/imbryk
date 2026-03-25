@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Maximum number of article images per newspaper (excluding hero).
-MAX_ARTICLE_IMAGES = 3
+MAX_ARTICLE_IMAGES = 2
 
 
 @dataclass

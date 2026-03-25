@@ -77,10 +77,17 @@
 <body{% if bodyClass %} class="{{ bodyClass }}"{% endif %}>
   <a href="#main-content" class="skip-link">{{ pageUi.skipToMain | default("Skip to main content") }}</a>
 
+  {% set _lp = "" %}
+  {% if pageLang and pageLang != "en" %}{% set _lp = pageLang %}{% endif %}
+  {% set navToday = "/" + (_lp + "/" if _lp else "") %}
+  {% set navWorld = "/timeline/" + (_lp + "/" if _lp else "") %}
+  {% set navArchive = "/archive/" %}
+  {% set navAbout = "/about/" + (_lp + "/" if _lp else "") %}
+
   <header role="banner" class="site-header">
     <div class="site-header__inner">
       <div class="site-header__brand">
-        <a href="/" class="site-logo">
+        <a href="{{ navToday }}" class="site-logo">
           <img src="/logo.svg" alt="Imbryk logo" class="site-logo__image" />
           <span class="site-title">Gazette</span>
         </a>
@@ -92,10 +99,10 @@
       </a>
       <nav aria-label="Primary navigation">
         <ul class="nav-list" role="list">
-          <li><a href="/"{% if page.url == "/" %} aria-current="page"{% endif %}>{{ pageUi.today | default("Today") }}</a></li>
-          <li><a href="/timeline/"{% if page.url == "/timeline/" %} aria-current="page"{% endif %}>{{ pageUi.world | default("World") }}</a></li>
-          <li><a href="/archive/"{% if page.url == "/archive/" %} aria-current="page"{% endif %}>{{ pageUi.archive | default("Archive") }}</a></li>
-          <li><a href="/about/"{% if page.url == "/about/" %} aria-current="page"{% endif %}>{{ pageUi.about | default("About") }}</a></li>
+          <li><a href="{{ navToday }}"{% if page.url == navToday %} aria-current="page"{% endif %}>{{ pageUi.today | default("Today") }}</a></li>
+          <li><a href="{{ navWorld }}"{% if page.url == navWorld %} aria-current="page"{% endif %}>{{ pageUi.world | default("World") }}</a></li>
+          <li><a href="{{ navArchive }}"{% if page.url == navArchive %} aria-current="page"{% endif %}>{{ pageUi.archive | default("Archive") }}</a></li>
+          <li><a href="{{ navAbout }}"{% if page.url == navAbout %} aria-current="page"{% endif %}>{{ pageUi.about | default("About") }}</a></li>
         </ul>
       </nav>
       {% include "language-switcher.njk" %}
@@ -110,8 +117,8 @@
     <p><a href="/newspapers/">Imbryk Gazette</a> &mdash; {{ pageUi.footerText | default("six AI perspectives on world events.") }}</p>
     <nav class="site-footer__links" aria-label="Footer links">
       <ul role="list">
-        <li><a href="/about/">{{ pageUi.about | default("About") }}</a></li>
-        <li><a href="/policies/">{{ pageUi.policies | default("Policies") }}</a></li>
+        <li><a href="{{ navAbout }}">{{ pageUi.about | default("About") }}</a></li>
+        <li><a href="/policies/{{ _lp + '/' if _lp else '' }}">{{ pageUi.policies | default("Policies") }}</a></li>
         <li><a href="https://bsky.app/profile/imbryk-gazette.bsky.social" rel="me noopener" target="_blank">Bluesky</a></li>
       </ul>
     </nav>

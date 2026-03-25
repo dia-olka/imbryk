@@ -76,7 +76,7 @@ from .metrics import (
     format_metrics_for_reflection,
 )
 from .output_schemas import (
-    CuratorOutput,
+    CuratorOutputV2,
     NewspaperOutput,
     is_valid_curator,
     is_valid_newspaper,
@@ -528,7 +528,7 @@ def run_morning_press(
                 for attempt in range(1, 4):
                     candidate = gen.generate(
                         curator_system, CURATOR_PERSONA.model_tier, curator_content,
-                        response_schema=CuratorOutput,
+                        response_schema=CuratorOutputV2,
                     )
                     if is_valid_curator(candidate):
                         curator_article = candidate
@@ -624,8 +624,42 @@ def run_morning_press(
                     import json as _json
                     try:
                         parsed_curator = _json.loads(articles["curator"])
-                        # New structured format
-                        if "consensus" in parsed_curator:
+                        version = parsed_curator.get("version")
+                        if version == 2:
+                            # V2 structured format — extract text for reflection prompt
+                            sections = []
+                            consensus = parsed_curator.get("consensus", [])
+                            if consensus:
+                                items = "\n".join(
+                                    f"{i}. {c['text']}" for i, c in enumerate(consensus, 1)
+                                    if isinstance(c, dict)
+                                )
+                                sections.append(f"CONSENSUS\n{items}")
+                            faults = parsed_curator.get("fault_lines", [])
+                            if faults:
+                                items = "\n".join(
+                                    f"{i}. {f['topic']}: {f.get('summary', '')}"
+                                    for i, f in enumerate(faults, 1)
+                                    if isinstance(f, dict)
+                                )
+                                sections.append(f"FAULT LINES\n{items}")
+                            gaps = parsed_curator.get("gaps", [])
+                            if gaps:
+                                items = "\n".join(
+                                    f"{i}. {g['topic']}: {g.get('description', '')}"
+                                    for i, g in enumerate(gaps, 1)
+                                    if isinstance(g, dict)
+                                )
+                                sections.append(f"GAPS\n{items}")
+                            watch = parsed_curator.get("what_to_watch", [])
+                            if watch:
+                                numbered = "\n".join(
+                                    f"{i}. {item}" for i, item in enumerate(watch, 1)
+                                )
+                                sections.append(f"WHAT TO WATCH\n{numbered}")
+                            curator_text = "\n\n".join(sections)
+                        elif "consensus" in parsed_curator:
+                            # V1 structured format — plain string lists
                             sections = []
                             for key, label in [
                                 ("consensus", "CONSENSUS"),
@@ -728,7 +762,7 @@ def run_morning_press(
         if articles:
             try:
                 mutation_system, mutation_content = _build_mutation_prompt(synopsis, articles)
-                mutation_response = gen.generate(mutation_system, "pro", mutation_content)
+                mutation_response = gen.generate(mutation_system, "flash", mutation_content)
                 mutation = _parse_mutation(mutation_response)
                 if mutation:
                     ledger = apply_mutation(ledger, mutation)

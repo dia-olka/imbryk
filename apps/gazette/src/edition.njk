@@ -18,51 +18,38 @@ eleventyComputed:
 ] %}
 {% include "breadcrumb.njk" %}
 
-<div class="edition-header">
-  {% set neighbours = editions | editionNeighbours(edition.date) %}
-  <nav class="curator-nav-row" aria-label="Browse editions by date">
-    <div class="curator-nav-row__next">
-      {% if neighbours.next %}
-        <a href="/edition/{{ neighbours.next }}/" class="curator-nav-row__link">
-          <span class="curator-nav-row__arrow" aria-hidden="true">&larr;</span>
-          <span class="curator-nav-row__meta">
-            
-            <span class="curator-nav-row__date">
-              <span class="curator-nav-row__date-full">{{ neighbours.next | dateDisplay }}</span>
-              <span class="curator-nav-row__date-short">{{ neighbours.next | dateShort }}</span>
-            </span>
-          </span>
-        </a>
-      {% endif %}
-    </div>
-    <div class="curator-nav-row__center">
-      {% if edition.curator_synthesis %}
-        <a href="/edition/{{ edition.date }}/curator/"
-           class="curator-banner"
-           style="{{ personas.curator.cssVars }}"
-           aria-label="{{ personas.curator.paperName }} — Synthesis &amp; Analysis">
-          <span class="curator-banner__label">{{ personas.curator.paperName }}</span>
-          <span class="curator-banner__text">{{ (edition.curator_synthesis.text or edition.curator_synthesis.analysis or "") | truncateChars(120) }}</span>
-          <span class="curator-banner__cta" aria-hidden="true">&rarr;</span>
-        </a>
-      {% endif %}
-    </div>
-    <div class="curator-nav-row__prev">
-      {% if neighbours.prev %}
-        <a href="/edition/{{ neighbours.prev }}/" class="curator-nav-row__link curator-nav-row__link--prev">
-          <span class="curator-nav-row__meta">
-          
-            <span class="curator-nav-row__date">
-              <span class="curator-nav-row__date-full">{{ neighbours.prev | dateDisplay }}</span>
-              <span class="curator-nav-row__date-short">{{ neighbours.prev | dateShort }}</span>
-            </span>
-          </span>
-          <span class="curator-nav-row__arrow" aria-hidden="true">&rarr;</span>
-        </a>
-      {% endif %}
-    </div>
-  </nav>
-</div>
+{% set neighbours = editions | editionNeighbours(edition.date) %}
+<nav class="edition-date-bar" aria-label="Browse editions by date">
+  <div class="edition-date-bar__prev">
+    {% if neighbours.next %}
+      <a href="/edition/{{ neighbours.next }}/">
+        <span aria-hidden="true">&larr;</span>
+        <span class="edition-date-bar__date-full">{{ neighbours.next | dateDisplay }}</span>
+        <span class="edition-date-bar__date-short">{{ neighbours.next | dateShort }}</span>
+      </a>
+    {% endif %}
+  </div>
+  <div class="edition-date-bar__center">
+    {% if edition.curator_synthesis %}
+      <a href="/edition/{{ edition.date }}/curator/"
+         class="curator-banner"
+         style="{{ personas.curator.cssVars }}"
+         aria-label="{{ personas.curator.paperName }} — Synthesis &amp; Analysis">
+        <span class="curator-banner__label">{{ personas.curator.paperName }}</span>
+        <span class="curator-banner__cta" aria-hidden="true">&rarr;</span>
+      </a>
+    {% endif %}
+  </div>
+  <div class="edition-date-bar__next">
+    {% if neighbours.prev %}
+      <a href="/edition/{{ neighbours.prev }}/">
+        <span class="edition-date-bar__date-full">{{ neighbours.prev | dateDisplay }}</span>
+        <span class="edition-date-bar__date-short">{{ neighbours.prev | dateShort }}</span>
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+    {% endif %}
+  </div>
+</nav>
 
 <ul class="front-page-grid" role="list">
   {% for newspaper in edition.newspapers %}

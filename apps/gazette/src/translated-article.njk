@@ -20,19 +20,21 @@ eleventyComputed:
 ---
 
 {% set persona = personas.newspapers | findPersona(tap.newspaperId) %}
+{% set translatedName = tap.ui.newspaperNames[tap.newspaperId] if (tap.ui.newspaperNames and tap.ui.newspaperNames[tap.newspaperId]) else tap.newspaperName %}
+{% set translatedTagline = tap.ui.newspaperTaglines[tap.newspaperId] if (tap.ui.newspaperTaglines and tap.ui.newspaperTaglines[tap.newspaperId]) else (persona.tagline if persona else "") %}
 
 {% set breadcrumbs = [
-  {label: tap.ui.home | default("Home"), url: "/"},
-  {label: tap.editionDate | dateDisplay(tap.lang), url: "/edition/" + tap.editionDate + "/"},
-  {label: tap.newspaperName, url: "/edition/" + tap.editionDate + "/" + tap.newspaperId + "/"},
+  {label: tap.ui.home | default("Home"), url: "/" + tap.lang + "/"},
+  {label: tap.editionDate | dateDisplay(tap.lang), url: "/edition/" + tap.editionDate + "/" + tap.lang + "/"},
+  {label: translatedName, url: "/edition/" + tap.editionDate + "/" + tap.newspaperId + "/" + tap.lang + "/"},
   {label: tap.article.headline, url: ""}
 ] %}
 {% include "breadcrumb.njk" %}
 
 <div class="newspaper" data-persona="{{ tap.newspaperId }}" style="{{ tap.cssVars }}">
 
-  {% set mastheadName = tap.newspaperName %}
-  {% set mastheadTagline = persona.tagline if persona else "" %}
+  {% set mastheadName = translatedName %}
+  {% set mastheadTagline = translatedTagline %}
   {% set mastheadDate = tap.editionDate %}
   {% include "newspaper-masthead.njk" %}
 

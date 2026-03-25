@@ -49,6 +49,15 @@ When adding, removing, or renaming **environment variables** for any service, al
 1. **`.github/workflows/cd.yml`** — add the variable to the relevant Cloud Run deploy/update step.
 2. **`DEPLOYMENT.md`** — add the variable to the Environment Variables Reference table for the relevant service, and update any prose sections (e.g. "Enabling Feature X") that reference related variables.
 
+# Cost Optimisation
+
+The project runs on Google Cloud with a target budget of ~$26-48/month. Follow these rules to keep costs low:
+
+- **Vertex AI model tiers:** Only reader-facing article generation (persona `model_tier`) uses Pro. All support tasks — reflections, news scout queries, world ledger mutation, curator — must use Flash. Do not upgrade support tasks to Pro without explicit approval.
+- **Image generation:** `MAX_ARTICLE_IMAGES` is 2 per newspaper. `MAX_BACKFILL_IMAGES_PER_RUN` defaults to 5 (set to 0 once backlog is cleared). Do not increase these without considering the Imagen cost (~$0.04/image).
+- **Cloud SQL:** The production instance must use `db-f1-micro` (cheapest tier). Never upgrade to `db-g1-small` or higher without approval.
+- **Artifact Registry:** A cleanup policy must be in place to delete old images. See the "Artifact Registry Cleanup" section in DEPLOYMENT.md.
+
 # UI Guidelines
 
 - **Mobile-first design** — all components and layouts must be designed for small screens first, then enhanced for larger viewports via progressive media queries.

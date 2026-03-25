@@ -5,6 +5,9 @@
      - currentNewspaperId: the active newspaper ID (for aria-current)
      - siblingEditionDate: the edition date for URL construction
      - personas: the personas data object (for looking up names)
+   Optional:
+     - siblingLangSuffix: language code for translated URLs (e.g. "es")
+     - siblingUi: UI strings with newspaperNames for translated names
 #}
 
 {% if siblingNewspaperIds and siblingNewspaperIds.length %}
@@ -12,9 +15,10 @@
   <ul class="sibling-nav__list" role="list">
     {% for npId in siblingNewspaperIds %}
       {% set np_persona = personas.newspapers | findPersona(npId) %}
+      {% set npDisplayName = siblingUi.newspaperNames[npId] if (siblingUi and siblingUi.newspaperNames and siblingUi.newspaperNames[npId]) else (np_persona.paperName if np_persona else npId) %}
       <li>
-        <a href="/edition/{{ siblingEditionDate }}/{{ npId }}/"{% if npId == currentNewspaperId %} aria-current="page"{% endif %}>
-          {{ np_persona.paperName if np_persona else npId }}
+        <a href="/edition/{{ siblingEditionDate }}/{{ npId }}/{{ siblingLangSuffix + '/' if siblingLangSuffix else '' }}"{% if npId == currentNewspaperId %} aria-current="page"{% endif %}>
+          {{ npDisplayName }}
         </a>
       </li>
     {% endfor %}

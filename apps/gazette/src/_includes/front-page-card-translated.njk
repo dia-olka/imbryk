@@ -5,16 +5,20 @@
      - cardPersona: persona object (paperName, tagline, cssVars)
      - cardEditionDate: edition date for URL
      - cardLangSuffix: language code for URL suffix (e.g. "es")
+     - cardUi: (optional) UI strings object with newspaperNames/newspaperTaglines
 #}
 
 {% set leadHeadline = cardNewspaper.articles[0].headline if cardNewspaper.articles.length else "" %}
+{% set npId = cardNewspaper.newspaper_id %}
+{% set translatedName = cardUi.newspaperNames[npId] if (cardUi and cardUi.newspaperNames and cardUi.newspaperNames[npId]) else (cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name) %}
+{% set translatedTagline = cardUi.newspaperTaglines[npId] if (cardUi and cardUi.newspaperTaglines and cardUi.newspaperTaglines[npId]) else (cardPersona.tagline if cardPersona else "") %}
 
 <li{% if cardId %} id="{{ cardId }}"{% endif %}>
-  <a href="/edition/{{ cardEditionDate }}/{{ cardNewspaper.newspaper_id }}/{{ cardLangSuffix }}/"
+  <a href="/edition/{{ cardEditionDate }}/{{ npId }}/{{ cardLangSuffix }}/"
      class="front-page-card"
-     data-persona="{{ cardNewspaper.newspaper_id }}"
+     data-persona="{{ npId }}"
      style="{{ cardPersona.cssVars if cardPersona else '' }}"
-     aria-label="{{ cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name }} — {{ leadHeadline }}">
+     aria-label="{{ translatedName }} — {{ leadHeadline }}">
 
     {# Image layer — uses hero image when available #}
     {% if cardNewspaper.heroImageUrl %}
@@ -29,9 +33,9 @@
 
     {# Top: Masthead overlay #}
     <div class="front-page-card__masthead">
-      <h2 class="front-page-card__name">{{ cardPersona.paperName if cardPersona else cardNewspaper.newspaper_name }}</h2>
-      {% if cardPersona and cardPersona.tagline %}
-        <p class="front-page-card__tagline">{{ cardPersona.tagline }}</p>
+      <h2 class="front-page-card__name">{{ translatedName }}</h2>
+      {% if translatedTagline %}
+        <p class="front-page-card__tagline">{{ translatedTagline }}</p>
       {% endif %}
     </div>
 

@@ -280,7 +280,7 @@ def run_persona_reflection(
     )
 
     try:
-        response = generation_strategy.generate(system, "pro", user)
+        response = generation_strategy.generate(system, "flash", user)
         if response and len(response.strip()) > 20:
             return response.strip()
         logger.warning(
@@ -308,7 +308,7 @@ def run_pipeline_observation(
     )
 
     try:
-        response = generation_strategy.generate(system, "pro", user)
+        response = generation_strategy.generate(system, "flash", user)
         if response and len(response.strip()) > 20:
             return response.strip()
         logger.warning("Pipeline observation too short, discarding")

@@ -64,9 +64,117 @@ eleventyComputed:
     <div class="curator-intro">
       <p>Six AI editorial perspectives analysed. Here is where they converge, clash, and leave gaps.</p>
     </div>
-    <section class="synthesis-section" aria-label="Curator synthesis">
-      {# New structured format — render directly as HTML #}
-      {% if synthesis.consensus %}
+
+    {# ─── V2: structured spectrum visualization ─── #}
+    {% if synthesis.version == 2 %}
+
+      {# Metrics bar #}
+      <div class="curator-metrics" role="status" aria-label="Edition analysis summary">
+        <span class="curator-metric">
+          <span class="curator-metric__count">{{ synthesis.consensus | length }}</span>
+          <span class="curator-metric__label">consensus</span>
+        </span>
+        <span class="curator-metric">
+          <span class="curator-metric__count">{{ synthesis.fault_lines | length }}</span>
+          <span class="curator-metric__label">fault lines</span>
+        </span>
+        <span class="curator-metric">
+          <span class="curator-metric__count">{{ allNewspaperIds | length }}</span>
+          <span class="curator-metric__label">voices</span>
+        </span>
+        {% if synthesis.gaps and synthesis.gaps.length %}
+        <span class="curator-metric">
+          <span class="curator-metric__count">{{ synthesis.gaps | length }}</span>
+          <span class="curator-metric__label">gaps</span>
+        </span>
+        {% endif %}
+      </div>
+
+      {# Consensus #}
+      {% if synthesis.consensus and synthesis.consensus.length %}
+      <section class="synthesis-section" aria-label="Consensus">
+        <h2>Consensus</h2>
+        {% for item in synthesis.consensus %}
+        <div class="consensus-item">
+          <p>{{ item.text }}</p>
+          {% if item.voices and item.voices.length %}
+          <div class="voice-dots" aria-label="Newspapers in agreement">
+            {% for voiceId in item.voices %}
+              {% set vp = personas.newspapers | findPersona(voiceId) %}
+              {% if vp %}
+              <span class="voice-dot"
+                    style="background: {{ vp.designTokens.primary }}"
+                    title="{{ vp.paperName }}"
+                    tabindex="0"
+                    role="img"
+                    aria-label="{{ vp.paperName }}"></span>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {# Fault Lines with spectrum #}
+      {% if synthesis.fault_lines and synthesis.fault_lines.length %}
+      <section class="synthesis-section" aria-label="Fault Lines">
+        <h2>Fault Lines</h2>
+        {% for fl in synthesis.fault_lines %}
+        <div class="faultline">
+          <h3 class="faultline__topic">{{ fl.topic }}</h3>
+          <p class="faultline__summary">{{ fl.summary }}</p>
+          <div class="spectrum" role="img" aria-label="Spectrum: {{ fl.label_left }} to {{ fl.label_right }}">
+            <span class="spectrum__label spectrum__label--left">{{ fl.label_left }}</span>
+            <div class="spectrum__track">
+              {% for stance in fl.stances %}
+                {% set sp = personas.newspapers | findPersona(stance.newspaper_id) %}
+                {% if sp %}
+                <span class="spectrum__dot"
+                      style="left: {{ stance.score }}%; background: {{ sp.designTokens.primary }}"
+                      title="{{ sp.paperName }}"
+                      tabindex="0"
+                      role="img"
+                      aria-label="{{ sp.paperName }}: {{ stance.score }}%"></span>
+                {% endif %}
+              {% endfor %}
+            </div>
+            <span class="spectrum__label spectrum__label--right">{{ fl.label_right }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {# Gaps #}
+      {% if synthesis.gaps and synthesis.gaps.length %}
+      <section class="synthesis-section" aria-label="Coverage Gaps">
+        <h2>Gaps</h2>
+        {% for gap in synthesis.gaps %}
+        <div class="gap-item">
+          <h3>{{ gap.topic }}</h3>
+          <p>{{ gap.description }}</p>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {# What to Watch #}
+      {% if synthesis.what_to_watch and synthesis.what_to_watch.length %}
+      <section class="synthesis-section" aria-label="What to Watch">
+        <h2>What to Watch</h2>
+        <ol>
+          {% for item in synthesis.what_to_watch %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ol>
+      </section>
+      {% endif %}
+
+    {# ─── V1: plain string lists ─── #}
+    {% elif synthesis.consensus %}
+      <section class="synthesis-section" aria-label="Curator synthesis">
         {% set sections = [
           {key: "consensus", label: "Consensus"},
           {key: "fault_lines", label: "Fault Lines"},
@@ -84,11 +192,15 @@ eleventyComputed:
             </ol>
           {% endif %}
         {% endfor %}
-      {% else %}
-        {# Legacy text format — fall back to markdown rendering #}
+      </section>
+
+    {# ─── Legacy: free-form text ─── #}
+    {% else %}
+      <section class="synthesis-section" aria-label="Curator synthesis">
         {{ (synthesis.text or synthesis.analysis or "") | markdown | safe }}
-      {% endif %}
-    </section>
+      </section>
+    {% endif %}
+
   {% else %}
     <p>No curator synthesis available for this edition.</p>
   {% endif %}

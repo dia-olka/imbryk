@@ -120,7 +120,30 @@ class StubGenerationStrategy(GenerationStrategy):
             return self._responses[model_tier]
         # When a schema is expected, return minimal valid JSON so validation passes.
         if response_schema is not None:
-            from .output_schemas import CuratorOutput, NewspaperOutput
+            from .output_schemas import CuratorOutput, CuratorOutputV2, NewspaperOutput
+            if response_schema is CuratorOutputV2:
+                return json.dumps({
+                    "version": 2,
+                    "consensus": [
+                        {"text": "Stub consensus point.", "voices": ["sovereign", "aspirant", "owner"]},
+                    ],
+                    "fault_lines": [{
+                        "topic": "Stub fault line",
+                        "label_left": "Position A",
+                        "label_right": "Position B",
+                        "stances": [
+                            {"newspaper_id": "sovereign", "score": 25},
+                            {"newspaper_id": "aspirant", "score": 15},
+                            {"newspaper_id": "owner", "score": 75},
+                            {"newspaper_id": "radical", "score": 5},
+                            {"newspaper_id": "moralist", "score": 60},
+                            {"newspaper_id": "hedonist", "score": 50},
+                        ],
+                        "summary": "Stub fault line summary.",
+                    }],
+                    "gaps": [{"topic": "Stub gap", "description": "Stub gap description."}],
+                    "what_to_watch": ["Stub watch item."],
+                })
             if response_schema is CuratorOutput:
                 return json.dumps({
                     "consensus": [

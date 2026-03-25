@@ -48,7 +48,24 @@
       "allArticles": "Todos los artículos",
       "permalink": "Enlace permanente a este artículo",
       "articleNavigation": "Navegación de artículos",
-      "skipToMain": "Saltar al contenido principal"
+      "skipToMain": "Saltar al contenido principal",
+      "worldHistory": "Historia del mundo",
+      "newspaperNames": {
+        "sovereign": "El Soberano",
+        "aspirant": "El Aspirante",
+        "owner": "El Propietario",
+        "radical": "El Radical",
+        "moralist": "El Moralista",
+        "hedonist": "El Hedonista"
+      },
+      "newspaperTaglines": {
+        "sovereign": "La perspectiva desde la sala de crisis",
+        "aspirant": "Un mundo mejor es posible",
+        "owner": "El balance final, ante todo",
+        "radical": "Sin dioses, sin amos, sin cuartel",
+        "moralist": "La verdad os hará libres",
+        "hedonist": "La vida es corta. Lee en consecuencia."
+      }
     },
     "ar": {
       "readMore": "اقرأ المزيد",
@@ -80,7 +97,24 @@
       "allArticles": "جميع المقالات",
       "permalink": "رابط دائم لهذا المقال",
       "articleNavigation": "التنقل بين المقالات",
-      "skipToMain": "انتقل إلى المحتوى الرئيسي"
+      "skipToMain": "انتقل إلى المحتوى الرئيسي",
+      "worldHistory": "تاريخ العالم",
+      "newspaperNames": {
+        "sovereign": "السيادي",
+        "aspirant": "الطامح",
+        "owner": "المالك",
+        "radical": "الراديكالي",
+        "moralist": "الأخلاقي",
+        "hedonist": "المتعي"
+      },
+      "newspaperTaglines": {
+        "sovereign": "النظرة من غرفة العمليات",
+        "aspirant": "عالم أفضل ممكن",
+        "owner": "الحساب الختامي، فوق كل اعتبار",
+        "radical": "لا آلهة، لا أسياد، لا هوادة",
+        "moralist": "الحقيقة تحرركم",
+        "hedonist": "الحياة قصيرة. اقرأ وفقًا لذلك."
+      }
     }
   }
 }

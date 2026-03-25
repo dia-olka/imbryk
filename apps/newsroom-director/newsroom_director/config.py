@@ -24,7 +24,7 @@ MAX_CLUSTERS = int(os.getenv("MAX_CLUSTERS", "30"))
 
 # Image backfill — max images to generate per pipeline run when catching up
 # on previous editions with failed image generation.
-MAX_BACKFILL_IMAGES_PER_RUN = int(os.getenv("MAX_BACKFILL_IMAGES_PER_RUN", "20"))
+MAX_BACKFILL_IMAGES_PER_RUN = int(os.getenv("MAX_BACKFILL_IMAGES_PER_RUN", "5"))
 
 # Override the edition date (default: today UTC). Used for one-off regeneration.
 EDITION_DATE = os.getenv("EDITION_DATE", "")
