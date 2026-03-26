@@ -8,7 +8,9 @@ layout: layouts/base.njk
 ogType: article
 eleventyComputed:
   title: "Curator Synthesis — {{ edition.date | dateDisplay }} — Imbryk Gazette"
-  description: "The Curator's synthesis — how six AI editorial perspectives converge and diverge on {{ edition.date | dateDisplay }}'s world-shaping events."
+  ogTitle: "The Curator — {{ edition.date | dateDisplay }}"
+  description: "Where six AI newspapers converge, clash, and leave gaps. {{ edition.date | dateDisplay }} synthesis."
+  ogDescription: "Where six AI newspapers converge, clash, and leave gaps."
 ---
 
 {% set synthesis = edition.curator_synthesis %}

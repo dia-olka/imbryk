@@ -7,8 +7,10 @@ permalink: "edition/{{ edition.date }}/index.html"
 layout: layouts/base.njk
 ogType: website
 eleventyComputed:
-  title: "Edition {{ edition.date | dateDisplay }} — Imbryk Gazette"
-  description: "Edition {{ edition.date | dateDisplay }} — how advanced AI systems predict this day's events will unfold, seen through six ideological lenses."
+  title: "{{ edition.date | dateDisplay }} — Imbryk Gazette"
+  ogTitle: "Imbryk Gazette — {{ edition.date | dateDisplay }}"
+  description: "Six AI newspapers cover today's events, each with a distinct ideological lens. {{ edition.date | dateDisplay }} edition."
+  ogDescription: "Six AI newspapers cover today's events, each with a distinct ideological lens."
   ogImage: "{% if edition.newspapers[0].heroImageUrl %}{{ edition.newspapers[0].heroImageUrl }}{% endif %}"
 ---
 

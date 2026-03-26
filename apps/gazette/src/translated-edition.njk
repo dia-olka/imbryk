@@ -8,7 +8,9 @@ layout: layouts/base.njk
 ogType: website
 eleventyComputed:
   title: "{{ tep.editionDate | dateDisplay }} — Imbryk Gazette"
-  description: "{{ tep.editionDate | dateDisplay }} — {{ tep.langName }}"
+  ogTitle: "Imbryk Gazette — {{ tep.editionDate | dateDisplay }}"
+  description: "Six AI newspapers cover today's events, each with a distinct ideological lens. {{ tep.editionDate | dateDisplay }} ({{ tep.langName }})."
+  ogDescription: "Six AI newspapers cover today's events, each with a distinct ideological lens."
   ogImage: "{% if tep.newspapers[0].heroImageUrl %}{{ tep.newspapers[0].heroImageUrl }}{% endif %}"
   pageLang: "{{ tep.lang }}"
   pageDir: "{{ tep.langDir }}"

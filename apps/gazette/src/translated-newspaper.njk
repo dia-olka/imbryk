@@ -8,7 +8,9 @@ layout: layouts/base.njk
 ogType: website
 eleventyComputed:
   title: "{{ tnp.newspaperName }} — {{ tnp.editionDate | dateDisplay }} — Imbryk Gazette"
-  description: "{{ tnp.newspaperName }} — {{ tnp.editionDate | dateDisplay }} edition ({{ tnp.langName }})."
+  ogTitle: "{{ tnp.newspaperName }} — {{ tnp.editionDate | dateDisplay }}"
+  description: "{% if tnp.articles[0] %}{{ tnp.articles[0].headline }}. {% endif %}{{ tnp.articles.length }} article{{ 's' if tnp.articles.length != 1 else '' }}{% if tnp.inBrief.length %}, {{ tnp.inBrief.length }} in brief{% endif %} ({{ tnp.langName }})."
+  ogDescription: "{% if tnp.articles[0] %}{{ tnp.articles[0].headline }}. {% endif %}{{ tnp.articles.length }} article{{ 's' if tnp.articles.length != 1 else '' }}{% if tnp.inBrief.length %}, {{ tnp.inBrief.length }} in brief{% endif %}."
   ogImage: "{% if tnp.heroImageUrl %}{{ tnp.heroImageUrl }}{% endif %}"
   ogImageAlt: "{{ tnp.newspaperName }} front page — {{ tnp.editionDate | dateDisplay }}"
   googleFontsUrl: "{{ tnp.googleFontsUrl }}"
