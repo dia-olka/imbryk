@@ -377,6 +377,58 @@ function loadFromFixture() {
     const mm = String(newDate.getMonth() + 1).padStart(2, '0');
     const dd = String(newDate.getDate()).padStart(2, '0');
     newEdition.date = `${yyyy}-${mm}-${dd}`;
+
+    // First edition gets V2 curator synthesis so both template paths are exercised.
+    if (i === 0 && newEdition.curator_synthesis && !newEdition.curator_synthesis.version) {
+      const npIds = newEdition.newspapers.map((n) => n.newspaper_id);
+      newEdition.curator_synthesis = {
+        version: 2,
+        consensus: [
+          { text: 'All outlets agree that new autonomous drone deployments mark a strategic escalation in the Gulf region.', voices: npIds },
+          { text: 'The diplomatic process for the Northern Shield conflict has been frozen to redirect military resources.', voices: npIds },
+          { text: 'AI data-centre expansion has triggered federal mandates to fast-track nuclear energy deployment.', voices: ['sovereign', 'owner', 'radical', 'moralist'] },
+        ],
+        fault_lines: [
+          {
+            topic: 'Suspension of Northern Shield peace talks',
+            label_left: 'Necessary strategic triage',
+            label_right: 'Imperial abandonment',
+            stances: [
+              { newspaper_id: 'sovereign', score: 12 },
+              { newspaper_id: 'aspirant', score: 88 },
+              { newspaper_id: 'owner', score: 22 },
+              { newspaper_id: 'moralist', score: 70 },
+              { newspaper_id: 'radical', score: 94 },
+              { newspaper_id: 'hedonist', score: 46 },
+            ],
+            summary: 'Sharp divide between security-first and humanitarian perspectives.',
+          },
+          {
+            topic: 'AI safety guardrails for autonomous weapons',
+            label_left: 'Sovereign survival necessity',
+            label_right: 'Unacceptable risk to civilians',
+            stances: [
+              { newspaper_id: 'sovereign', score: 10 },
+              { newspaper_id: 'aspirant', score: 84 },
+              { newspaper_id: 'owner', score: 20 },
+              { newspaper_id: 'moralist', score: 86 },
+              { newspaper_id: 'radical', score: 92 },
+              { newspaper_id: 'hedonist', score: 52 },
+            ],
+            summary: 'Pentagon rejection of guardrails splits outlets along security vs ethics lines.',
+          },
+        ],
+        gaps: [
+          { topic: 'Accountability gap', description: 'No outlet addressed civilian casualty data from the drone deployment or any independent oversight mechanisms.' },
+          { topic: 'Coverage gap', description: 'The Meridian currency story received no coverage from two outlets, despite direct commodity market implications.' },
+        ],
+        what_to_watch: [
+          'Follow the Fracture Accords council response to the drone deployment.',
+          'Track whether the nuclear fast-track mandate faces legal challenges from environmental groups.',
+        ],
+      };
+    }
+
     editions.push(newEdition);
   }
   return editions;

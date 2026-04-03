@@ -279,3 +279,66 @@ test.describe('Global navigation', () => {
     await expect(activeLink).toHaveText('Archive');
   });
 });
+
+// ── Curator synthesis page ────────────────────────────────────────────────────
+
+test.describe('Curator page', () => {
+  test('V2 curator page: landmarks, accessibility, and structure', async ({ page }) => {
+    // Navigate to the latest edition (first in the list → V2 fixture data)
+    await page.goto('/');
+    const editionLinks = page.locator('.front-page-grid a');
+    const count = await editionLinks.count();
+    test.skip(count === 0, 'No editions on home page — skipping');
+
+    // Go to the edition overview first
+    const firstHref = await editionLinks.first().getAttribute('href');
+    // Extract edition date from href like /edition/2026-03-01/sovereign/
+    const dateMatch = firstHref!.match(/\/edition\/(\d{4}-\d{2}-\d{2})\//);
+    test.skip(!dateMatch, 'Could not extract edition date from URL');
+
+    // Navigate directly to the curator page for that edition
+    await page.goto(`/edition/${dateMatch![1]}/curator/`);
+
+    await assertLandmarks(page);
+    await assertSkipLink(page);
+
+    // V2: should have metrics, legend, consensus, fault lines, gaps
+    await expect(page.locator('.curator-metrics')).toHaveCount(1);
+    await expect(page.locator('.curator-legend')).toHaveCount(1);
+    await expect(page.locator('.voice-chip').first()).toBeVisible();
+    await expect(page.locator('.spectrum__dot').first()).toBeVisible();
+    await expect(page.locator('.gap-icon').first()).toBeVisible();
+
+    await axeScan(page);
+  });
+
+  test('V1 curator page: landmarks and axe clean', async ({ page }) => {
+    // Navigate to the latest edition then go one edition back (V1 data)
+    await page.goto('/');
+    const editionLinks = page.locator('.front-page-grid a');
+    const count = await editionLinks.count();
+    test.skip(count === 0, 'No editions on home page — skipping');
+
+    const firstHref = await editionLinks.first().getAttribute('href');
+    const dateMatch = firstHref!.match(/\/edition\/(\d{4}-\d{2}-\d{2})\//);
+    test.skip(!dateMatch, 'Could not extract edition date from URL');
+
+    // Go to the V2 curator page and follow the "Previous edition" link
+    await page.goto(`/edition/${dateMatch![1]}/curator/`);
+    const prevLink = page.locator('.edition-nav__link').first();
+    const prevCount = await prevLink.count();
+    test.skip(prevCount === 0, 'No previous edition link — skipping');
+
+    await prevLink.click();
+    await expect(page).toHaveURL(/\/curator\//);
+
+    await assertLandmarks(page);
+    await assertSkipLink(page);
+
+    // V1: should NOT have V2-specific elements but should have synthesis-section
+    await expect(page.locator('.curator-metrics')).toHaveCount(0);
+    await expect(page.locator('.synthesis-section')).not.toHaveCount(0);
+
+    await axeScan(page);
+  });
+});

@@ -1691,30 +1691,25 @@ main:has(.newspaper) {
   margin-bottom: var(--space-2xl);
 }
 
-/* Section headers: CONSENSUS, FAULT LINES, UNCOVERED ANGLES, WHAT TO WATCH */
+/* Section headers: CONSENSUS, FAULT LINES, GAPS, WHAT TO WATCH */
 .synthesis-section h2 {
   font-family: 'Inter', sans-serif;
-  font-size: var(--type-sm);
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--curator-dark, #2c3e50);
-  margin: var(--space-2xl) 0 var(--space-lg);
-  padding: var(--space-md) 0 var(--space-sm);
-  border-bottom: 2px solid var(--curator-accent, #3498db);
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+  margin: var(--space-lg) 0 var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-bottom: none;
   display: flex;
   align-items: center;
   gap: var(--space-sm);
 }
 
+/* Remove the old ::before dot — dots are now in markup via .sec-dot */
 .synthesis-section h2::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background: var(--curator-accent, #3498db);
-  border-radius: 50%;
-  flex-shrink: 0;
+  display: none;
 }
 
 .synthesis-section h2:first-of-type {
@@ -1782,10 +1777,7 @@ main:has(.newspaper) {
     padding: var(--space-xl);
   }
 
-  .synthesis-section h2 {
-    font-size: var(--type-base);
-  }
-
+  /* Keep V1 list items comfortable on desktop */
   .synthesis-section li {
     padding: var(--space-sm) var(--space-lg);
   }
@@ -3303,7 +3295,7 @@ main:has(.newspaper) {
 }
 
 .newspaper[data-persona='curator'] .newspaper-masthead__date {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.62);
   margin-top: var(--space-sm);
 }
 
@@ -3354,16 +3346,16 @@ main:has(.newspaper) {
   border-top-color: var(--color-border-light);
 }
 
-/* ─── Curator V2: Metrics, Spectrum, Voice Dots, Gaps ───────────────────── */
+/* ─── Curator V2: Metrics, Legend, Spectrum, Voice Chips, Gaps ──────────── */
 
+/* Metrics — 3-column grid with 1px gap separators */
 .curator-metrics {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-lg);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--color-border-light);
   max-width: 70ch;
-  margin: 0 auto var(--space-xl);
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid var(--color-border-light);
+  margin: 0 auto;
 }
 
 .curator-metric {
@@ -3371,146 +3363,236 @@ main:has(.newspaper) {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  padding: var(--space-sm) var(--space-xs);
+  background: var(--color-bg);
 }
 
 .curator-metric__count {
   font-size: var(--type-2xl);
-  font-weight: 700;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
   color: var(--color-text);
   line-height: 1;
 }
 
 .curator-metric__label {
-  font-size: var(--type-xs);
+  font-size: 8px;
+  font-family: 'Inter', sans-serif;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+}
+
+/* Curator lede — italic summary between metrics and legend */
+.curator-lede {
+  max-width: 70ch;
+  margin: 0 auto;
+  padding: var(--space-md) var(--space-lg);
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.curator-lede p {
+  font-size: var(--type-sm);
+  line-height: 1.65;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Legend — newspaper colour key */
+.curator-legend {
+  max-width: 70ch;
+  margin: 0 auto;
+  padding: var(--space-sm) var(--space-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.curator-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-family: 'Inter', sans-serif;
   color: var(--color-text-muted);
 }
 
-/* Consensus voice dots */
-.consensus-item {
-  margin-bottom: var(--space-md);
+.curator-legend__dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.voice-dots {
+/* Section header dots */
+.sec-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sec-dot--consensus { background: var(--curator-accent, #3498db); }
+.sec-dot--faultlines { background: #c0392b; }
+.sec-dot--gaps { background: #e67e22; }
+.sec-dot--watch { background: var(--curator-dark, #2c3e50); }
+
+/* Consensus items — numbered list with voice chips */
+.consensus-item {
   display: flex;
-  gap: 6px;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.c-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ddeaf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--curator-accent, #3498db);
+  font-family: 'Inter', sans-serif;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.c-body { flex: 1; }
+
+.c-text {
+  font-size: var(--type-sm);
+  line-height: 1.55;
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* Voice chips — coloured circles with newspaper initial */
+.voice-chips {
+  display: flex;
+  gap: 3px;
   margin-top: var(--space-xs);
   flex-wrap: wrap;
 }
 
-.voice-dot {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
+.voice-chip {
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
   cursor: default;
 }
 
-.voice-dot:hover::after,
-.voice-dot:focus-visible::after {
-  content: attr(title);
-  position: absolute;
-  bottom: 130%;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: var(--type-xs);
-  background: var(--color-text);
-  color: var(--color-bg);
-  padding: 2px 8px;
-  border-radius: var(--radius);
-  pointer-events: none;
-  z-index: 10;
-}
-
-.voice-dot:focus-visible {
+.voice-chip:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-/* Fault Line spectrum */
+/* Fault lines — numbered with spectrum */
 .faultline {
-  margin-bottom: var(--space-xl);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.faultline__topic {
-  font-size: var(--type-md);
-  font-weight: 600;
-  margin-bottom: var(--space-xs);
-}
-
-.faultline__summary {
-  color: var(--color-text-muted);
+.faultline__header {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
   margin-bottom: var(--space-sm);
 }
 
-.spectrum {
+.f-num {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fde;
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  margin: var(--space-sm) 0;
-}
-
-.spectrum__label {
-  font-size: var(--type-xs);
-  color: var(--color-text-muted);
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #c0392b;
+  font-family: 'Inter', sans-serif;
   flex-shrink: 0;
-  max-width: 30%;
-  line-height: 1.3;
+  margin-top: 1px;
 }
 
-.spectrum__label--left {
-  text-align: right;
+.faultline__topic {
+  font-size: var(--type-sm);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text);
+  margin: 0;
 }
 
-.spectrum__label--right {
-  text-align: left;
+/* Spectrum visualisation */
+.spectrum {
+  margin: var(--space-xs) 0;
 }
 
 .spectrum__track {
   position: relative;
-  flex: 1;
-  height: 4px;
+  height: 28px;
+  margin: 0 2px;
+}
+
+.spectrum__track-bg {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
   background: var(--color-border);
-  border-radius: 2px;
-  min-height: 28px;
+  transform: translateY(-50%);
+}
+
+.spectrum__track-mid {
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 50%;
+  width: 1px;
+  background: var(--color-border-light);
 }
 
 .spectrum__dot {
   position: absolute;
+  top: 50%;
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  top: 50%;
   transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
   cursor: default;
-  border: 2px solid var(--color-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform 0.15s ease;
+  z-index: 2;
+  transition: transform 0.12s ease;
 }
 
 .spectrum__dot:hover,
 .spectrum__dot:focus-visible {
-  transform: translate(-50%, -50%) scale(1.4);
-  z-index: 2;
-}
-
-.spectrum__dot:hover::after,
-.spectrum__dot:focus-visible::after {
-  content: attr(title);
-  position: absolute;
-  bottom: 130%;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: var(--type-xs);
-  background: var(--color-text);
-  color: var(--color-bg);
-  padding: 2px 8px;
-  border-radius: var(--radius);
-  pointer-events: none;
+  transform: translate(-50%, -50%) scale(1.35);
+  z-index: 10;
 }
 
 .spectrum__dot:focus-visible {
@@ -3518,33 +3600,77 @@ main:has(.newspaper) {
   outline-offset: 2px;
 }
 
-/* Gaps */
-.gap-item {
-  margin-bottom: var(--space-md);
+/* Spectrum labels — below the track */
+.spectrum-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
 }
 
-.gap-item h3 {
-  font-size: var(--type-sm);
-  font-weight: 600;
-  margin-bottom: var(--space-xs);
-}
-
-.gap-item p {
+.spectrum-label {
+  font-size: 9px;
+  font-family: 'Inter', sans-serif;
   color: var(--color-text-muted);
+  font-style: italic;
+  max-width: 45%;
+  line-height: 1.2;
 }
 
-/* Mobile: stack spectrum labels */
+.spectrum-label--right {
+  text-align: right;
+}
+
+/* Gap items — icon + body layout */
+.gap-item {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  align-items: flex-start;
+}
+
+.gap-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: #faeeda;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #e67e22;
+}
+
+.gap-body { flex: 1; }
+
+.gap-text {
+  font-size: var(--type-sm);
+  line-height: 1.5;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.gap-tag {
+  font-size: 8px;
+  font-family: 'Inter', sans-serif;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+  letter-spacing: 0.03em;
+  display: block;
+}
+
+/* Mobile: stack spectrum */
 @media (max-width: 25rem) {
-  .spectrum {
-    flex-wrap: wrap;
+  .spectrum-labels {
+    flex-direction: column;
+    gap: 2px;
   }
-  .spectrum__label {
+  .spectrum-label {
     max-width: 100%;
-    text-align: left;
   }
-  .spectrum__track {
-    width: 100%;
-    order: -1;
+  .spectrum-label--right {
+    text-align: left;
   }
 }
 

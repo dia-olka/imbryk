@@ -115,6 +115,13 @@ export default function (eleventyConfig) {
     return personas.find((p) => p.id === newspaperId);
   });
 
+  // Extract newspaper initial from paperName, e.g. "The Sovereign" → "S"
+  eleventyConfig.addFilter('personaInitial', (paperName) => {
+    if (!paperName) return '?';
+    const parts = paperName.split(' ');
+    return (parts.length > 1 ? parts[1] : parts[0]).charAt(0).toUpperCase();
+  });
+
   eleventyConfig.addFilter('findCategory', (categories, categoryId) => {
     return categories.find((c) => c.id === categoryId);
   });
