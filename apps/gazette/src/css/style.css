@@ -2136,7 +2136,7 @@ main:has(.newspaper) {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: calc(var(--type-xs) * 0.85);
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
 .front-page-card[data-persona='aspirant'] .front-page-card__footer {

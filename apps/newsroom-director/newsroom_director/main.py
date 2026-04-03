@@ -222,7 +222,7 @@ def run_morning_press(
             extra={"synopsis_length": len(synopsis)},
         )
 
-        # Step 5: Topic research — replace raw prompts with researched news
+        # Step 5: Topic research —  replace raw prompts with researched news
         # Prompts that fail research are left as 'accepted' for retry on the
         # next pipeline run (up to TOPIC_RESEARCH_MAX_RETRIES attempts).
         original_prompt_ids = [pr.prompt_id for pr in prompt_records]
