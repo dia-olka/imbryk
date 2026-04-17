@@ -1,0 +1,24 @@
+# Default: HTML and everything else must revalidate every request.
+# Browsers keep the copy on disk but send a conditional request (ETag/If-None-Match)
+# so a new deploy is picked up immediately on next navigation.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# CSS: short cache with SWR so design changes propagate within ~1 minute
+# to every page (new and old editions alike), without hammering origin.
+/css/*
+  Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=86400
+
+# Static image assets (logos, favicons, OG image): cache 1h in browser,
+# 1d at edge via SWR — these change rarely but are not "forever".
+/*.svg
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/*.png
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/*.jpg
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/*.webp
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400

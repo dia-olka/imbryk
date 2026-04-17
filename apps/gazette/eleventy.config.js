@@ -33,6 +33,8 @@ export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy('src/logo.svg');
   // TODO: create a 1200x630 og-gazette.png and place it in src/
   eleventyConfig.addPassthroughCopy('src/og-gazette.png');
+  // Cloudflare Pages reads _headers from the deploy root.
+  eleventyConfig.addPassthroughCopy({ 'src/_headers': '_headers' });
 
   eleventyConfig.addFilter('dateDisplay', (value, locale) => {
     if (!value) return '';
