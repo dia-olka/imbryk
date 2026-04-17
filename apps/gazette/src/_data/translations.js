@@ -40,7 +40,17 @@ const TranslationSchema = z.object({
   newspapers: z.record(z.string(), TranslatedNewspaperMetaSchema).optional(),
 });
 
-export default async function () {
+// Module-level memo: 11ty data files import this concurrently and call the
+// default export multiple times per build. Without caching each caller
+// re-fetches every edition × language translation file.
+let memoised;
+
+export default function () {
+  if (!memoised) memoised = loadAll();
+  return memoised;
+}
+
+async function loadAll() {
   if (!R2_PUBLIC_URL) {
     // Local dev — load fixture translations
     return loadFixtureTranslations();
@@ -52,41 +62,41 @@ export default async function () {
 
   if (!systemLangs.length) return {};
 
-  // { editionId: { langCode: translationData } }
-  const translations = {};
-
+  // Fan out: one fetch per (edition, lang). Missing translations return 404
+  // silently. We still surface network/parse errors via console.warn but
+  // each failure only affects one lang of one edition.
+  const jobs = [];
   for (const edition of editions) {
-    const editionTranslations = {};
-
     for (const lang of systemLangs) {
       const url = `${R2_PUBLIC_URL}/editions/${edition.date}/translations/${lang.code}/${edition.edition_id}.json`;
-
-      try {
-        const resp = await fetch(url);
-        if (!resp.ok) continue; // translation not available yet — normal
-
-        const data = await resp.json();
-        const result = TranslationSchema.safeParse(data);
-        if (!result.success) {
-          console.warn(
-            `Invalid translation JSON for ${edition.edition_id}/${lang.code}:`,
-            result.error.flatten(),
-          );
-          continue;
-        }
-
-        editionTranslations[lang.code] = result.data;
-      } catch {
-        // Fetch failed — skip silently, English pages still build
-        continue;
-      }
-    }
-
-    if (Object.keys(editionTranslations).length > 0) {
-      translations[edition.edition_id] = editionTranslations;
+      jobs.push(
+        fetch(url)
+          .then(async (resp) => {
+            if (!resp.ok) return null; // not translated yet — normal
+            const data = await resp.json();
+            const result = TranslationSchema.safeParse(data);
+            if (!result.success) {
+              console.warn(
+                `Invalid translation JSON for ${edition.edition_id}/${lang.code}:`,
+                result.error.flatten(),
+              );
+              return null;
+            }
+            return { edition, lang: lang.code, data: result.data };
+          })
+          .catch(() => null),
+      );
     }
   }
 
+  const results = await Promise.all(jobs);
+  const translations = {};
+  for (const entry of results) {
+    if (!entry) continue;
+    const byLang = translations[entry.edition.edition_id] ?? {};
+    byLang[entry.lang] = entry.data;
+    translations[entry.edition.edition_id] = byLang;
+  }
   return translations;
 }
 

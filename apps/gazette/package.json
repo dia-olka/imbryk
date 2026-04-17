@@ -5,9 +5,9 @@
   "type": "module",
   "dependencies": {
     "@11ty/eleventy": "^3.0.0",
-    "@org/ai-personas": "*",
-    "@org/taxonomy": "*",
-    "@org/world-state": "*",
+    "ai-personas": "*",
+    "taxonomy": "*",
+    "world-state": "*",
     "@sentry/node": "^8.0.0",
     "@sindresorhus/slugify": "^2.2.1",
     "dotenv": "^16.4.7",

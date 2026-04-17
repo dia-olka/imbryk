@@ -96,14 +96,16 @@ class R2EditionStorage(EditionStorage):
         return key
 
     def list_editions(self) -> list[dict]:
-        response = self._client.list_objects_v2(
-            Bucket=self._bucket, Prefix="editions/"
-        )
+        # list_objects_v2 caps at 1000 keys per response. With images and
+        # translations under editions/, a month of daily runs can exceed this,
+        # which would silently drop the oldest editions from the index.
+        paginator = self._client.get_paginator("list_objects_v2")
         editions: list[dict] = []
-        for obj in response.get("Contents", []):
-            editions.append(
-                {"key": obj["Key"], "last_modified": str(obj["LastModified"])}
-            )
+        for page in paginator.paginate(Bucket=self._bucket, Prefix="editions/"):
+            for obj in page.get("Contents", []):
+                editions.append(
+                    {"key": obj["Key"], "last_modified": str(obj["LastModified"])}
+                )
         return editions
 
     def write_index(self, editions: list[dict]) -> None:

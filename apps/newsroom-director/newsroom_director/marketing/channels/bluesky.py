@@ -120,9 +120,14 @@ def _build_embed_card(url: str, client):
             )
             with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
                 image_data = resp.read()
-            image_data, _content_type = _compress_image(image_data)
+            image_data, content_type = _compress_image(image_data)
             upload_resp = client.upload_blob(image_data)
             thumb = upload_resp.blob
+            # upload_blob hardcodes input_encoding='*/*', so the returned
+            # BlobRef has mime_type='*/*'. Bluesky rejects embed thumbnails
+            # whose mimeType isn't image/*, so override it here.
+            if thumb is not None:
+                thumb.mime_type = content_type
         except Exception:
             logger.warning(
                 "Failed to fetch/upload OG image %s", image_url, exc_info=True

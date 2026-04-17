@@ -15,6 +15,7 @@ import type {
 } from './world-ledger.types.js';
 
 export interface LedgerMutation {
+  epoch?: string;
   synopsis?: string;
 
   // Geopolitics
@@ -62,10 +63,10 @@ export interface LedgerMutation {
 
 export function applyMutation(
   ledger: WorldLedger,
-  mutation: LedgerMutation
+  mutation: LedgerMutation,
 ): WorldLedger {
   return {
-    epoch: ledger.epoch,
+    epoch: mutation.epoch ?? ledger.epoch,
     synopsis: mutation.synopsis ?? ledger.synopsis,
 
     geopolitics: {
@@ -73,14 +74,14 @@ export function applyMutation(
         ledger.geopolitics.nations,
         mutation.addNations,
         mutation.updateNations,
-        'name'
+        'name',
       ),
       alliances: append(ledger.geopolitics.alliances, mutation.addAlliances),
       conflicts: mergeByKey(
         ledger.geopolitics.conflicts,
         mutation.addConflicts,
         mutation.updateConflicts,
-        'name'
+        'name',
       ),
     },
 
@@ -88,7 +89,7 @@ export function applyMutation(
       currencies: append(ledger.economics.currencies, mutation.addCurrencies),
       tradingBlocs: append(
         ledger.economics.tradingBlocs,
-        mutation.addTradingBlocs
+        mutation.addTradingBlocs,
       ),
       scarcities: append(ledger.economics.scarcities, mutation.addScarcities),
       globalGdpTrend:
@@ -100,7 +101,7 @@ export function applyMutation(
       energy: mergeTechDomain(ledger.technology.energy, mutation.updateEnergy),
       biotech: mergeTechDomain(
         ledger.technology.biotech,
-        mutation.updateBiotech
+        mutation.updateBiotech,
       ),
       other: append(ledger.technology.other, mutation.addTechDomains),
     },
@@ -108,7 +109,7 @@ export function applyMutation(
     culture: {
       dominantNarratives: append(
         ledger.culture.dominantNarratives,
-        mutation.addDominantNarratives
+        mutation.addDominantNarratives,
       ),
       movements: append(ledger.culture.movements, mutation.addMovements),
       mediaLandscape:
@@ -120,12 +121,12 @@ export function applyMutation(
         ledger.military.forces,
         mutation.addForces,
         mutation.updateForces,
-        'entity'
+        'entity',
       ),
       armsRaces: append(ledger.military.armsRaces, mutation.addArmsRaces),
       doctrineShifts: append(
         ledger.military.doctrineShifts,
-        mutation.addDoctrineShifts
+        mutation.addDoctrineShifts,
       ),
     },
 
@@ -136,7 +137,7 @@ export function applyMutation(
       crises: append(ledger.environment.crises, mutation.addCrises),
       mitigationEfforts: append(
         ledger.environment.mitigationEfforts,
-        mutation.addMitigationEfforts
+        mutation.addMitigationEfforts,
       ),
     },
 
@@ -144,7 +145,7 @@ export function applyMutation(
       ledger.storyThreads,
       mutation.addStoryThreads,
       mutation.updateStoryThreads,
-      'name'
+      'name',
     ),
 
     history: append(ledger.history, mutation.addHistoricalEvents),
@@ -160,7 +161,7 @@ function mergeByKey<T, K extends keyof T>(
   existing: T[],
   additions: T[] | undefined,
   updates: (Partial<T> & Pick<T, K>)[] | undefined,
-  key: K
+  key: K,
 ): T[] {
   let result = [...existing];
 
@@ -183,7 +184,7 @@ function mergeByKey<T, K extends keyof T>(
 
 function mergeTechDomain(
   existing: TechDomain,
-  update?: Partial<TechDomain>
+  update?: Partial<TechDomain>,
 ): TechDomain {
   if (!update) return { ...existing };
   return { ...existing, ...update };

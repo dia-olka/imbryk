@@ -33,6 +33,7 @@ from .types import (
 
 @dataclass
 class LedgerMutation:
+    epoch: str | None = None
     synopsis: str | None = None
 
     # Geopolitics
@@ -82,7 +83,11 @@ def apply_mutation(
     ledger: WorldLedger, mutation: LedgerMutation
 ) -> WorldLedger:
     return WorldLedger(
-        epoch=ledger.epoch,
+        epoch=(
+            mutation.epoch
+            if mutation.epoch is not None
+            else ledger.epoch
+        ),
         synopsis=(
             mutation.synopsis
             if mutation.synopsis is not None

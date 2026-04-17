@@ -4,7 +4,7 @@ export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/prompt-engine',
   test: {
-    name: '@org/prompt-engine',
+    name: 'prompt-engine',
     watch: false,
     globals: true,
     environment: 'node',

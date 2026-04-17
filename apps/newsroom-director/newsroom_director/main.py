@@ -917,7 +917,25 @@ def run_morning_press(
                 mutation = _parse_mutation(mutation_response)
                 if mutation:
                     ledger = apply_mutation(ledger, mutation)
-                    save_world_ledger(session, ledger_to_dict(ledger), edition_date=today_date)
+                    ledger_dict_out = ledger_to_dict(ledger)
+                    save_world_ledger(session, ledger_dict_out, edition_date=today_date)
+                    # Mirror the updated ledger to R2 so gazette builds pick it
+                    # up at deploy time. Without this, the English timeline page
+                    # keeps serving the compile-time INITIAL_WORLD_LEDGER.
+                    try:
+                        store.write_raw(
+                            "_meta/world-ledger.json",
+                            json.dumps(ledger_dict_out, ensure_ascii=False).encode("utf-8"),
+                            content_type="application/json",
+                        )
+                    except NotImplementedError:
+                        pass
+                    except Exception:
+                        logger.warning(
+                            "Failed to mirror world ledger to R2",
+                            exc_info=True,
+                            extra={"step": "world_ledger_update", "edition_date": today_date},
+                        )
                     logger.info(
                         "World Ledger updated for %s | mutation: %s",
                         today_date,
@@ -926,9 +944,11 @@ def run_morning_press(
                     )
                 else:
                     logger.warning(
-                        "World Ledger mutation was empty/unparseable for %s | raw: %s",
+                        "World Ledger mutation was empty/unparseable for %s "
+                        "(len=%d) | raw: %.20000s",
                         today_date,
-                        mutation_response[:500],
+                        len(mutation_response),
+                        mutation_response,
                         extra={"step": "world_ledger_update", "edition_date": today_date},
                     )
             except Exception:
@@ -1086,27 +1106,40 @@ def _write_edition_index(
     """Build and write an index.json manifest listing all editions."""
     try:
         existing = store.list_editions()
-        # Collect known edition dates from existing index entries
-        known_dates: set[str] = set()
+        # list_objects_v2 returns every JSON under editions/ recursively,
+        # including nested keys like editions/{date}/translations/{lang}/{id}.json
+        # and editions/{date}/{newspaper}/*.{png,webp}. We must accept only
+        # the canonical top-level edition shape:
+        #     editions/{date}/{edition_id}.json
+        # Anything else (extra path segments, index.json itself) is skipped,
+        # otherwise the gazette sees phantom "editions" and 404s on every build.
+        seen: set[tuple[str, str]] = set()
         index_entries: list[dict] = []
         for entry in existing:
-            # Entries from list_editions have {key, last_modified}
             key = entry.get("key", "")
-            if key.endswith(".json") and key != "editions/index.json":
-                parts = key.split("/")
-                if len(parts) >= 3:
-                    date = parts[1]
-                    known_dates.add(date)
-                    index_entries.append(
-                        {
-                            "edition_id": parts[2].replace(".json", ""),
-                            "date": date,
-                            "newspaper_ids": [],
-                        }
-                    )
+            if not key.endswith(".json") or key == "editions/index.json":
+                continue
+            parts = key.split("/")
+            # Exactly 3 segments: ["editions", "{date}", "{edition_id}.json"]
+            if len(parts) != 3:
+                continue
+            date = parts[1]
+            file_edition_id = parts[2][:-len(".json")]
+            dedupe_key = (date, file_edition_id)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            index_entries.append(
+                {
+                    "edition_id": file_edition_id,
+                    "date": date,
+                    "newspaper_ids": [],
+                }
+            )
 
         # Add current edition if not already present
-        if edition_date not in known_dates:
+        current_key = (edition_date, edition_id)
+        if current_key not in seen:
             newspaper_ids = [k for k in articles if k != "curator"]
             index_entries.append(
                 {
@@ -1257,6 +1290,11 @@ that actually happened — not to speculate or editorialize. Extract concrete \
 facts from today's articles and update the historical record accordingly.
 
 The mutation JSON should follow this schema (all fields optional):
+- epoch: string — the short banner title for the current era (e.g. \
+"April 2026 — Cognitive Enclosure"). Only update this when a significant \
+narrative shift has occurred (new war, leadership change, crisis resolution, \
+a new month that fundamentally reframes coverage). Otherwise omit this field \
+entirely and the previous epoch will be kept.
 - synopsis: string (updated world history synopsis — a factual summary of \
 the current state of world affairs)
 - add_nations: list of new nations
@@ -1315,8 +1353,16 @@ def _parse_mutation(response: str) -> LedgerMutation | None:
         data = json.loads(text)
         return _dict_to_mutation(data)
     except (json.JSONDecodeError, KeyError, TypeError):
+        # Response does not end with a closing brace → almost certainly
+        # truncated by max_output_tokens. Keep the full text in the log
+        # (bounded for safety) so we can distinguish truncation from
+        # malformed JSON.
+        looks_truncated = not text.rstrip().endswith("}")
         logger.warning(
-            "Failed to parse WorldLedger mutation from LLM response: %.500s",
+            "Failed to parse WorldLedger mutation from LLM response "
+            "(len=%d, looks_truncated=%s): %.20000s",
+            len(text),
+            looks_truncated,
             text,
             exc_info=True,
         )
@@ -1341,6 +1387,9 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
     )
 
     mutation = LedgerMutation()
+
+    if "epoch" in data:
+        mutation.epoch = data["epoch"]
 
     if "synopsis" in data:
         mutation.synopsis = data["synopsis"]

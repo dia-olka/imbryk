@@ -36,7 +36,8 @@ const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
  */
 function resolveImageUrl(urlOrPath) {
   if (!urlOrPath) return urlOrPath;
-  if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) return urlOrPath;
+  if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://'))
+    return urlOrPath;
   if (R2_PUBLIC_URL) return `${R2_PUBLIC_URL}/${urlOrPath}`;
   return urlOrPath;
 }
@@ -90,7 +91,7 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
   let curatorSynthesis = null;
 
   for (const [newspaperId, rawContent] of Object.entries(
-    r2Edition.articles || {}
+    r2Edition.articles || {},
   )) {
     let parsed;
     if (typeof rawContent === 'string') {
@@ -106,7 +107,7 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
         await captureLoadError(
           sourceUrl,
           `JSON.parse newspaper "${newspaperId}"`,
-          err
+          err,
         );
         continue;
       }
@@ -154,7 +155,8 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
 
       // Normalise editors_note key variants
       if (!parsed.editors_note) {
-        const alt = parsed.editorsNote ?? parsed.editorNote ?? parsed.editor_note;
+        const alt =
+          parsed.editorsNote ?? parsed.editorNote ?? parsed.editor_note;
         if (typeof alt === 'string') {
           parsed.editors_note = alt;
         }
@@ -164,14 +166,19 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
         parsed.in_brief = parsed.in_brief.map((item) => {
           if (typeof item === 'string') {
             // Plain string — derive headline from first sentence
-            const headline = item.split(/[.!?]/)[0].trim().slice(0, 80) || item.slice(0, 80);
+            const headline =
+              item.split(/[.!?]/)[0].trim().slice(0, 80) || item.slice(0, 80);
             return { headline, summary: item };
           }
           const headline = item.headline ?? item.title ?? undefined;
-          const summary = item.summary ?? item.content ?? item.text ?? undefined;
+          const summary =
+            item.summary ?? item.content ?? item.text ?? undefined;
           // Derive headline from summary when the LLM omitted it entirely
           const resolvedHeadline =
-            headline ?? (summary ? summary.split(/[.!?]/)[0].trim().slice(0, 80) : undefined);
+            headline ??
+            (summary
+              ? summary.split(/[.!?]/)[0].trim().slice(0, 80)
+              : undefined);
           return { ...item, headline: resolvedHeadline, summary };
         });
       }
@@ -190,7 +197,7 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
             label: `newspaper "${newspaperId}"`,
             offendingData: parsed,
           },
-          npResult.error
+          npResult.error,
         );
         // Use the raw parsed data anyway — only articles missing `headline`
         // will be filtered out later when building article/newspaper pages.
@@ -211,14 +218,22 @@ export async function transformR2Edition(r2Edition, sourceUrl) {
 /**
  * Load all editions — from R2 in production, from fixture in local dev.
  *
+ * Result is memoised at module scope. 11ty data files (editions.js,
+ * translations.js, articlePages.js, newspaperPages.js, edition.11tydata.js)
+ * all call this during a single build; without the cache each caller would
+ * refetch every edition from R2 — the main reason builds took 15 minutes.
+ *
  * @returns {Promise<Array>} Array of edition objects in gazette template shape,
  *                           sorted newest-first.
  */
-export default async function loadEditions() {
-  if (R2_PUBLIC_URL) {
-    return await loadFromR2();
-  }
-  return loadFromFixture();
+let memoised;
+
+export default function loadEditions() {
+  if (!memoised)
+    memoised = R2_PUBLIC_URL
+      ? loadFromR2()
+      : Promise.resolve(loadFromFixture());
+  return memoised;
 }
 
 async function loadFromR2() {
@@ -228,20 +243,29 @@ async function loadFromR2() {
   try {
     const indexResp = await fetch(indexUrl);
     if (!indexResp.ok) {
-      await captureLoadError(
-        indexUrl,
-        'fetch editions index',
-        new Error(`HTTP ${indexResp.status} ${indexResp.statusText}`)
-      );
-      console.warn(
-        `Failed to fetch edition index from R2 (${indexResp.status}), falling back to fixture`
-      );
+      // 404 just means no editions have been published yet (first deploy) —
+      // not a real failure, so skip Sentry and log a single calm line.
+      if (indexResp.status === 404) {
+        console.info(`Editions index not found at ${indexUrl}, using fixture`);
+      } else {
+        await captureLoadError(
+          indexUrl,
+          'fetch editions index',
+          new Error(`HTTP ${indexResp.status} ${indexResp.statusText}`),
+        );
+        console.warn(
+          `Failed to fetch edition index from R2 (${indexResp.status}), falling back to fixture`,
+        );
+      }
       return loadFromFixture();
     }
     index = await indexResp.json();
   } catch (err) {
     await captureLoadError(indexUrl, 'fetch editions index', err);
-    console.warn('Error fetching edition index, falling back to fixture:', err.message);
+    console.warn(
+      'Error fetching edition index, falling back to fixture:',
+      err.message,
+    );
     return loadFromFixture();
   }
 
@@ -249,16 +273,15 @@ async function loadFromR2() {
     await captureLoadError(
       indexUrl,
       'editions index shape',
-      new Error(`Expected array, got ${typeof index}`)
+      new Error(`Expected array, got ${typeof index}`),
     );
     console.warn('Edition index is not an array, falling back to fixture');
     return loadFromFixture();
   }
 
-  const editions = [];
-
-  for (const entry of index) {
-    // Validate the index entry before using it to build the URL
+  // Fan out all edition fetches in parallel — previously this was serial
+  // and dominated build time. Per-entry errors still skip only that entry.
+  const fetchJobs = index.map(async (entry) => {
     const entryResult = R2IndexEntrySchema.safeParse(entry);
     if (!entryResult.success) {
       await captureValidationError(
@@ -267,9 +290,9 @@ async function loadFromR2() {
           label: `index entry (edition_id: ${entry?.edition_id ?? 'unknown'})`,
           offendingData: entry,
         },
-        entryResult.error
+        entryResult.error,
       );
-      continue;
+      return null;
     }
 
     const { edition_id, date } = entryResult.data;
@@ -279,24 +302,35 @@ async function loadFromR2() {
     try {
       const resp = await fetch(editionUrl);
       if (!resp.ok) {
-        await captureLoadError(
-          editionUrl,
-          `fetch edition ${edition_id}`,
-          new Error(`HTTP ${resp.status} ${resp.statusText}`)
-        );
-        console.warn(
-          `Failed to fetch edition ${edition_id} from ${editionUrl} (${resp.status}), skipping`
-        );
-        continue;
+        // 404 means the index is out of sync with the bucket (edition was
+        // deleted or index contains a stale entry). Skip without Sentry —
+        // the next pipeline run rewrites the index.
+        if (resp.status === 404) {
+          console.info(
+            `Edition ${edition_id} not found at ${editionUrl}, skipping`,
+          );
+        } else {
+          await captureLoadError(
+            editionUrl,
+            `fetch edition ${edition_id}`,
+            new Error(`HTTP ${resp.status} ${resp.statusText}`),
+          );
+          console.warn(
+            `Failed to fetch edition ${edition_id} from ${editionUrl} (${resp.status}), skipping`,
+          );
+        }
+        return null;
       }
       r2Edition = await resp.json();
     } catch (err) {
       await captureLoadError(editionUrl, `fetch edition ${edition_id}`, err);
-      console.warn(`Error fetching edition ${edition_id} from ${editionUrl}:`, err.message);
-      continue;
+      console.warn(
+        `Error fetching edition ${edition_id} from ${editionUrl}:`,
+        err.message,
+      );
+      return null;
     }
 
-    // Validate the raw R2 edition shape
     const editionResult = R2EditionSchema.safeParse(r2Edition);
     if (!editionResult.success) {
       await captureValidationError(
@@ -305,14 +339,16 @@ async function loadFromR2() {
           label: `R2 edition ${edition_id}`,
           offendingData: r2Edition,
         },
-        editionResult.error
+        editionResult.error,
       );
-      continue;
+      return null;
     }
 
-    const transformed = await transformR2Edition(editionResult.data, editionUrl);
+    const transformed = await transformR2Edition(
+      editionResult.data,
+      editionUrl,
+    );
 
-    // Validate the transformed gazette shape
     const transformedResult = EditionSchema.safeParse(transformed);
     if (!transformedResult.success) {
       await captureValidationError(
@@ -321,14 +357,16 @@ async function loadFromR2() {
           label: `transformed edition ${edition_id}`,
           offendingData: transformed,
         },
-        transformedResult.error
+        transformedResult.error,
       );
       // Still include the edition — individual invalid articles are filtered
       // in articlePages.js / newspaperPages.js before slugify is called.
     }
 
-    editions.push(transformed);
-  }
+    return transformed;
+  });
+
+  const editions = (await Promise.all(fetchJobs)).filter((e) => e !== null);
 
   // Deduplicate by date (URL structure uses date as the unique key).
   // Later entries overwrite earlier ones, so the last edition_id for a date wins.
@@ -350,7 +388,9 @@ function loadFromFixture() {
     const raw = readFileSync(fixturePath, 'utf-8');
     edition = JSON.parse(raw);
   } catch (err) {
-    throw new Error(`Failed to load gazette fixture from ${fixturePath}: ${err.message}`);
+    throw new Error(
+      `Failed to load gazette fixture from ${fixturePath}: ${err.message}`,
+    );
   }
 
   // Validate fixture — fail fast in development so schema drift is caught early.
@@ -358,10 +398,10 @@ function loadFromFixture() {
   if (!result.success) {
     console.error(
       `Gazette fixture at ${sourceUrl} does not match EditionSchema:`,
-      JSON.stringify(result.error.flatten(), null, 2)
+      JSON.stringify(result.error.flatten(), null, 2),
     );
     throw new Error(
-      `Gazette fixture validation failed — run the build to see details. Fix ${sourceUrl} or update the schema.`
+      `Gazette fixture validation failed — run the build to see details. Fix ${sourceUrl} or update the schema.`,
     );
   }
 
@@ -379,14 +419,27 @@ function loadFromFixture() {
     newEdition.date = `${yyyy}-${mm}-${dd}`;
 
     // First edition gets V2 curator synthesis so both template paths are exercised.
-    if (i === 0 && newEdition.curator_synthesis && !newEdition.curator_synthesis.version) {
+    if (
+      i === 0 &&
+      newEdition.curator_synthesis &&
+      !newEdition.curator_synthesis.version
+    ) {
       const npIds = newEdition.newspapers.map((n) => n.newspaper_id);
       newEdition.curator_synthesis = {
         version: 2,
         consensus: [
-          { text: 'All outlets agree that new autonomous drone deployments mark a strategic escalation in the Gulf region.', voices: npIds },
-          { text: 'The diplomatic process for the Northern Shield conflict has been frozen to redirect military resources.', voices: npIds },
-          { text: 'AI data-centre expansion has triggered federal mandates to fast-track nuclear energy deployment.', voices: ['sovereign', 'owner', 'radical', 'moralist'] },
+          {
+            text: 'All outlets agree that new autonomous drone deployments mark a strategic escalation in the Gulf region.',
+            voices: npIds,
+          },
+          {
+            text: 'The diplomatic process for the Northern Shield conflict has been frozen to redirect military resources.',
+            voices: npIds,
+          },
+          {
+            text: 'AI data-centre expansion has triggered federal mandates to fast-track nuclear energy deployment.',
+            voices: ['sovereign', 'owner', 'radical', 'moralist'],
+          },
         ],
         fault_lines: [
           {
@@ -401,7 +454,8 @@ function loadFromFixture() {
               { newspaper_id: 'radical', score: 94 },
               { newspaper_id: 'hedonist', score: 46 },
             ],
-            summary: 'Sharp divide between security-first and humanitarian perspectives.',
+            summary:
+              'Sharp divide between security-first and humanitarian perspectives.',
           },
           {
             topic: 'AI safety guardrails for autonomous weapons',
@@ -415,12 +469,21 @@ function loadFromFixture() {
               { newspaper_id: 'radical', score: 92 },
               { newspaper_id: 'hedonist', score: 52 },
             ],
-            summary: 'Pentagon rejection of guardrails splits outlets along security vs ethics lines.',
+            summary:
+              'Pentagon rejection of guardrails splits outlets along security vs ethics lines.',
           },
         ],
         gaps: [
-          { topic: 'Accountability gap', description: 'No outlet addressed civilian casualty data from the drone deployment or any independent oversight mechanisms.' },
-          { topic: 'Coverage gap', description: 'The Meridian currency story received no coverage from two outlets, despite direct commodity market implications.' },
+          {
+            topic: 'Accountability gap',
+            description:
+              'No outlet addressed civilian casualty data from the drone deployment or any independent oversight mechanisms.',
+          },
+          {
+            topic: 'Coverage gap',
+            description:
+              'The Meridian currency story received no coverage from two outlets, despite direct commodity market implications.',
+          },
         ],
         what_to_watch: [
           'Follow the Fracture Accords council response to the drone deployment.',

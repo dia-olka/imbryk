@@ -4,7 +4,7 @@ export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/world-state',
   test: {
-    name: '@org/world-state',
+    name: 'world-state',
     watch: false,
     globals: true,
     environment: 'node',

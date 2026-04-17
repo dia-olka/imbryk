@@ -40,18 +40,26 @@ class TestR2EditionStorage:
         assert body["articles"]["sovereign"] == "Article text"
 
     def test_list_editions(self, mock_s3_client):
-        mock_s3_client.list_objects_v2.return_value = {
-            "Contents": [
-                {
-                    "Key": "editions/2026-03-01/ed-001.json",
-                    "LastModified": "2026-03-01T06:00:00Z",
-                },
-                {
-                    "Key": "editions/2026-03-02/ed-002.json",
-                    "LastModified": "2026-03-02T06:00:00Z",
-                },
-            ]
-        }
+        paginator = MagicMock()
+        paginator.paginate.return_value = iter([
+            {
+                "Contents": [
+                    {
+                        "Key": "editions/2026-03-01/ed-001.json",
+                        "LastModified": "2026-03-01T06:00:00Z",
+                    },
+                ],
+            },
+            {
+                "Contents": [
+                    {
+                        "Key": "editions/2026-03-02/ed-002.json",
+                        "LastModified": "2026-03-02T06:00:00Z",
+                    },
+                ],
+            },
+        ])
+        mock_s3_client.get_paginator.return_value = paginator
 
         storage = R2EditionStorage(
             account_id="test-acct",
@@ -63,9 +71,12 @@ class TestR2EditionStorage:
         editions = storage.list_editions()
         assert len(editions) == 2
         assert editions[0]["key"] == "editions/2026-03-01/ed-001.json"
+        mock_s3_client.get_paginator.assert_called_once_with("list_objects_v2")
 
     def test_list_editions_empty(self, mock_s3_client):
-        mock_s3_client.list_objects_v2.return_value = {}
+        paginator = MagicMock()
+        paginator.paginate.return_value = iter([{}])
+        mock_s3_client.get_paginator.return_value = paginator
 
         storage = R2EditionStorage(
             account_id="test-acct",

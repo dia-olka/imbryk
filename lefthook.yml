@@ -2,10 +2,10 @@ pre-commit:
   parallel: true
   commands:
     lint:ts:
-      glob: "**/*.{ts,tsx}" 
-      run: npx nx run-many --targets=lint --all --exclude=ingestion-api,newsroom-director --fix --files={staged_files}
+      glob: "**/*.{ts,tsx,js,mjs,cjs,jsx}"
+      run: npx nx affected --target=lint --fix --uncommitted --exclude=ingestion-api,newsroom-director
       stage_fixed: true
     lint:py:
-      glob: "**/*.{py}"
-      run: npx nx run-many --targets=lint --projects=ingestion-api,newsroom-director --fix --files={staged_files}
+      glob: "**/*.py"
+      run: npx nx run-many --target=lint --fix --projects=ingestion-api,newsroom-director
       stage_fixed: true
