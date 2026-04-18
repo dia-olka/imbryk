@@ -10,6 +10,7 @@
 
 import {
   INITIAL_WORLD_LEDGER,
+  WorldLedgerSchema,
   serializeLedgerToSynopsis,
 } from '@org/world-state';
 
@@ -21,8 +22,15 @@ async function fetchLiveLedger() {
     const resp = await fetch(`${R2_PUBLIC_URL}/_meta/world-ledger.json`);
     if (!resp.ok) return null;
     const data = await resp.json();
-    if (!data || typeof data !== 'object') return null;
-    return data;
+    const parsed = WorldLedgerSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn(
+        '[worldState] Live ledger failed schema validation, falling back to INITIAL_WORLD_LEDGER:',
+        parsed.error.issues
+      );
+      return null;
+    }
+    return parsed.data;
   } catch {
     return null;
   }
