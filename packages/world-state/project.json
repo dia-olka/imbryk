@@ -1,0 +1,34 @@
+{
+  "name": "world-state",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "targets": {
+    "generate-data": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{workspaceRoot}/data/world-state.json",
+        "{workspaceRoot}/scripts/generate-data.mjs"
+      ],
+      "outputs": ["{projectRoot}/src/lib/world-ledger.initial.ts"],
+      "options": {
+        "command": "node scripts/generate-data.mjs --target world-state"
+      },
+      "cache": true
+    },
+    "export-schema": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{projectRoot}/src/lib/world-ledger.schemas.ts",
+        "{workspaceRoot}/scripts/export-world-ledger-schema.mjs"
+      ],
+      "outputs": ["{projectRoot}/src/schema/world-ledger.schema.json"],
+      "options": {
+        "command": "node --import tsx/esm scripts/export-world-ledger-schema.mjs"
+      },
+      "cache": true
+    },
+    "build": {
+      "dependsOn": ["generate-data", "export-schema"],
+      "executor": "nx:noop"
+    }
+  }
+}

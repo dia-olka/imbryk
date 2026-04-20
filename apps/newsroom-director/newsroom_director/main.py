@@ -55,6 +55,8 @@ from .db import (
     get_session_factory,
     load_edition_by_date,
     load_edition_metrics,
+    load_recent_curator_synthesis,
+    load_recent_headlines,
     load_recent_journal,
     load_world_ledger,
     mark_news_items_processed,
@@ -109,6 +111,7 @@ from .world_ledger import (
 )
 from .world_ledger.serialise_dict import (
     ledger_from_dict,
+    ledger_to_camel_dict,
     ledger_to_dict,
 )
 
@@ -342,34 +345,43 @@ def run_morning_press(
         if ENABLE_READER_METRICS:
             prev_edition_metrics_by_persona = load_edition_metrics(session, prev_date_str)
 
+        # Load a 5-day headline window per persona so the generation prompt
+        # can warn the model off storylines that already led the paper this
+        # week. Yesterday-only was insufficient — see Val Kilmer fixation.
+        recent_headlines_by_persona = load_recent_headlines(
+            session, today_date, lookback_days=5
+        )
+
         prev_edition_by_persona: dict[str, str] = {}
         prev_quality_by_persona: dict[str, str] = {}  # persona_id -> formatted score text
-        if prev_edition:
-            for persona in NEWSPAPER_PERSONAS:
-                content_json = prev_edition.get(persona.id)
-                persona_metrics = prev_edition_metrics_by_persona.get(persona.id)
-                summary = format_previous_edition_summary(
-                    persona.id,
-                    prev_date_str,
-                    content_json,
-                    metrics=persona_metrics,
-                )
-                if summary:
-                    prev_edition_by_persona[persona.id] = summary
+        for persona in NEWSPAPER_PERSONAS:
+            content_json = prev_edition.get(persona.id) if prev_edition else None
+            persona_metrics = prev_edition_metrics_by_persona.get(persona.id)
+            recent = recent_headlines_by_persona.get(persona.id, [])
 
-                # Extract quality scores from previous edition metadata
-                if ENABLE_QUALITY_GRADING and content_json:
-                    prev_report = extract_quality_report(content_json)
-                    if prev_report and prev_report.scores:
-                        prev_quality_by_persona[persona.id] = (
-                            prev_report.format_for_generation()
-                        )
+            summary = format_previous_edition_summary(
+                persona.id,
+                prev_date_str,
+                content_json,
+                metrics=persona_metrics,
+                recent_headlines=recent,
+            )
+            if summary:
+                prev_edition_by_persona[persona.id] = summary
 
-            if prev_edition_by_persona:
-                logger.info(
-                    "Previous edition summaries loaded for %d personas",
-                    len(prev_edition_by_persona),
-                )
+            # Extract quality scores from previous edition metadata
+            if ENABLE_QUALITY_GRADING and content_json:
+                prev_report = extract_quality_report(content_json)
+                if prev_report and prev_report.scores:
+                    prev_quality_by_persona[persona.id] = (
+                        prev_report.format_for_generation()
+                    )
+
+        if prev_edition_by_persona:
+            logger.info(
+                "Previous edition summaries loaded for %d personas",
+                len(prev_edition_by_persona),
+            )
 
         # Step 7: For each newspaper, distill and generate.
         # Failures for individual newspapers are isolated — a single Gemini error
@@ -552,7 +564,22 @@ def run_morning_press(
                 curator_system = CURATOR_PERSONA.system_prompt_template.replace(
                     "{{ALL_ARTICLES}}", "[See user content below]"
                 )
-                curator_content = f"TODAY'S ARTICLES:\n{all_articles_text}\n\nGenerate today's synthesis."
+                prev_curator_json = load_recent_curator_synthesis(
+                    session, today_date, lookback_days=1
+                )
+                prev_curator_block = ""
+                if prev_curator_json:
+                    # Contrast-with-yesterday rule lives in the curator
+                    # system template; here we only label the data.
+                    prev_curator_block = (
+                        "PREVIOUS EDITION'S CURATOR SYNTHESIS:\n"
+                        f"{prev_curator_json}\n\n"
+                    )
+                curator_content = (
+                    f"{prev_curator_block}"
+                    f"TODAY'S ARTICLES:\n{all_articles_text}\n\n"
+                    "Generate today's synthesis."
+                )
                 curator_article = None
                 for attempt in range(1, 4):
                     candidate = gen.generate(
@@ -912,7 +939,9 @@ def run_morning_press(
         # regardless of whether any user prompts were processed in this edition.
         if articles:
             try:
-                mutation_system, mutation_content = _build_mutation_prompt(synopsis, articles)
+                mutation_system, mutation_content = _build_mutation_prompt(
+                    synopsis, articles, today_date
+                )
                 mutation_response = gen.generate(mutation_system, "flash", mutation_content)
                 mutation = _parse_mutation(mutation_response)
                 if mutation:
@@ -920,12 +949,15 @@ def run_morning_press(
                     ledger_dict_out = ledger_to_dict(ledger)
                     save_world_ledger(session, ledger_dict_out, edition_date=today_date)
                     # Mirror the updated ledger to R2 so gazette builds pick it
-                    # up at deploy time. Without this, the English timeline page
-                    # keeps serving the compile-time INITIAL_WORLD_LEDGER.
+                    # up at deploy time. Must be camelCase: the TS
+                    # WorldLedgerSchema the gazette validates against uses
+                    # camelCase keys, and on safeParse failure the build
+                    # silently falls back to INITIAL_WORLD_LEDGER (stale lore).
                     try:
+                        ledger_camel_out = ledger_to_camel_dict(ledger)
                         store.write_raw(
                             "_meta/world-ledger.json",
-                            json.dumps(ledger_dict_out, ensure_ascii=False).encode("utf-8"),
+                            json.dumps(ledger_camel_out, ensure_ascii=False).encode("utf-8"),
                             content_type="application/json",
                         )
                     except NotImplementedError:
@@ -1275,28 +1307,35 @@ def _try_parse_edition_json(content: str) -> dict | None:
 
 
 def _build_mutation_prompt(
-    synopsis: str, articles: dict[str, str]
+    synopsis: str, articles: dict[str, str], today_date: str
 ) -> tuple[str, str]:
-    """Build a system instruction + user content for World History mutation."""
+    """Build a system instruction + user content for World History mutation.
+
+    The system instruction is intentionally date-free so the prefix is stable
+    across daily runs and eligible for implicit cache hits. All date-dependent
+    behavioural rules live in the user content, where the date is baked in
+    anyway.
+    """
     articles_text = _format_all_articles(articles)
 
+    # System: stable schema + behavioural rules. No f-string, no today_date,
+    # no run-specific data — the prefix must be byte-identical day to day
+    # for implicit caching. Literal `{name, ...}` brace examples below
+    # would otherwise break an f-string.
     system_instruction = """\
 You are a world history recorder. Given the current historical record and \
 today's newspaper articles, produce a JSON object describing factual updates \
 to the world history ledger. Only include fields that should change.
 
 Your job is to record real-world facts — events, developments, and trends \
-that actually happened — not to speculate or editorialize. Extract concrete \
-facts from today's articles and update the historical record accordingly.
+that actually happened — not to speculate or editorialize.
 
 The mutation JSON should follow this schema (all fields optional):
-- epoch: string — the short banner title for the current era (e.g. \
-"April 2026 — Cognitive Enclosure"). Only update this when a significant \
-narrative shift has occurred (new war, leadership change, crisis resolution, \
-a new month that fundamentally reframes coverage). Otherwise omit this field \
-entirely and the previous epoch will be kept.
-- synopsis: string (updated world history synopsis — a factual summary of \
-the current state of world affairs)
+- epoch: string — short banner title for the current era (e.g. \
+"April 2026 — Cognitive Enclosure"). Only update on significant narrative \
+shifts (new war, leadership change, crisis resolution, a new month that \
+reframes coverage). Otherwise omit.
+- synopsis: string — updated world history synopsis.
 - add_nations: list of new nations
 - update_nations: list of {name, ...fields_to_update}
 - add_alliances, add_conflicts, update_conflicts
@@ -1312,27 +1351,36 @@ with optional keys: {"name": str, "maturity_level": "emerging"|"growth"|\
 - add_arms_races, add_doctrine_shifts: lists of strings
 - update_temperature_anomaly: float
 - add_crises, add_mitigation_efforts
-- add_historical_events: list of {date, headline, description, impact, \
-sectors} — record significant real-world events from today's coverage
+- add_historical_events: list of {date, headline, description, impact, sectors}
 - add_story_threads: list of {name, status, started, last_covered, summary, \
-related_nations, sectors} — create NEW threads for developing real-world \
-stories that span multiple days. Status: "developing" | "ongoing" | "resolved".
-- update_story_threads: list of {name, ...fields_to_update} — update existing \
-story threads by name. Use this to update summaries with new facts, change \
-status to "resolved" when a story concludes, or update last_covered dates.
+related_nations, sectors} — status: "developing" | "ongoing" | "resolved".
+- update_story_threads: list of {name, ...fields_to_update}
 
-IMPORTANT: Story threads track evolving real-world narratives across editions. \
-When today's articles cover a significant new developing story, create a thread. \
-When a thread's story concludes or becomes irrelevant, mark it "resolved". \
-Always update last_covered for threads that appear in today's coverage.
+Story threads track evolving real-world narratives across editions. Create \
+threads for new developing stories, mark them "resolved" when they conclude, \
+and always refresh last_covered for threads that appear in today's coverage.
 
 Respond with ONLY the JSON mutation object, no explanation."""
 
     user_content = f"""\
+TODAY'S DATE: {today_date}
+
+Every factual update must be consistent with this date:
+- New `historical_event` entries MUST have `date` = {today_date} (or a \
+clearly dated event from the articles). Do not invent earlier dates.
+- For every story thread that appears in today's coverage, set \
+`last_covered` = {today_date}. Stale last_covered dates are the symptom \
+of a broken pipeline.
+- New story threads default to `started` = {today_date} unless the \
+articles explicitly date the origin earlier.
+- When advancing `epoch`, phrase it as current-month / current-dominant-\
+narrative (e.g. "April 2026 — Gulf Blockade and Mineral War"), and only \
+advance on a month change or a narrative shift.
+
 CURRENT WORLD HISTORY:
 {synopsis}
 
-TODAY'S ARTICLES:
+TODAY'S ARTICLES (dated {today_date}):
 {articles_text}"""
 
     return system_instruction, user_content

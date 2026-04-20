@@ -123,6 +123,7 @@ export interface StoryThread {
 }
 
 export interface WorldLedger {
+  schemaVersion: '1.0.0';
   epoch: string;
   synopsis: string;
   geopolitics: GeopoliticsState;

@@ -8,6 +8,7 @@ from newsroom_director.world_ledger import (
 )
 from newsroom_director.world_ledger.serialise_dict import (
     ledger_from_dict,
+    ledger_to_camel_dict,
     ledger_to_dict,
 )
 from newsroom_director.world_ledger.types import (
@@ -228,3 +229,39 @@ class TestDictRoundTrip:
         restored = ledger_from_dict(d)
         text2 = serialize_ledger_to_synopsis(restored)
         assert text1 == text2
+
+
+class TestLedgerToCamelDict:
+    """The gazette validates the R2-mirrored ledger with a camelCase Zod
+    schema; a silent fallback to INITIAL_WORLD_LEDGER broke the timeline
+    for weeks. These tests lock in the key-casing contract."""
+
+    def test_top_level_keys_are_camel_case(self):
+        d = ledger_to_camel_dict(INITIAL_WORLD_LEDGER)
+        assert "storyThreads" in d
+        assert "story_threads" not in d
+
+    def test_nested_keys_are_camel_case(self):
+        d = ledger_to_camel_dict(INITIAL_WORLD_LEDGER)
+        if d["geopolitics"]["nations"]:
+            nation = d["geopolitics"]["nations"][0]
+            assert "governmentType" in nation
+            assert "government_type" not in nation
+        assert "globalTemperatureAnomaly" in d["environment"]
+        assert "globalGdpTrend" in d["economics"]
+        assert "tradingBlocs" in d["economics"]
+        assert "dominantNarratives" in d["culture"]
+        assert "mediaLandscape" in d["culture"]
+        assert "armsRaces" in d["military"]
+        assert "doctrineShifts" in d["military"]
+        assert "mitigationEfforts" in d["environment"]
+        assert "maturityLevel" in d["technology"]["ai"]
+        assert "keyPlayers" in d["technology"]["ai"]
+
+    def test_values_preserved(self):
+        d = ledger_to_camel_dict(INITIAL_WORLD_LEDGER)
+        assert d["epoch"] == INITIAL_WORLD_LEDGER.epoch
+        assert len(d["history"]) == len(INITIAL_WORLD_LEDGER.history)
+        assert len(d["storyThreads"]) == len(
+            INITIAL_WORLD_LEDGER.story_threads
+        )

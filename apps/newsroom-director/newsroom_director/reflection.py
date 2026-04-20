@@ -210,55 +210,69 @@ def format_previous_edition_summary(
     edition_date: str,
     edition_content_json: str | None,
     metrics: list[ArticleMetric] | None = None,
+    recent_headlines: list[tuple[str, str]] | None = None,
 ) -> str:
-    """Format a compact summary of the persona's previous edition.
+    """Format a compact summary of the persona's previous edition(s).
 
-    Returns a short block (~200 tokens) listing headlines + view counts,
-    suitable for appending to the editorial journal in generation prompts.
-    Returns empty string if no previous edition data is available.
+    Returns a short block listing headlines + view counts, suitable for
+    appending to the editorial journal in generation prompts. If
+    ``recent_headlines`` is supplied, a multi-day "RECENT HEADLINES TO
+    AVOID" block is appended so the model can see stories it has already
+    led the paper with this week.
+
+    Returns empty string if no data is available.
     """
-    if not edition_content_json:
-        return ""
+    lines: list[str] = []
 
-    try:
-        content = json.loads(edition_content_json)
-    except (json.JSONDecodeError, TypeError):
-        return ""
+    # Yesterday's headlines (with metrics when available)
+    if edition_content_json:
+        try:
+            content = json.loads(edition_content_json)
+        except (json.JSONDecodeError, TypeError):
+            content = None
 
-    # Extract headlines from either list or dict format
-    if isinstance(content, list):
+        if isinstance(content, list):
+            article_list = content
+        elif isinstance(content, dict):
+            article_list = content.get("articles", [])
+        else:
+            article_list = []
+
         headlines = [
-            a.get("headline") or a.get("title", "")
-            for a in content
-            if isinstance(a, dict)
-        ]
-    elif isinstance(content, dict):
-        article_list = content.get("articles", [])
-        headlines = [
-            a.get("headline") or a.get("title", "")
+            (a.get("headline") or a.get("title", ""))
             for a in article_list
             if isinstance(a, dict)
         ]
-    else:
-        return ""
+        headlines = [h for h in headlines if h]
 
-    headlines = [h for h in headlines if h]
-    if not headlines:
-        return ""
+        if headlines:
+            views_by_headline: dict[str, int] = {}
+            if metrics:
+                for m in metrics:
+                    views_by_headline[m.headline] = m.page_views
 
-    # Build metrics lookup by headline
-    views_by_headline: dict[str, int] = {}
-    if metrics:
-        for m in metrics:
-            views_by_headline[m.headline] = m.page_views
+            lines.append(f"YOUR PREVIOUS EDITION ({edition_date}):")
+            for h in headlines:
+                views = views_by_headline.get(h)
+                if views is not None:
+                    lines.append(f'- "{h}" \u2014 {views} views')
+                else:
+                    lines.append(f'- "{h}"')
 
-    lines = [f"YOUR PREVIOUS EDITION ({edition_date}):"]
-    for h in headlines:
-        views = views_by_headline.get(h)
-        if views is not None:
-            lines.append(f'- "{h}" \u2014 {views} views')
-        else:
-            lines.append(f'- "{h}"')
+    # Deeper history — strip yesterday (already above) to avoid duplication
+    if recent_headlines:
+        older = [(d, h) for (d, h) in recent_headlines if d != edition_date]
+        if older:
+            if lines:
+                lines.append("")
+            lines.append(
+                "STORIES YOU ALREADY LED WITH THIS WEEK — do NOT re-use "
+                "the same angle. If a storyline warrants another article, "
+                "it MUST advance with new named sources, a new concrete "
+                "development, and a new lede:"
+            )
+            for date, headline in older:
+                lines.append(f'- [{date}] "{headline}"')
 
     return "\n".join(lines)
 

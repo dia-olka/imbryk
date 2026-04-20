@@ -29,8 +29,8 @@ from ..config import (
 from ..db import (
     get_engine,
     get_session_factory,
-    load_edition_by_date,
     load_edition_metrics,
+    load_recent_headlines,
     load_recent_journal,
     load_world_ledger,
     save_news_item,
@@ -121,7 +121,9 @@ def run_news_scout(
         else:
             journal_entries = []
 
-        previous_edition = load_edition_by_date(session, prev_date)
+        recent_headlines = load_recent_headlines(
+            session, target_date, lookback_days=5
+        )
 
         if ENABLE_READER_METRICS:
             reader_metrics = load_edition_metrics(session, prev_date)
@@ -130,7 +132,7 @@ def run_news_scout(
 
         editorial_context = format_scout_context(
             journal_entries=journal_entries,
-            previous_edition=previous_edition,
+            recent_headlines=recent_headlines,
             reader_metrics=reader_metrics,
         )
         if editorial_context:
@@ -147,6 +149,7 @@ def run_news_scout(
         queries_by_category = generate_queries(
             synopsis, CATEGORY_IDS, gen, NEWSPAPER_PERSONAS,
             editorial_context=editorial_context,
+            today_date=target_date,
         )
 
         if not queries_by_category:

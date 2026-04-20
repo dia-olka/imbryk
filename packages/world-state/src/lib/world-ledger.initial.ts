@@ -6,6 +6,7 @@
 import type { WorldLedger } from './world-ledger.types.js';
 
 export const INITIAL_WORLD_LEDGER: WorldLedger = {
+  schemaVersion: '1.0.0',
   epoch: 'March 2026 — The World as It Is',
   synopsis:
     'The world enters 2026 under compounding pressures. The United States, under Donald Trump’s second term, has imposed a 10% global import tariff and withdrawn from the WHO, reshaping the multilateral order. A fragile US-China tariff truce holds at 30%/10% baseline rates, but tensions over Taiwan remain elevated. Russia and Ukraine are locked in a grinding stalemate across the Donbas front, with no peace talks in sight. The most acute crisis erupted on 28 February 2026: US and Israeli strikes killed Iranian Supreme Leader Ali Khamenei; Iran is retaliating across the Middle East, and the region is on the edge of full-scale war.\n\nAI has crossed into the agentic era — autonomous systems are acting on behalf of users and institutions without step-by-step human instruction. DeepSeek R1 narrowed the US-China AI capability gap dramatically. Renewable energy met 109% of new global electricity demand in 2025 — the first year solar and wind outpaced all new demand. Global temperature anomaly reached 1.47°C above pre-industrial levels in 2025. The morning papers have never mattered more.',

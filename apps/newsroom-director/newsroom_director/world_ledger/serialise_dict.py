@@ -28,8 +28,29 @@ from .types import (
 
 
 def ledger_to_dict(ledger: WorldLedger) -> dict:
-    """Serialize a WorldLedger dataclass to a plain dict."""
+    """Serialize a WorldLedger dataclass to a plain dict (snake_case)."""
     return asdict(ledger)
+
+
+def _snake_to_camel(key: str) -> str:
+    head, *tail = key.split("_")
+    return head + "".join(part.title() for part in tail)
+
+
+def _camelize(value):
+    if isinstance(value, dict):
+        return {_snake_to_camel(k): _camelize(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_camelize(item) for item in value]
+    return value
+
+
+def ledger_to_camel_dict(ledger: WorldLedger) -> dict:
+    """Serialize a WorldLedger as camelCase — the shape the TS WorldLedgerSchema
+    expects. Used when mirroring to R2 so the gazette build can validate and
+    consume the live ledger instead of silently falling back to the initial lore.
+    """
+    return _camelize(asdict(ledger))
 
 
 def ledger_from_dict(data: dict) -> WorldLedger:

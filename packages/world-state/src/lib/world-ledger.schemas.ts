@@ -142,7 +142,10 @@ const HistoricalEventSchema = z.object({
 
 // ── WorldLedger ──────────────────────────────────────────────────────
 
+export const WORLD_LEDGER_SCHEMA_VERSION = '1.0.0' as const;
+
 const WorldLedgerSchema = z.object({
+  schemaVersion: z.literal(WORLD_LEDGER_SCHEMA_VERSION),
   epoch: z.string(),
   synopsis: z.string(),
   geopolitics: GeopoliticsStateSchema,

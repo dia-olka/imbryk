@@ -186,8 +186,9 @@ def _serialize_story_threads(ledger: WorldLedger) -> str:
         nations = (
             f" [{', '.join(t.related_nations)}]" if t.related_nations else ""
         )
+        last = f", last_covered: {t.last_covered}" if t.last_covered else ""
         lines.append(
-            f"- {t.name} ({t.status}, since {t.started}){nations}: "
+            f"- {t.name} ({t.status}, since {t.started}{last}){nations}: "
             f"{t.summary}"
         )
 

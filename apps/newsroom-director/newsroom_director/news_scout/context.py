@@ -8,19 +8,11 @@ engagement when deciding what to search for.
 
 from __future__ import annotations
 
-import json
 import logging
-from datetime import datetime, timedelta
 
 from ..db import ArticleMetric, JournalEntry
 
 logger = logging.getLogger(__name__)
-
-
-def _previous_date(edition_date: str) -> str:
-    """Return the day before *edition_date* as YYYY-MM-DD."""
-    dt = datetime.strptime(edition_date, "%Y-%m-%d") - timedelta(days=1)
-    return dt.strftime("%Y-%m-%d")
 
 
 def _format_journal_context(
@@ -65,42 +57,30 @@ def _format_journal_context(
     return "\n".join(parts)
 
 
-def _format_previous_headlines(
-    edition_data: dict[str, str] | None,
+def _format_recent_headlines(
+    recent: dict[str, list[tuple[str, str]]] | None,
 ) -> str:
-    """Extract headlines from the previous edition's content JSON.
+    """Render headlines from the last N editions grouped by newspaper.
 
-    Returns a compact list of headlines grouped by newspaper.
+    Replaces the previous yesterday-only formatter. A wider window is
+    required to prevent the scout from re-commissioning queries for
+    storylines that already led the paper earlier in the week.
     """
-    if not edition_data:
+    if not recent:
         return ""
 
-    parts: list[str] = ["PREVIOUS EDITION HEADLINES:"]
-    for newspaper_id, content_json in sorted(edition_data.items()):
-        try:
-            articles = json.loads(content_json)
-            if isinstance(articles, list):
-                headlines = [
-                    a.get("headline") or a.get("title", "")
-                    for a in articles
-                    if isinstance(a, dict)
-                ]
-            elif isinstance(articles, dict):
-                article_list = articles.get("articles", [])
-                headlines = [
-                    a.get("headline") or a.get("title", "")
-                    for a in article_list
-                    if isinstance(a, dict)
-                ]
-            else:
-                continue
-            headlines = [h for h in headlines if h]
-            if headlines:
-                parts.append(f"  {newspaper_id}:")
-                for h in headlines:
-                    parts.append(f"    - {h}")
-        except (json.JSONDecodeError, TypeError):
+    parts: list[str] = [
+        "RECENT HEADLINES (last editions — do NOT commission queries that "
+        "would retrieve the same storylines; advance them only if there is "
+        "a genuinely new development):"
+    ]
+    for newspaper_id in sorted(recent.keys()):
+        entries = recent[newspaper_id]
+        if not entries:
             continue
+        parts.append(f"  {newspaper_id}:")
+        for date, headline in entries:
+            parts.append(f"    [{date}] - {headline}")
 
     return "\n".join(parts) if len(parts) > 1 else ""
 
@@ -129,18 +109,17 @@ def _format_reader_metrics(
 
 def format_scout_context(
     journal_entries: list[JournalEntry],
-    previous_edition: dict[str, str] | None,
+    recent_headlines: dict[str, list[tuple[str, str]]] | None,
     reader_metrics: dict[str, list[ArticleMetric]],
 ) -> str:
     """Build the editorial context string for the News Scout.
 
-    Combines journal entries, previous headlines, and reader metrics
-    into a single compact text block. Returns empty string if no
-    context is available.
+    Combines journal entries, a multi-day window of recent headlines,
+    and reader metrics into a single compact text block.
     """
     sections = [
         _format_journal_context(journal_entries),
-        _format_previous_headlines(previous_edition),
+        _format_recent_headlines(recent_headlines),
         _format_reader_metrics(reader_metrics),
     ]
 

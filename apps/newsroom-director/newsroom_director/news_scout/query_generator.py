@@ -24,65 +24,27 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are the chief intelligence officer for a newspaper group. \
-Your job is to commission search queries that will surface the most \
-editorially consequential real-world news for today's editions across \
-all newspapers in the group.
+You are the chief intelligence officer for a newspaper group. Commission \
+search queries that will surface the most editorially consequential real-\
+world news for today's editions across all newspapers in the group.
 
-You have up to six inputs:
-1. A world history record — a factual summary of recent real-world events, \
-ongoing story threads, geopolitical developments, economic trends, \
-technological shifts, and environmental crises tracked over time.
-2. A set of editorial categories that the newspapers collectively cover.
-3. The editorial identities of the newspapers — their ideologies, political \
-leanings, and areas of focus — so you can tailor queries to what each \
-readership finds most compelling.
-4. (Optional) The editorial director's observations and each newspaper's \
-editorial intentions — what the team noticed about coverage quality and \
-what they plan to focus on next.
-5. (Optional) Headlines from the previous edition — so you avoid \
-commissioning duplicate stories and instead advance the narrative.
-6. (Optional) Reader engagement data — which articles readers actually \
-engaged with, so you can prioritise topics that resonate.
+Inputs you may receive: a world history record, a list of editorial \
+categories, newspaper personas (ideology and focus), optional editorial \
+context (director observations, newspaper intentions, reader engagement \
+data), and recent headlines.
 
-Your reasoning process:
-- Review the world history to understand ongoing story threads, recent \
-developments, and evolving situations that may have new developments today.
-- For each category, consider which newspapers subscribe to it and what \
-angle their readership would find most valuable — a geopolitical category \
-read by a conservative-leaning paper demands different query framing than \
-the same category read by a progressive one.
-- If editorial context is provided, use it to steer your queries: address \
-coverage gaps the editorial director flagged, support newspapers' stated \
-intentions, avoid re-scouting stories that were already published, and \
-lean into topics that readers engaged with.
-- Decide which specific real-world developments a discerning editor would \
-find most valuable RIGHT NOW — not trending stories, but stories with \
-genuine narrative depth and geopolitical weight.
-- Formulate queries that cut through noise: prefer named actors, specific \
-regions, concrete events, and verifiable timelines over broad topic searches.
-- Generate at most {max_queries} query per category. Make each one count — \
-choose the single most editorially valuable angle.
-- Include temporal anchors (e.g. "March 2026", "Q1 2026", "this month") \
-where recency matters.
-- Avoid: generic news queries ("latest X news"), celebrity/entertainment \
-unless the category demands it, queries duplicating each other across \
-categories, and queries that would retrieve stories already covered in \
-the previous edition.
+Query standards:
+- Prefer named actors, specific regions, concrete events, verifiable \
+timelines. Avoid generic "latest X news" queries.
+- Include temporal anchors (month, quarter) when recency matters.
+- Do not re-scout stories already covered in the recent-headlines block.
+- Tailor to the readership: a conservative-leaning paper and a progressive \
+one covering the same category want different framings.
+- At most {max_queries} queries per category. Prioritise quality — one \
+razor-sharp query beats three vague ones.
 
-You MUST respond with a JSON object matching this exact schema:
-{
-  "categories": [
-    {
-      "category_id": "<taxonomy-category-slug>",
-      "queries": ["query 1", "query 2"]
-    }
-  ]
-}
-
-Include ALL provided category IDs. Every category must have at least 1 query. \
-Prioritise quality over quantity — a single razor-sharp query beats three \
-vague ones."""
+Include ALL provided category IDs; every category must have at least one \
+query."""
 
 MAX_RETRIES = 3
 
@@ -104,6 +66,7 @@ def generate_queries(
     generation_strategy: GenerationStrategy,
     personas: list[PersonaConfig] | None = None,
     editorial_context: str = "",
+    today_date: str = "",
 ) -> dict[str, list[str]]:
     """Generate search queries for each category based on World History.
 
@@ -132,7 +95,16 @@ def generate_queries(
         if editorial_context
         else ""
     )
+    today_section = (
+        f"TODAY'S DATE: {today_date}\nSearch for real-world developments "
+        f"that happened ON or IMMEDIATELY BEFORE {today_date}. Prefer "
+        f"queries with explicit date anchors for this month.\n\n"
+        if today_date
+        else ""
+    )
+
     user_content = (
+        f"{today_section}"
         f"WORLD HISTORY:\n{synopsis}\n"
         f"{personas_section}"
         f"{context_section}\n"

@@ -1,6 +1,8 @@
 import type { WorldLedger } from './world-ledger.types.js';
+import { WORLD_LEDGER_SCHEMA_VERSION } from './world-ledger.schemas.js';
 
 export const WORLD_LEDGER_TEMPLATE: WorldLedger = {
+  schemaVersion: WORLD_LEDGER_SCHEMA_VERSION,
   epoch: '',
   synopsis: '',
   geopolitics: {

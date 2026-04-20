@@ -531,19 +531,26 @@ def save_news_item(
     snippet: str,
     source_url: str,
     relevance_score: float,
+    dedup_lookback_days: int = 7,
 ) -> bool:
     """Insert a news item, returning True on success.
 
-    Returns False if a row with the same (source_url, edition_date) already
-    exists. Checks for duplicates before inserting to work with both SQLite
-    (which may not enforce named unique constraints from migrations) and
-    PostgreSQL.
+    Returns False if the same source_url was stored in any edition within
+    the last ``dedup_lookback_days`` days (inclusive of today). This stops
+    trending articles from being re-ingested day after day under fresh
+    query variants — a single story keeps winning clusters otherwise.
     """
+    cutoff_dt = datetime.strptime(edition_date, "%Y-%m-%d") - timedelta(
+        days=dedup_lookback_days
+    )
+    cutoff = cutoff_dt.strftime("%Y-%m-%d")
+
     existing = (
         session.query(NewsItemRow.id)
         .filter(
             NewsItemRow.source_url == source_url,
-            NewsItemRow.edition_date == edition_date,
+            NewsItemRow.edition_date >= cutoff,
+            NewsItemRow.edition_date <= edition_date,
         )
         .first()
     )
@@ -853,3 +860,101 @@ def load_edition_by_date(
     )
 
     return {row.newspaper_id: row.content_json for row in article_rows}
+
+
+def load_recent_headlines(
+    session: Session,
+    current_date: str,
+    lookback_days: int = 5,
+) -> dict[str, list[tuple[str, str]]]:
+    """Return recent headlines per newspaper for the days BEFORE current_date.
+
+    Used to give the News Scout query generator and the per-persona article
+    generation prompts a wider memory window than a single day. Without this,
+    a trending story survives yesterday-only dedup and leads the paper for a
+    week straight (see Val Kilmer AI-film bug, April 2026).
+
+    Returns: {newspaper_id: [(edition_date, headline), ...]} sorted by date
+    ascending. Empty dict if no editions found in the window.
+    """
+    current_dt = datetime.strptime(current_date, "%Y-%m-%d")
+    start = (current_dt - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    end = (current_dt - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    edition_rows = (
+        session.query(EditionRow)
+        .filter(EditionRow.date >= start, EditionRow.date <= end)
+        .all()
+    )
+    if not edition_rows:
+        return {}
+
+    id_to_date = {row.id: row.date for row in edition_rows}
+    article_rows = (
+        session.query(EditionArticleRow)
+        .filter(EditionArticleRow.edition_id.in_(list(id_to_date.keys())))
+        .all()
+    )
+
+    result: dict[str, list[tuple[str, str]]] = {}
+    for row in article_rows:
+        date = id_to_date.get(row.edition_id)
+        if not date:
+            continue
+        try:
+            content = json.loads(row.content_json)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if isinstance(content, list):
+            article_list = content
+        elif isinstance(content, dict):
+            article_list = content.get("articles", [])
+        else:
+            continue
+        for article in article_list:
+            if not isinstance(article, dict):
+                continue
+            headline = article.get("headline") or article.get("title", "")
+            if headline:
+                result.setdefault(row.newspaper_id, []).append(
+                    (date, headline)
+                )
+
+    for key in result:
+        result[key].sort()
+    return result
+
+
+def load_recent_curator_synthesis(
+    session: Session,
+    current_date: str,
+    lookback_days: int = 1,
+) -> str | None:
+    """Return the most recent Curator synthesis JSON before current_date.
+
+    The Curator otherwise has zero memory of prior synthesis, so when the
+    same storylines dominate two days in a row it re-emits near-identical
+    consensus/fault-lines. Feeding it yesterday's JSON lets it differentiate.
+    """
+    current_dt = datetime.strptime(current_date, "%Y-%m-%d")
+    start = (current_dt - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    end = (current_dt - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    edition_rows = (
+        session.query(EditionRow)
+        .filter(EditionRow.date >= start, EditionRow.date <= end)
+        .order_by(EditionRow.date.desc())
+        .all()
+    )
+    for edition_row in edition_rows:
+        article_row = (
+            session.query(EditionArticleRow)
+            .filter(
+                EditionArticleRow.edition_id == edition_row.id,
+                EditionArticleRow.newspaper_id == "curator",
+            )
+            .first()
+        )
+        if article_row and article_row.content_json:
+            return article_row.content_json
+    return None

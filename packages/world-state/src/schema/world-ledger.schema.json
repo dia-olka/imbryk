@@ -1,0 +1,632 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "epoch": {
+      "type": "string"
+    },
+    "synopsis": {
+      "type": "string"
+    },
+    "geopolitics": {
+      "type": "object",
+      "properties": {
+        "nations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "governmentType": {
+                "type": "string"
+              },
+              "leader": {
+                "type": "string"
+              },
+              "stability": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "governmentType",
+              "leader",
+              "stability",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "alliances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "purpose": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "members",
+              "purpose"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "parties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "frozen",
+                  "resolved"
+                ]
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "parties",
+              "status",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "nations",
+        "alliances",
+        "conflicts"
+      ],
+      "additionalProperties": false
+    },
+    "economics": {
+      "type": "object",
+      "properties": {
+        "currencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "issuingEntity": {
+                "type": "string"
+              },
+              "strength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "issuingEntity",
+              "strength",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "tradingBlocs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "focus": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "members",
+              "focus"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "scarcities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "resource": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "moderate",
+                  "critical"
+                ]
+              },
+              "affectedRegions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "resource",
+              "severity",
+              "affectedRegions",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "globalGdpTrend": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "currencies",
+        "tradingBlocs",
+        "scarcities",
+        "globalGdpTrend"
+      ],
+      "additionalProperties": false
+    },
+    "technology": {
+      "type": "object",
+      "properties": {
+        "ai": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "maturityLevel": {
+              "type": "string",
+              "enum": [
+                "emerging",
+                "growth",
+                "mature",
+                "declining"
+              ]
+            },
+            "keyPlayers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "maturityLevel",
+            "keyPlayers",
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        "energy": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "maturityLevel": {
+              "type": "string",
+              "enum": [
+                "emerging",
+                "growth",
+                "mature",
+                "declining"
+              ]
+            },
+            "keyPlayers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "maturityLevel",
+            "keyPlayers",
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        "biotech": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "maturityLevel": {
+              "type": "string",
+              "enum": [
+                "emerging",
+                "growth",
+                "mature",
+                "declining"
+              ]
+            },
+            "keyPlayers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "maturityLevel",
+            "keyPlayers",
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        "other": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "maturityLevel": {
+                "type": "string",
+                "enum": [
+                  "emerging",
+                  "growth",
+                  "mature",
+                  "declining"
+                ]
+              },
+              "keyPlayers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "maturityLevel",
+              "keyPlayers",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "ai",
+        "energy",
+        "biotech",
+        "other"
+      ],
+      "additionalProperties": false
+    },
+    "culture": {
+      "type": "object",
+      "properties": {
+        "dominantNarratives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "movements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "reach": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "regional",
+                  "global"
+                ]
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "reach",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "mediaLandscape": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dominantNarratives",
+        "movements",
+        "mediaLandscape"
+      ],
+      "additionalProperties": false
+    },
+    "military": {
+      "type": "object",
+      "properties": {
+        "forces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entity": {
+                "type": "string"
+              },
+              "conventionalStrength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "nuclearCapable": {
+                "type": "boolean"
+              },
+              "specialCapabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "entity",
+              "conventionalStrength",
+              "nuclearCapable",
+              "specialCapabilities"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "armsRaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "doctrineShifts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "forces",
+        "armsRaces",
+        "doctrineShifts"
+      ],
+      "additionalProperties": false
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "globalTemperatureAnomaly": {
+          "type": "number"
+        },
+        "crises": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "moderate",
+                  "severe",
+                  "catastrophic"
+                ]
+              },
+              "affectedRegions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "severity",
+              "affectedRegions",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "mitigationEfforts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "globalTemperatureAnomaly",
+        "crises",
+        "mitigationEfforts"
+      ],
+      "additionalProperties": false
+    },
+    "storyThreads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "developing",
+              "ongoing",
+              "resolved"
+            ]
+          },
+          "started": {
+            "type": "string"
+          },
+          "lastCovered": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "relatedNations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sectors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "started",
+          "lastCovered",
+          "summary",
+          "relatedNations",
+          "sectors"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "headline": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "sectors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "headline",
+          "description",
+          "impact",
+          "sectors"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "epoch",
+    "synopsis",
+    "geopolitics",
+    "economics",
+    "technology",
+    "culture",
+    "military",
+    "environment",
+    "storyThreads",
+    "history"
+  ],
+  "additionalProperties": false,
+  "title": "WorldLedger",
+  "x-schema-version": "1.0.0"
+}

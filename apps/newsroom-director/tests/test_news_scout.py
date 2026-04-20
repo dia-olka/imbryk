@@ -306,7 +306,10 @@ class TestNewsItemDB:
         )
         assert saved is False
 
-    def test_same_url_different_dates_ok(self, db_session):
+    def test_same_url_within_lookback_rejected(self, db_session):
+        """URLs seen within the dedup_lookback_days window are rejected even
+        on a later edition — kills the trending-article daily recycling bug.
+        """
         save_news_item(
             session=db_session,
             edition_date="2026-03-12",
@@ -328,6 +331,33 @@ class TestNewsItemDB:
             snippet="Content",
             source_url="https://example.com/same",
             relevance_score=0.9,
+        )
+        assert saved is False
+
+    def test_same_url_outside_lookback_ok(self, db_session):
+        """Once the lookback window elapses, the same URL can be ingested."""
+        save_news_item(
+            session=db_session,
+            edition_date="2026-03-01",
+            category_id="ai",
+            query="q1",
+            headline="Title",
+            snippet="Content",
+            source_url="https://example.com/revived",
+            relevance_score=0.9,
+        )
+        db_session.commit()
+
+        saved = save_news_item(
+            session=db_session,
+            edition_date="2026-03-15",
+            category_id="ai",
+            query="q1",
+            headline="Title",
+            snippet="Content",
+            source_url="https://example.com/revived",
+            relevance_score=0.9,
+            dedup_lookback_days=7,
         )
         assert saved is True
 
@@ -550,27 +580,24 @@ class TestFormatScoutContext:
         assert "the-herald" in result
         assert "the-vanguard" in result
 
-    def test_previous_headlines(self):
-        edition_data = {
-            "the-herald": json.dumps([
-                {"headline": "Iran crisis deepens", "body": "..."},
-                {"headline": "AI regulation passes", "body": "..."},
-            ]),
+    def test_recent_headlines_multi_day(self):
+        recent = {
+            "the-herald": [
+                ("2026-03-14", "Iran crisis deepens"),
+                ("2026-03-15", "AI regulation passes"),
+            ],
         }
-        result = format_scout_context([], edition_data, {})
-        assert "PREVIOUS EDITION HEADLINES" in result
-        assert "Iran crisis deepens" in result
-        assert "AI regulation passes" in result
+        result = format_scout_context([], recent, {})
+        assert "RECENT HEADLINES" in result
+        assert "[2026-03-14] - Iran crisis deepens" in result
+        assert "[2026-03-15] - AI regulation passes" in result
 
-    def test_previous_headlines_dict_format(self):
-        edition_data = {
-            "the-herald": json.dumps({
-                "articles": [
-                    {"headline": "Test headline", "body": "..."},
-                ]
-            }),
+    def test_recent_headlines_empty_newspaper_skipped(self):
+        recent = {
+            "the-herald": [("2026-03-15", "Test headline")],
+            "the-void": [],
         }
-        result = format_scout_context([], edition_data, {})
+        result = format_scout_context([], recent, {})
         assert "Test headline" in result
 
     def test_reader_metrics(self):
@@ -604,10 +631,8 @@ class TestFormatScoutContext:
                 content="Good coverage balance today.",
             ),
         ]
-        edition_data = {
-            "the-herald": json.dumps([
-                {"headline": "Test headline", "body": "..."},
-            ]),
+        recent = {
+            "the-herald": [("2026-03-15", "Test headline")],
         }
         metrics = {
             "the-herald": [
@@ -619,17 +644,7 @@ class TestFormatScoutContext:
                 ),
             ],
         }
-        result = format_scout_context(entries, edition_data, metrics)
+        result = format_scout_context(entries, recent, metrics)
         assert "EDITORIAL DIRECTOR'S OBSERVATION" in result
-        assert "PREVIOUS EDITION HEADLINES" in result
+        assert "RECENT HEADLINES" in result
         assert "READER ENGAGEMENT" in result
-
-    def test_malformed_json_skipped(self):
-        edition_data = {
-            "the-herald": "not valid json",
-            "the-vanguard": json.dumps([
-                {"headline": "Valid headline", "body": "..."},
-            ]),
-        }
-        result = format_scout_context([], edition_data, {})
-        assert "Valid headline" in result
