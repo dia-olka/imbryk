@@ -1,99 +1,58 @@
 ---
 layout: layouts/base.njk
 title: "Feedback — Imbryk Gazette"
-description: "Send feedback, questions, or takedown requests to the Imbryk Gazette team."
+description: "Write to the editors — corrections, questions, ideas, or takedown requests."
 ogType: website
 permalink: /feedback/
 ---
 
-<article>
-  <h1>Send us feedback</h1>
-
-  <p>Spotted something odd, have an idea, or want to request a takedown? Drop us a line — a human reads every message.</p>
-
-  <div id="feedback-status" role="status" aria-live="polite" hidden></div>
+<article class="feedback-page">
+  <header class="feedback-page__header">
+    <p class="feedback-page__eyebrow">Letters to the Editor</p>
+    <h1 class="feedback-page__title">Write to the Gazette</h1>
+    <p class="feedback-page__lede">
+      Spotted an error, have an idea, or need to request a takedown? Our editors read every note.
+    </p>
+  </header>
 
   <form
-    id="feedback-form"
     action="https://api.web3forms.com/submit"
     method="POST"
     class="feedback-form"
-    novalidate
   >
     <input type="hidden" name="access_key" value="987c22b8-28cb-4780-bb51-795528fbe8e0">
     <input type="hidden" name="from_name" value="Imbryk Gazette feedback">
     <input type="hidden" name="subject" value="New feedback from Imbryk Gazette">
-    <input type="hidden" name="redirect" value="{{ site.url }}/feedback/?sent=1">
+    <input type="hidden" name="redirect" value="{{ site.url }}/feedback/sent/">
     {# Honeypot — bots fill this, humans don't see it. #}
     <input type="checkbox" name="botcheck" class="visually-hidden" tabindex="-1" autocomplete="off">
 
-    <div class="feedback-form__field">
-      <label for="feedback-name">Your name <span class="feedback-form__optional">(optional)</span></label>
-      <input type="text" id="feedback-name" name="name" autocomplete="name" maxlength="120">
+    <div class="feedback-form__row">
+      <div class="feedback-form__field">
+        <label for="feedback-name">
+          Name <span class="feedback-form__optional">Optional</span>
+        </label>
+        <input type="text" id="feedback-name" name="name" autocomplete="name" maxlength="120">
+      </div>
+
+      <div class="feedback-form__field">
+        <label for="feedback-email">
+          Email <span class="feedback-form__optional">Optional — for a reply</span>
+        </label>
+        <input type="email" id="feedback-email" name="email" autocomplete="email" maxlength="200">
+      </div>
     </div>
 
     <div class="feedback-form__field">
-      <label for="feedback-email">Email <span class="feedback-form__optional">(optional — needed if you want a reply)</span></label>
-      <input type="email" id="feedback-email" name="email" autocomplete="email" maxlength="200">
+      <label for="feedback-message">Your message</label>
+      <textarea id="feedback-message" name="message" required minlength="10" maxlength="4000" rows="8" placeholder="Tell us what's on your mind&hellip;"></textarea>
     </div>
 
-    <div class="feedback-form__field">
-      <label for="feedback-message">Message</label>
-      <textarea id="feedback-message" name="message" required minlength="10" maxlength="4000" rows="6"></textarea>
+    <div class="feedback-form__actions">
+      <button type="submit" class="feedback-form__submit">Send to the editors</button>
+      <p class="feedback-form__note">
+        We'll only use your email to reply.
+      </p>
     </div>
-
-    <button type="submit" class="feedback-form__submit">Send feedback</button>
-    <p class="feedback-form__privacy">
-      We use <a href="https://web3forms.com" rel="noopener" target="_blank">web3forms.com</a> to deliver messages.
-      Your message is emailed to us — we do not store it on this site.
-    </p>
   </form>
-
-  <script>
-    (function () {
-      var form = document.getElementById('feedback-form');
-      var status = document.getElementById('feedback-status');
-      if (!form || !status) return;
-
-      // If the user landed here with ?sent=1, show the thank-you message.
-      if (new URLSearchParams(window.location.search).get('sent') === '1') {
-        status.hidden = false;
-        status.className = 'feedback-status feedback-status--success';
-        status.textContent = 'Thanks — your message is on its way. We read every one.';
-        form.hidden = true;
-      }
-
-      form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        status.hidden = false;
-        status.className = 'feedback-status feedback-status--info';
-        status.textContent = 'Sending…';
-
-        var data = new FormData(form);
-        var payload = {};
-        data.forEach(function (value, key) { payload[key] = value; });
-
-        fetch('https://api.web3forms.com/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(payload),
-        })
-          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
-          .then(function (res) {
-            if (res.ok && res.body.success) {
-              status.className = 'feedback-status feedback-status--success';
-              status.textContent = 'Thanks — your message is on its way. We read every one.';
-              form.hidden = true;
-            } else {
-              status.className = 'feedback-status feedback-status--error';
-              status.textContent = (res.body && res.body.message) || 'Something went wrong. Please try again later.';
-            }
-          })
-          .catch(function () {
-            status.className = 'feedback-status feedback-status--error';
-            status.textContent = 'Network error. Please try again later.';
-          });
-      });
-    })();
-  </script>
 </article>

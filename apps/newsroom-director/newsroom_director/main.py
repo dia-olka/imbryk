@@ -81,6 +81,7 @@ from .metrics import (
 )
 from .output_schemas import (
     CuratorOutputV2,
+    LedgerMutationOutput,
     NewspaperOutput,
     is_valid_curator,
     is_valid_newspaper,
@@ -942,7 +943,12 @@ def run_morning_press(
                 mutation_system, mutation_content = _build_mutation_prompt(
                     synopsis, articles, today_date
                 )
-                mutation_response = gen.generate(mutation_system, "flash", mutation_content)
+                mutation_response = gen.generate(
+                    mutation_system,
+                    "flash",
+                    mutation_content,
+                    response_schema=LedgerMutationOutput,
+                )
                 mutation = _parse_mutation(mutation_response)
                 if mutation:
                     ledger = apply_mutation(ledger, mutation)
@@ -1318,49 +1324,34 @@ def _build_mutation_prompt(
     """
     articles_text = _format_all_articles(articles)
 
-    # System: stable schema + behavioural rules. No f-string, no today_date,
-    # no run-specific data — the prefix must be byte-identical day to day
-    # for implicit caching. Literal `{name, ...}` brace examples below
-    # would otherwise break an f-string.
+    # System: stable behavioural rules. No f-string, no today_date, no
+    # run-specific data — the prefix must be byte-identical day to day for
+    # implicit caching. Field names, types, and enum values are enforced by
+    # response_schema=LedgerMutationOutput, so this prompt only carries the
+    # semantic rules the schema cannot express.
     system_instruction = """\
 You are a world history recorder. Given the current historical record and \
 today's newspaper articles, produce a JSON object describing factual updates \
-to the world history ledger. Only include fields that should change.
+to the world history ledger. Only include fields that should change; omit \
+everything else.
 
 Your job is to record real-world facts — events, developments, and trends \
 that actually happened — not to speculate or editorialize.
 
-The mutation JSON should follow this schema (all fields optional):
-- epoch: string — short banner title for the current era (e.g. \
-"April 2026 — Cognitive Enclosure"). Only update on significant narrative \
-shifts (new war, leadership change, crisis resolution, a new month that \
-reframes coverage). Otherwise omit.
-- synopsis: string — updated world history synopsis.
-- add_nations: list of new nations
-- update_nations: list of {name, ...fields_to_update}
-- add_alliances, add_conflicts, update_conflicts
-- add_currencies, add_trading_blocs, add_scarcities
-- update_global_gdp_trend: string
-- update_ai, update_energy, update_biotech: partial tech domain update objects \
-with optional keys: {"name": str, "maturity_level": "emerging"|"growth"|\
-"mature"|"declining", "key_players": [str], "description": str}
-- add_dominant_narratives: list of strings
-- add_movements: list of {name, reach, description}
-- update_media_landscape: string
-- add_forces, update_forces
-- add_arms_races, add_doctrine_shifts: lists of strings
-- update_temperature_anomaly: float
-- add_crises, add_mitigation_efforts
-- add_historical_events: list of {date, headline, description, impact, sectors}
-- add_story_threads: list of {name, status, started, last_covered, summary, \
-related_nations, sectors} — status: "developing" | "ongoing" | "resolved".
-- update_story_threads: list of {name, ...fields_to_update}
-
-Story threads track evolving real-world narratives across editions. Create \
-threads for new developing stories, mark them "resolved" when they conclude, \
-and always refresh last_covered for threads that appear in today's coverage.
-
-Respond with ONLY the JSON mutation object, no explanation."""
+Behavioural guidance:
+- epoch: short banner title for the current era (e.g. "April 2026 — \
+Cognitive Enclosure"). Only update on a significant narrative shift — new \
+war, leadership change, crisis resolution, or a new month that reframes \
+coverage. Otherwise omit it entirely.
+- Story threads track evolving real-world narratives across editions. \
+Create `add_story_threads` entries for genuinely new developing stories, \
+mark threads "resolved" via `update_story_threads` when they conclude, and \
+always refresh `last_covered` for any thread that appears in today's \
+coverage.
+- Partial update entries (update_nations, update_conflicts, update_forces, \
+update_story_threads, update_ai/energy/biotech) must carry the identifier \
+(`name` or `entity`) plus only the fields that should change. Leave fields \
+you don't want to modify out of the object."""
 
     user_content = f"""\
 TODAY'S DATE: {today_date}
@@ -1417,6 +1408,19 @@ def _parse_mutation(response: str) -> LedgerMutation | None:
         return None
 
 
+def _strip_nones(d: dict) -> dict:
+    """Drop keys whose value is None.
+
+    When response_schema=LedgerMutationOutput is in use, Gemini may serialize
+    optional fields of a partial-update dataclass (NationUpdate, etc.) as
+    explicit `null` rather than omitting them. The mutator's _merge_by_key
+    does a blind ``setattr(item, attr, val)``, so a null would overwrite the
+    live field — e.g. a stability=60 update would also null out the nation's
+    leader. Stripping nulls here preserves "omit = don't touch" semantics.
+    """
+    return {k: v for k, v in d.items() if v is not None}
+
+
 def _dict_to_mutation(data: dict) -> LedgerMutation:
     """Convert a raw dict into a LedgerMutation dataclass."""
     from .world_ledger.types import (
@@ -1454,8 +1458,10 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
             for n in data["add_nations"]
         ]
 
-    if "update_nations" in data:
-        mutation.update_nations = data["update_nations"]
+    if data.get("update_nations"):
+        mutation.update_nations = [
+            _strip_nones(u) for u in data["update_nations"] if isinstance(u, dict)
+        ]
 
     if "add_alliances" in data:
         mutation.add_alliances = [
@@ -1478,8 +1484,10 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
             for c in data["add_conflicts"]
         ]
 
-    if "update_conflicts" in data:
-        mutation.update_conflicts = data["update_conflicts"]
+    if data.get("update_conflicts"):
+        mutation.update_conflicts = [
+            _strip_nones(u) for u in data["update_conflicts"] if isinstance(u, dict)
+        ]
 
     if "add_currencies" in data:
         mutation.add_currencies = [
@@ -1517,15 +1525,21 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
         mutation.update_global_gdp_trend = data["update_global_gdp_trend"]
 
     for tech_key in ("update_ai", "update_energy", "update_biotech"):
-        if tech_key in data:
-            val = data[tech_key]
-            if isinstance(val, str):
-                # LLM returned a prose string; wrap it as a description update
-                logger.warning(
-                    "LLM returned string for %s, coercing to dict", tech_key
-                )
-                val = {"description": val}
-            if isinstance(val, dict):
+        if tech_key not in data:
+            continue
+        val = data[tech_key]
+        if val is None:
+            # Gemini may serialize an unset optional TechDomainUpdate as null.
+            continue
+        if isinstance(val, str):
+            # LLM returned a prose string; wrap it as a description update
+            logger.warning(
+                "LLM returned string for %s, coercing to dict", tech_key
+            )
+            val = {"description": val}
+        if isinstance(val, dict):
+            val = _strip_nones(val)
+            if val:
                 setattr(mutation, tech_key, val)
 
     if "add_tech_domains" in data:
@@ -1566,8 +1580,10 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
             for f in data["add_forces"]
         ]
 
-    if "update_forces" in data:
-        mutation.update_forces = data["update_forces"]
+    if data.get("update_forces"):
+        mutation.update_forces = [
+            _strip_nones(u) for u in data["update_forces"] if isinstance(u, dict)
+        ]
 
     if "add_arms_races" in data:
         mutation.add_arms_races = data["add_arms_races"]
@@ -1608,8 +1624,10 @@ def _dict_to_mutation(data: dict) -> LedgerMutation:
             for t in data["add_story_threads"]
         ]
 
-    if "update_story_threads" in data:
-        mutation.update_story_threads = data["update_story_threads"]
+    if data.get("update_story_threads"):
+        mutation.update_story_threads = [
+            _strip_nones(u) for u in data["update_story_threads"] if isinstance(u, dict)
+        ]
 
     if "add_historical_events" in data:
         mutation.add_historical_events = [

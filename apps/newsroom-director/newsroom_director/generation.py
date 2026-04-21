@@ -120,7 +120,14 @@ class StubGenerationStrategy(GenerationStrategy):
             return self._responses[model_tier]
         # When a schema is expected, return minimal valid JSON so validation passes.
         if response_schema is not None:
-            from .output_schemas import CuratorOutput, CuratorOutputV2, NewspaperOutput
+            from .output_schemas import (
+                CuratorOutput,
+                CuratorOutputV2,
+                LedgerMutationOutput,
+                NewspaperOutput,
+            )
+            if response_schema is LedgerMutationOutput:
+                return json.dumps({})
             if response_schema is CuratorOutputV2:
                 return json.dumps({
                     "version": 2,

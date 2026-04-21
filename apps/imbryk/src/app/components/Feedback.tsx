@@ -46,29 +46,37 @@ export function Feedback() {
       } else {
         setStatus({
           kind: 'error',
-          message: body.message ?? 'Something went wrong. Please try again later.',
+          message:
+            body.message ?? 'Something went wrong. Please try again later.',
         });
       }
     } catch {
-      setStatus({ kind: 'error', message: 'Network error. Please try again later.' });
+      setStatus({
+        kind: 'error',
+        message: 'Network error. Please try again later.',
+      });
     }
   };
 
   if (status.kind === 'success') {
     return (
-      <Alert variant="success" className="max-w-md mx-auto">
+      <Alert variant="success">
         <AlertDescription>
-          Thanks — your message is on its way. We read every one.
+          Thank you — your message is on its way. We read every one.
         </AlertDescription>
       </Alert>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto space-y-4 font-sans">
+    <form onSubmit={handleSubmit} className="space-y-4 font-sans">
       <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
       <input type="hidden" name="from_name" value="Imbryk Whisper feedback" />
-      <input type="hidden" name="subject" value="New feedback from Imbryk Whisper" />
+      <input
+        type="hidden"
+        name="subject"
+        value="New feedback from Imbryk Whisper"
+      />
       {/* Honeypot — bots fill this, humans don't see it. */}
       <input
         type="checkbox"
@@ -80,8 +88,11 @@ export function Feedback() {
       />
 
       <div className="space-y-1.5">
-        <Label htmlFor="feedback-name">
-          Your name <span className="text-text-muted font-normal">(optional)</span>
+        <Label htmlFor="feedback-name" className="flex items-baseline gap-2">
+          <span>Name</span>
+          <span className="text-text-muted font-normal text-xs italic">
+            Optional
+          </span>
         </Label>
         <input
           type="text"
@@ -94,8 +105,11 @@ export function Feedback() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="feedback-email">
-          Email <span className="text-text-muted font-normal">(optional — needed if you want a reply)</span>
+        <Label htmlFor="feedback-email" className="flex items-baseline gap-2">
+          <span>Email</span>
+          <span className="text-text-muted font-normal text-xs italic">
+            Optional — for a reply
+          </span>
         </Label>
         <input
           type="email"
@@ -108,7 +122,7 @@ export function Feedback() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="feedback-message">Message</Label>
+        <Label htmlFor="feedback-message">Your message</Label>
         <Textarea
           id="feedback-message"
           name="message"
@@ -116,6 +130,7 @@ export function Feedback() {
           minLength={10}
           maxLength={4000}
           rows={6}
+          placeholder="Tell us what's on your mind…"
         />
       </div>
 
@@ -125,21 +140,17 @@ export function Feedback() {
         </Alert>
       )}
 
-      <div className="flex items-center justify-between gap-3">
-        <Button type="submit" disabled={status.kind === 'sending'}>
+      <div className="flex flex-col gap-3 pt-2 border-t border-border sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-text-muted italic order-2 sm:order-1">
+          We'll only use your email to reply.
+        </p>
+        <Button
+          type="submit"
+          disabled={status.kind === 'sending'}
+          className="order-1 sm:order-2"
+        >
           {status.kind === 'sending' ? 'Sending…' : 'Send feedback'}
         </Button>
-        <p className="text-xs text-text-muted">
-          Delivered via{' '}
-          <a
-            href="https://web3forms.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            web3forms
-          </a>
-        </p>
       </div>
     </form>
   );

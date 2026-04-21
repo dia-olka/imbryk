@@ -6,6 +6,7 @@
   <title>{{ title | default("Imbryk Gazette") }}</title>
   <meta name="description" content="{{ description | default(site.description) }}">
   <meta name="theme-color" content="#1a1a2e">
+  {% if robots %}<meta name="robots" content="{{ robots }}">{% endif %}
   <link rel="canonical" href="{{ canonicalUrl | default(site.url + page.url) }}">
 
   {% if hreflangAlternates %}

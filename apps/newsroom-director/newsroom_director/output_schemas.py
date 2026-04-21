@@ -8,6 +8,22 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from typing import Literal
+
+from .world_ledger.types import (
+    Alliance,
+    Conflict,
+    CulturalMovement,
+    Currency,
+    EnvironmentalCrisis,
+    HistoricalEvent,
+    MilitaryForce,
+    Nation,
+    Scarcity,
+    StoryThread,
+    TechDomain,
+    TradingBloc,
+)
 
 
 @dataclass
@@ -90,6 +106,108 @@ class CuratorOutputV2:
     fault_lines: list[FaultLineItem]
     gaps: list[GapItem]
     what_to_watch: list[str]
+
+
+# ─── World-ledger mutation: partial-update sub-schemas ───────────────────────
+
+# Add-* lists reuse the world_ledger dataclasses directly — their required
+# fields (e.g. Scarcity.resource, EnvironmentalCrisis.severity enum) become
+# schema constraints Gemini must satisfy, so the `KeyError: 'resource'` class
+# of drift cannot recur.
+#
+# Update-* lists cannot reuse those dataclasses: a partial update must carry
+# only the fields that should change, so every field except the identifier
+# (name / entity) is optional. These sub-schemas make that explicit.
+
+
+@dataclass
+class NationUpdate:
+    name: str
+    government_type: str | None = None
+    leader: str | None = None
+    stability: int | None = None
+    description: str | None = None
+
+
+@dataclass
+class ConflictUpdate:
+    name: str
+    parties: list[str] | None = None
+    status: Literal["active", "frozen", "resolved"] | None = None
+    description: str | None = None
+
+
+@dataclass
+class MilitaryForceUpdate:
+    entity: str
+    conventional_strength: int | None = None
+    nuclear_capable: bool | None = None
+    special_capabilities: list[str] | None = None
+
+
+@dataclass
+class StoryThreadUpdate:
+    name: str
+    status: Literal["developing", "ongoing", "resolved"] | None = None
+    started: str | None = None
+    last_covered: str | None = None
+    summary: str | None = None
+    related_nations: list[str] | None = None
+    sectors: list[str] | None = None
+
+
+@dataclass
+class TechDomainUpdate:
+    name: str | None = None
+    maturity_level: Literal["emerging", "growth", "mature", "declining"] | None = None
+    key_players: list[str] | None = None
+    description: str | None = None
+
+
+@dataclass
+class LedgerMutationOutput:
+    """Schema for a single LLM-generated world-ledger mutation.
+
+    Mirrors LedgerMutation (world_ledger.mutator) field-by-field so Gemini's
+    controlled generation emits exactly what _dict_to_mutation expects. Every
+    field is optional — the model only fills in what should change.
+    """
+    epoch: str | None = None
+    synopsis: str | None = None
+
+    add_nations: list[Nation] | None = None
+    update_nations: list[NationUpdate] | None = None
+    add_alliances: list[Alliance] | None = None
+    add_conflicts: list[Conflict] | None = None
+    update_conflicts: list[ConflictUpdate] | None = None
+
+    add_currencies: list[Currency] | None = None
+    add_trading_blocs: list[TradingBloc] | None = None
+    add_scarcities: list[Scarcity] | None = None
+    update_global_gdp_trend: str | None = None
+
+    update_ai: TechDomainUpdate | None = None
+    update_energy: TechDomainUpdate | None = None
+    update_biotech: TechDomainUpdate | None = None
+    add_tech_domains: list[TechDomain] | None = None
+
+    add_dominant_narratives: list[str] | None = None
+    add_movements: list[CulturalMovement] | None = None
+    update_media_landscape: str | None = None
+
+    add_forces: list[MilitaryForce] | None = None
+    update_forces: list[MilitaryForceUpdate] | None = None
+    add_arms_races: list[str] | None = None
+    add_doctrine_shifts: list[str] | None = None
+
+    update_temperature_anomaly: float | None = None
+    add_crises: list[EnvironmentalCrisis] | None = None
+    add_mitigation_efforts: list[str] | None = None
+
+    add_story_threads: list[StoryThread] | None = None
+    update_story_threads: list[StoryThreadUpdate] | None = None
+
+    add_historical_events: list[HistoricalEvent] | None = None
 
 
 # ─── Output validation ────────────────────────────────────────────────────────

@@ -180,15 +180,16 @@ class TestOrchestrator:
             distillation_pipeline=pipeline,
         )
 
-        # The stub returns non-JSON, so mutation parsing fails gracefully.
-        # WorldLedger should NOT be saved (mutation parse failure).
-        # This is expected -- real LLM would return valid JSON.
+        # The stub returns an empty JSON mutation for LedgerMutationOutput,
+        # which parses to a no-op LedgerMutation. apply_mutation then returns
+        # the initial ledger unchanged and we persist it. A real LLM would
+        # produce a populated mutation, but saving the empty baseline is the
+        # correct behaviour — it just means "no facts changed this run".
         engine = create_engine(test_db_url)
         Session = sessionmaker(bind=engine)
         session = Session()
         ledger = load_world_ledger(session)
-        # With stub, mutation parsing fails, so ledger stays None
-        assert ledger is None
+        assert ledger is not None
         session.close()
 
     def test_no_prompts_returns_empty(self, tmp_path):
