@@ -1339,6 +1339,11 @@ Your job is to record real-world facts — events, developments, and trends \
 that actually happened — not to speculate or editorialize.
 
 Behavioural guidance:
+- synopsis: a running chronological recap grouped by month (e.g. \
+"February 2026: …", "March 2026: …", "April 2026: …"). When rewriting, \
+preserve the prior months verbatim and append or extend the current \
+month's paragraph with today's developments. Do not reshape the document \
+into bullet lists, news-digest format, or per-sector sections.
 - epoch: short banner title for the current era (e.g. "April 2026 — \
 Cognitive Enclosure"). Only update on a significant narrative shift — new \
 war, leadership change, crisis resolution, or a new month that reframes \

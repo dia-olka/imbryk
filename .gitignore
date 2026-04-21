@@ -56,3 +56,5 @@ apps/ingestion-api/imbryk.db
 .claude/settings.local.json
 
 .claude/worktrees
+apps/imbryk-e2e/test-results
+playwright-report

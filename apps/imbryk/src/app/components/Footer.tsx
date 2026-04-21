@@ -16,7 +16,7 @@ export function Footer() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="underline underline-offset-2 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded cursor-pointer"
+            className="inline-flex items-center justify-center min-h-11 min-w-11 px-3 underline underline-offset-2 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded cursor-pointer"
           >
             Send feedback
           </button>

@@ -113,7 +113,9 @@ jobs:
           retention-days: 14
       
       - name: Post failure comment
-        if: failure()
+        # Only on PRs — context.issue.number is unset on push builds,
+        # which would POST to /issues//comments and 404.
+        if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
